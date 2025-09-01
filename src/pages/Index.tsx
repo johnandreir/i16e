@@ -9,56 +9,106 @@ import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const { toast } = useToast();
-  const [selectedEntity, setSelectedEntity] = useState('dpe');
-  const [selectedEntityValue, setSelectedEntityValue] = useState('');
+  const [selectedEntity, setSelectedEntity] = useState('squad'); // Changed to squad to show team chart
+  const [selectedEntityValue, setSelectedEntityValue] = useState('Alpha Squad'); // Pre-selected
   const [selectedTimeRange, setSelectedTimeRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
   }>({
-    from: undefined,
-    to: undefined,
+    from: new Date(2024, 7, 1), // Aug 1, 2024
+    to: new Date(2024, 7, 31),  // Aug 31, 2024
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [reportGenerated, setReportGenerated] = useState(false);
+  const [reportGenerated, setReportGenerated] = useState(true); // Set to true to show sample data
 
-  // Sample data - in real implementation, this would come from D365 API
+  // Enhanced sample data with more realistic metrics
   const sampleTeamData = [
     { name: 'Juan D.', sct: 16, cases: 45, satisfaction: 87 },
     { name: 'Maria S.', sct: 12, cases: 52, satisfaction: 92 },
     { name: 'Carlos R.', sct: 20, cases: 38, satisfaction: 78 },
     { name: 'Ana G.', sct: 14, cases: 48, satisfaction: 89 },
     { name: 'Miguel T.', sct: 18, cases: 41, satisfaction: 85 },
+    { name: 'Sofia L.', sct: 11, cases: 55, satisfaction: 94 },
+    { name: 'Diego M.', sct: 22, cases: 35, satisfaction: 76 },
+    { name: 'Isabella C.', sct: 15, cases: 47, satisfaction: 88 },
   ];
 
   const sampleSurveyData = [
-    { name: 'Satisfied (4-5)', value: 156, percentage: 78, color: 'hsl(var(--kpi-success))' },
-    { name: 'Neutral (3)', value: 32, percentage: 16, color: 'hsl(var(--kpi-warning))' },
-    { name: 'Dissatisfied (1-2)', value: 12, percentage: 6, color: 'hsl(var(--kpi-danger))' },
+    { name: 'Satisfied (4-5)', value: 312, percentage: 78, color: 'hsl(var(--kpi-success))' },
+    { name: 'Neutral (3)', value: 64, percentage: 16, color: 'hsl(var(--kpi-warning))' },
+    { name: 'Dissatisfied (1-2)', value: 24, percentage: 6, color: 'hsl(var(--kpi-danger))' },
   ];
+
+  // Additional sample data for different views
+  const individualDPEData = {
+    sct: 16,
+    cases: 45,
+    satisfaction: 87,
+    neutral: 8,
+    dissatisfied: 5,
+    totalSurveys: 42
+  };
+
+  const teamAverages = {
+    sct: 15.2,
+    cases: 224,
+    satisfaction: 86,
+    totalMembers: 8
+  };
 
   const sampleInsights = [
     {
       id: '1',
       type: 'improvement' as const,
-      title: 'Carlos Rodriguez - High SCT',
-      description: 'Carlos has the highest Solution Cycle Time at 20 days, 25% above team average.',
-      recommendation: 'Review case complexity and provide additional training on efficient troubleshooting techniques.',
+      title: 'Carlos Rodriguez - High SCT Alert',
+      description: 'Carlos has the highest Solution Cycle Time at 20 days, 25% above team average of 15.2 days.',
+      recommendation: 'Review case complexity distribution and provide advanced troubleshooting training. Consider pairing with Maria Santos for knowledge transfer.',
       member: 'Carlos R.'
     },
     {
       id: '2',
-      type: 'success' as const,
-      title: 'Maria Santos - Top Performer',
-      description: 'Maria consistently delivers excellent results with 12-day SCT and 92% CSAT.',
-      recommendation: 'Consider having Maria mentor team members with higher SCT.',
-      member: 'Maria S.'
+      type: 'improvement' as const,
+      title: 'Diego Martinez - Performance Concern',
+      description: 'Diego shows 22-day SCT with lowest satisfaction rate (76%). Case handoffs detected in 40% of assignments.',
+      recommendation: 'Implement dedicated case ownership protocol and provide customer communication training.',
+      member: 'Diego M.'
     },
     {
       id: '3',
+      type: 'success' as const,
+      title: 'Sofia Lopez - Excellence Recognition',
+      description: 'Sofia leads with 11-day SCT and 94% CSAT, handling the highest case volume (55 cases).',
+      recommendation: 'Promote Sofia as team lead mentor and document her best practices for team adoption.',
+      member: 'Sofia L.'
+    },
+    {
+      id: '4',
+      type: 'success' as const,
+      title: 'Maria Santos - Consistent Top Performer',
+      description: 'Maria maintains excellent metrics: 12-day SCT and 92% CSAT with strong technical resolution skills.',
+      recommendation: 'Assign Maria to complex enterprise cases and have her lead knowledge sharing sessions.',
+      member: 'Maria S.'
+    },
+    {
+      id: '5',
       type: 'warning' as const,
-      title: 'Case Handoff Issues Detected',
-      description: 'Analysis shows 15% of cases have multiple handoffs, increasing resolution time.',
-      recommendation: 'Implement better case routing and ownership protocols.'
+      title: 'Case Handoff Pattern Detected',
+      description: 'Analysis shows 18% of cases have multiple handoffs, increasing average SCT by 35%.',
+      recommendation: 'Implement skill-based routing and establish clear escalation procedures to reduce handoffs.'
+    },
+    {
+      id: '6',
+      type: 'info' as const,
+      title: 'Weekend Response Time Impact',
+      description: 'Cases created on weekends show 28% longer resolution times due to reduced staffing.',
+      recommendation: 'Consider weekend on-call rotation or implement automated triage for weekend cases.'
+    },
+    {
+      id: '7',
+      type: 'warning' as const,
+      title: 'Survey Response Rate Declining',
+      description: 'Customer survey response rate dropped to 65% this month from 78% last month.',
+      recommendation: 'Implement follow-up survey reminders and consider incentivizing survey completion.'
     }
   ];
 
@@ -89,6 +139,27 @@ const Index = () => {
       description: "Processing email threads for improvement suggestions...",
     });
   };
+
+  // Dynamic data based on selected entity
+  const getCurrentData = () => {
+    if (selectedEntity === 'dpe') {
+      return {
+        sct: individualDPEData.sct,
+        cases: individualDPEData.cases,
+        satisfaction: individualDPEData.satisfaction,
+        totalSurveys: individualDPEData.totalSurveys
+      };
+    } else {
+      return {
+        sct: teamAverages.sct,
+        cases: teamAverages.cases,
+        satisfaction: teamAverages.satisfaction,
+        totalSurveys: 400
+      };
+    }
+  };
+
+  const currentData = getCurrentData();
 
   const getEntityTitle = () => {
     switch (selectedEntity) {
@@ -133,7 +204,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <KPICard
               title="Solution Cycle Time"
-              value={selectedEntity === 'dpe' ? 16 : 15.2}
+              value={currentData.sct}
               unit="days"
               trend="down"
               trendValue="12%"
@@ -143,7 +214,7 @@ const Index = () => {
             />
             <KPICard
               title="Customer Satisfaction"
-              value={selectedEntity === 'dpe' ? 87 : 86}
+              value={currentData.satisfaction}
               unit="%"
               trend="up"
               trendValue="5%"
@@ -153,7 +224,7 @@ const Index = () => {
             />
             <KPICard
               title="Cases Handled"
-              value={selectedEntity === 'dpe' ? 45 : 224}
+              value={currentData.cases}
               trend="up"
               trendValue="8%"
               description="Total cases this period"
@@ -183,7 +254,7 @@ const Index = () => {
             <SurveyAnalysisChart
               data={sampleSurveyData}
               title="Customer Satisfaction Distribution"
-              totalSurveys={200}
+              totalSurveys={currentData.totalSurveys}
             />
           </div>
 
