@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Clock, Users, ThumbsUp, AlertCircle, BarChart3, TrendingUp } from 'lucide-react';
+import { Clock, Users, ThumbsUp, AlertCircle, BarChart3, TrendingUp, Settings } from 'lucide-react';
 import FilterSection from '@/components/dashboard/FilterSection';
 import KPICard from '@/components/dashboard/KPICard';
 import TeamPerformanceChart from '@/components/dashboard/TeamPerformanceChart';
 import SurveyAnalysisChart from '@/components/dashboard/SurveyAnalysisChart';
 import InsightsPanel from '@/components/dashboard/InsightsPanel';
+import ThemeToggle from '@/components/ui/theme-toggle';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
@@ -177,13 +178,18 @@ const Index = () => {
   return (
     <div className="min-h-screen p-6 space-y-8">
       {/* Header */}
-      <div className="text-center space-y-4 mb-8">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-          DevOps KPI Insight Engine
-        </h1>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          AI-Powered Performance Analytics for DevOps Platform Engineers, Squads, and Teams
-        </p>
+      <div className="relative">
+        <div className="absolute top-0 right-0 z-10">
+          <ThemeToggle />
+        </div>
+        <div className="text-center space-y-4 mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+            DevOps KPI Insight Engine
+          </h1>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            AI-Powered Performance Analytics for DevOps Platform Engineers, Squads, and Teams
+          </p>
+        </div>
       </div>
 
       {/* Filter Section */}
