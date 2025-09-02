@@ -20,9 +20,9 @@ interface FilterSectionProps {
 }
 
 const entityData = {
-  dpe: ['Juan Dela Cruz', 'Maria Santos', 'Carlos Rodriguez', 'Ana Garcia', 'Miguel Torres'],
-  squad: ['Alpha Squad', 'Beta Squad', 'Gamma Squad', 'Delta Squad', 'Echo Squad'],
-  team: ['Platform Engineering', 'DevOps Infrastructure', 'Cloud Operations', 'Security Engineering', 'Site Reliability']
+  dpe: ['Juan Dela Cruz', 'Maria Santos', 'Carlos Rodriguez', 'Ana Garcia', 'Miguel Torres', 'Add New DPE...'],
+  squad: ['Alpha Squad', 'Beta Squad', 'Gamma Squad', 'Delta Squad', 'Echo Squad', 'Add New Squad...'],
+  team: ['Platform Engineering', 'DevOps Infrastructure', 'Cloud Operations', 'Security Engineering', 'Site Reliability', 'Add New Team...']
 };
 
 const FilterSection: React.FC<FilterSectionProps> = ({

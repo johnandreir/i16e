@@ -12,9 +12,10 @@ interface TeamMember {
 interface TeamPerformanceChartProps {
   data: TeamMember[];
   title: string;
+  onBarClick?: (data: TeamMember[]) => void;
 }
 
-const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title }) => {
+const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title, onBarClick }) => {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -38,9 +39,10 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
   };
 
   return (
-    <Card className="chart-container">
+    <Card className="chart-container cursor-pointer" onClick={() => onBarClick?.(data)}>
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
+        <p className="text-sm text-muted-foreground">Click to view detailed breakdown</p>
       </CardHeader>
       <CardContent>
         <div className="h-80">
@@ -73,7 +75,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
               <Bar 
                 dataKey="satisfaction" 
                 name="CSAT (%)"
-                fill="hsl(var(--chart-tertiary))" 
+                fill="hsl(var(--chart-quaternary))" 
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>

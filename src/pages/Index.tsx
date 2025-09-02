@@ -5,6 +5,7 @@ import KPICard from '@/components/dashboard/KPICard';
 import TeamPerformanceChart from '@/components/dashboard/TeamPerformanceChart';
 import SurveyAnalysisChart from '@/components/dashboard/SurveyAnalysisChart';
 import InsightsPanel from '@/components/dashboard/InsightsPanel';
+import DetailedStatsModal from '@/components/dashboard/DetailedStatsModal';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,23 +22,27 @@ const Index = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(true); // Set to true to show sample data
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<any>(null);
+  const [modalType, setModalType] = useState<'team' | 'survey'>('team');
+  const [modalTitle, setModalTitle] = useState('');
 
   // Enhanced sample data with more realistic metrics
   const sampleTeamData = [
-    { name: 'Juan D.', sct: 16, cases: 45, satisfaction: 87 },
-    { name: 'Maria S.', sct: 12, cases: 52, satisfaction: 92 },
-    { name: 'Carlos R.', sct: 20, cases: 38, satisfaction: 78 },
-    { name: 'Ana G.', sct: 14, cases: 48, satisfaction: 89 },
-    { name: 'Miguel T.', sct: 18, cases: 41, satisfaction: 85 },
-    { name: 'Sofia L.', sct: 11, cases: 55, satisfaction: 94 },
-    { name: 'Diego M.', sct: 22, cases: 35, satisfaction: 76 },
-    { name: 'Isabella C.', sct: 15, cases: 47, satisfaction: 88 },
+    { name: 'Juan Dela Cruz', sct: 16, cases: 45, satisfaction: 87 },
+    { name: 'Maria Santos', sct: 12, cases: 52, satisfaction: 92 },
+    { name: 'Carlos Rodriguez', sct: 20, cases: 38, satisfaction: 78 },
+    { name: 'Ana Garcia', sct: 14, cases: 48, satisfaction: 89 },
+    { name: 'Miguel Torres', sct: 18, cases: 41, satisfaction: 85 },
+    { name: 'Sofia Lopez', sct: 11, cases: 55, satisfaction: 94 },
+    { name: 'Diego Martinez', sct: 22, cases: 35, satisfaction: 76 },
+    { name: 'Isabella Chen', sct: 15, cases: 47, satisfaction: 88 },
   ];
 
   const sampleSurveyData = [
-    { name: 'Satisfied (4-5)', value: 312, percentage: 78, color: 'hsl(var(--kpi-success))' },
+    { name: 'CSAT (4-5)', value: 312, percentage: 78, color: 'hsl(var(--kpi-success))' },
     { name: 'Neutral (3)', value: 64, percentage: 16, color: 'hsl(var(--kpi-warning))' },
-    { name: 'Dissatisfied (1-2)', value: 24, percentage: 6, color: 'hsl(var(--kpi-danger))' },
+    { name: 'DSAT (1-2)', value: 24, percentage: 6, color: 'hsl(var(--kpi-danger))' },
   ];
 
   // Additional sample data for different views
@@ -141,6 +146,13 @@ const Index = () => {
     });
   };
 
+  const handleChartClick = (data: any, type: 'team' | 'survey', title: string) => {
+    setModalData(data);
+    setModalType(type);
+    setModalTitle(title);
+    setModalOpen(true);
+  };
+
   // Dynamic data based on selected entity
   const getCurrentData = () => {
     if (selectedEntity === 'dpe') {
@@ -229,15 +241,6 @@ const Index = () => {
               icon={<ThumbsUp className="h-5 w-5" />}
             />
             <KPICard
-              title="Cases Handled"
-              value={currentData.cases}
-              trend="up"
-              trendValue="8%"
-              description="Total cases this period"
-              variant="default"
-              icon={<BarChart3 className="h-5 w-5" />}
-            />
-            <KPICard
               title="Dissatisfaction Rate"
               value={6}
               unit="%"
@@ -247,6 +250,15 @@ const Index = () => {
               variant="warning"
               icon={<AlertCircle className="h-5 w-5" />}
             />
+            <KPICard
+              title="Cases Handled"
+              value={currentData.cases}
+              trend="up"
+              trendValue="8%"
+              description="Total cases this period"
+              variant="default"
+              icon={<BarChart3 className="h-5 w-5" />}
+            />
           </div>
 
           {/* Charts Section */}
@@ -255,12 +267,14 @@ const Index = () => {
               <TeamPerformanceChart
                 data={sampleTeamData}
                 title={`${getEntityTitle()} Performance Breakdown`}
+                onBarClick={(data) => handleChartClick(data, 'team', `${getEntityTitle()} Performance`)}
               />
             )}
             <SurveyAnalysisChart
               data={sampleSurveyData}
               title="Customer Satisfaction Distribution"
               totalSurveys={currentData.totalSurveys}
+              onPieClick={(data) => handleChartClick(data, 'survey', 'Customer Satisfaction')}
             />
           </div>
 
