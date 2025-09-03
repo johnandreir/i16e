@@ -12,7 +12,7 @@ interface TeamMember {
 interface TeamPerformanceChartProps {
   data: TeamMember[];
   title: string;
-  onBarClick?: (data: TeamMember[]) => void;
+  onBarClick?: (member: TeamMember, metric: 'sct' | 'cases' | 'satisfaction') => void;
 }
 
 const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title, onBarClick }) => {
@@ -38,16 +38,28 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
     return null;
   };
 
+  const handleBarClick = (data: any, index: number) => {
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      const memberData = data.activePayload[0].payload;
+      const dataKey = data.activePayload[0].dataKey as 'sct' | 'cases' | 'satisfaction';
+      onBarClick?.(memberData, dataKey);
+    }
+  };
+
   return (
-    <Card className="chart-container cursor-pointer" onClick={() => onBarClick?.(data)}>
+    <Card className="chart-container">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
-        <p className="text-sm text-muted-foreground">Click to view detailed breakdown</p>
+        <p className="text-sm text-muted-foreground">Click individual bars for detailed breakdown</p>
       </CardHeader>
       <CardContent>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart 
+              data={data} 
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              onClick={handleBarClick}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
                 dataKey="name" 
@@ -65,18 +77,21 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 name="Solution Cycle Time (Days)"
                 fill="hsl(var(--chart-primary))" 
                 radius={[4, 4, 0, 0]}
+                cursor="pointer"
               />
               <Bar 
                 dataKey="cases" 
                 name="Cases Handled"
                 fill="hsl(var(--chart-secondary))" 
                 radius={[4, 4, 0, 0]}
+                cursor="pointer"
               />
               <Bar 
                 dataKey="satisfaction" 
                 name="CSAT (%)"
                 fill="hsl(var(--chart-quaternary))" 
                 radius={[4, 4, 0, 0]}
+                cursor="pointer"
               />
             </BarChart>
           </ResponsiveContainer>

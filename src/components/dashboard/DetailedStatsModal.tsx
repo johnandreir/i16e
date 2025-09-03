@@ -9,7 +9,7 @@ interface DetailedStatsModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: any;
-  type: 'team' | 'survey';
+  type: 'team' | 'survey' | 'individual';
   title: string;
 }
 
@@ -81,6 +81,190 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
     </div>
   );
 
+  const renderIndividualDetails = () => {
+    const { member, metric, details } = data;
+    
+    if (metric === 'sct') {
+      return (
+        <div className="space-y-6">
+          <div className="bg-card p-4 rounded-lg border">
+            <h3 className="font-semibold text-foreground mb-2">{member.name} - Solution Cycle Time Analysis</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Average SCT</p>
+                <p className="font-semibold text-lg">{member.sct} days</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Cases Analyzed</p>
+                <p className="font-semibold text-lg">{details.length}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Fastest Resolution</p>
+                <p className="font-semibold text-lg">{Math.min(...details.map(d => d.sct))} days</p>
+              </div>
+            </div>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Case ID</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>SCT (Days)</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Complexity</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Closed</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {details.map((detail: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-mono text-sm">{detail.caseId}</TableCell>
+                  <TableCell>{detail.title}</TableCell>
+                  <TableCell>
+                    <Badge variant={detail.sct > 20 ? "destructive" : detail.sct < 10 ? "success" : "secondary"}>
+                      {detail.sct}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={detail.priority === 'High' ? "destructive" : detail.priority === 'Medium' ? "warning" : "secondary"}>
+                      {detail.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{detail.complexity}/5</TableCell>
+                  <TableCell>{detail.createdDate}</TableCell>
+                  <TableCell>{detail.closedDate}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    }
+    
+    if (metric === 'cases') {
+      return (
+        <div className="space-y-6">
+          <div className="bg-card p-4 rounded-lg border">
+            <h3 className="font-semibold text-foreground mb-2">{member.name} - Cases Handled</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Total Cases</p>
+                <p className="font-semibold text-lg">{member.cases}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Closed Cases</p>
+                <p className="font-semibold text-lg">{details.filter(d => d.status === 'Closed').length}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Avg Response Time</p>
+                <p className="font-semibold text-lg">4.2h</p>
+              </div>
+            </div>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Case ID</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Customer Rating</TableHead>
+                <TableHead>Response Time</TableHead>
+                <TableHead>Created</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {details.map((detail: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-mono text-sm">{detail.caseId}</TableCell>
+                  <TableCell>{detail.title}</TableCell>
+                  <TableCell>
+                    <Badge variant={detail.status === 'Closed' ? "success" : detail.status === 'In Progress' ? "warning" : "secondary"}>
+                      {detail.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={detail.priority === 'High' ? "destructive" : detail.priority === 'Medium' ? "warning" : "secondary"}>
+                      {detail.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={detail.customerSat >= 4 ? "success" : detail.customerSat >= 3 ? "warning" : "destructive"}>
+                      {detail.customerSat}/5
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{detail.responseTime}</TableCell>
+                  <TableCell>{detail.createdDate}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    }
+    
+    if (metric === 'satisfaction') {
+      return (
+        <div className="space-y-6">
+          <div className="bg-card p-4 rounded-lg border">
+            <h3 className="font-semibold text-foreground mb-2">{member.name} - Customer Satisfaction</h3>
+            <div className="grid grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Overall CSAT</p>
+                <p className="font-semibold text-lg">{member.satisfaction}%</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Total Surveys</p>
+                <p className="font-semibold text-lg">{details.length}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">5-Star Ratings</p>
+                <p className="font-semibold text-lg">{details.filter(d => d.rating === 5).length}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Avg Rating</p>
+                <p className="font-semibold text-lg">{(details.reduce((acc, d) => acc + d.rating, 0) / details.length).toFixed(1)}/5</p>
+              </div>
+            </div>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Survey ID</TableHead>
+                <TableHead>Case ID</TableHead>
+                <TableHead>Rating</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Comment</TableHead>
+                <TableHead>Submitted</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {details.map((detail: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-mono text-sm">{detail.surveyId}</TableCell>
+                  <TableCell className="font-mono text-sm">{detail.caseId}</TableCell>
+                  <TableCell>
+                    <Badge variant={detail.rating >= 4 ? "success" : detail.rating >= 3 ? "warning" : "destructive"}>
+                      {detail.rating}/5
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{detail.category}</TableCell>
+                  <TableCell className="max-w-xs truncate">{detail.comment}</TableCell>
+                  <TableCell>{detail.submittedDate}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    }
+    
+    return null;
+  };
   const renderSurveyDetails = () => (
     <div className="space-y-6">
       <Table>
@@ -156,7 +340,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
         </DialogHeader>
         
         <div className="mt-6">
-          {type === 'team' ? renderTeamDetails() : renderSurveyDetails()}
+          {type === 'team' ? renderTeamDetails() : type === 'survey' ? renderSurveyDetails() : renderIndividualDetails()}
         </div>
       </DialogContent>
     </Dialog>

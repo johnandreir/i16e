@@ -2,11 +2,10 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Filter, RefreshCcw } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Combobox } from '@/components/ui/combobox';
+import DateRangePicker from './DateRangePicker';
+import EntityManagementDialog from './EntityManagementDialog';
+import { Filter, RefreshCcw } from 'lucide-react';
 
 interface FilterSectionProps {
   selectedEntity: string;
@@ -16,14 +15,11 @@ interface FilterSectionProps {
   onEntityValueChange: (value: string) => void;
   onTimeRangeChange: (range: { from: Date | undefined; to: Date | undefined }) => void;
   onGenerateReport: () => void;
+  entityData: Record<string, string[]>;
+  onEntityDataChange: (entityType: string, data: string[]) => void;
   isLoading?: boolean;
 }
 
-const entityData = {
-  dpe: ['Juan Dela Cruz', 'Maria Santos', 'Carlos Rodriguez', 'Ana Garcia', 'Miguel Torres', 'Add New DPE...'],
-  squad: ['Alpha Squad', 'Beta Squad', 'Gamma Squad', 'Delta Squad', 'Echo Squad', 'Add New Squad...'],
-  team: ['Platform Engineering', 'DevOps Infrastructure', 'Cloud Operations', 'Security Engineering', 'Site Reliability', 'Add New Team...']
-};
 
 const FilterSection: React.FC<FilterSectionProps> = ({
   selectedEntity,
@@ -33,8 +29,16 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   onEntityValueChange,
   onTimeRangeChange,
   onGenerateReport,
+  entityData,
+  onEntityDataChange,
   isLoading = false
 }) => {
+  const getCurrentEntityOptions = () => {
+    const entities = entityData[selectedEntity as keyof typeof entityData] || [];
+    return entities
+      .filter(entity => !entity.includes('Add New'))
+      .map(entity => ({ value: entity, label: entity }));
+  };
   return (
     <Card className="glass-card p-6 mb-8">
       <div className="flex flex-col lg:flex-row gap-6 items-end">
@@ -54,90 +58,40 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             </Select>
           </div>
 
-          {/* Entity Value Selection */}
+          {/* Entity Value Selection with Search */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">
               Select {selectedEntity.toUpperCase()}
             </label>
-            <Select value={selectedEntityValue} onValueChange={onEntityValueChange}>
-              <SelectTrigger className="bg-card border-border">
-                <SelectValue placeholder={`Choose ${selectedEntity}`} />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border">
-                {entityData[selectedEntity as keyof typeof entityData]?.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={getCurrentEntityOptions()}
+              value={selectedEntityValue}
+              onValueChange={onEntityValueChange}
+              placeholder={`Choose ${selectedEntity}`}
+              searchPlaceholder={`Search ${selectedEntity}s...`}
+              emptyText={`No ${selectedEntity} found.`}
+              className="bg-card border-border"
+            />
           </div>
 
           {/* Date Range Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Time Range</label>
-            <div className="flex gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "flex-1 justify-start text-left font-normal",
-                      !selectedTimeRange.from && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedTimeRange.from ? (
-                      format(selectedTimeRange.from, "MMM dd")
-                    ) : (
-                      <span>From</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedTimeRange.from}
-                    onSelect={(date) => onTimeRangeChange({ ...selectedTimeRange, from: date })}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "flex-1 justify-start text-left font-normal",
-                      !selectedTimeRange.to && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedTimeRange.to ? (
-                      format(selectedTimeRange.to, "MMM dd")
-                    ) : (
-                      <span>To</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedTimeRange.to}
-                    onSelect={(date) => onTimeRangeChange({ ...selectedTimeRange, to: date })}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            <DateRangePicker
+              value={selectedTimeRange}
+              onChange={onTimeRangeChange}
+              className="w-full"
+            />
           </div>
         </div>
 
-        {/* Generate Report Button */}
+        {/* Entity Management and Generate Report Buttons */}
         <div className="flex gap-3">
+          <EntityManagementDialog
+            entityType={selectedEntity as 'dpe' | 'squad' | 'team'}
+            entities={entityData[selectedEntity as keyof typeof entityData] || []}
+            onEntitiesChange={(entities) => onEntityDataChange(selectedEntity, entities)}
+          />
           <Button
             onClick={onGenerateReport}
             disabled={isLoading || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to}

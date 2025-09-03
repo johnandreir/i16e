@@ -9,6 +9,13 @@ import DetailedStatsModal from '@/components/dashboard/DetailedStatsModal';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { useToast } from '@/hooks/use-toast';
 
+interface TeamMember {
+  name: string;
+  sct: number;
+  cases: number;
+  satisfaction: number;
+}
+
 const Index = () => {
   const { toast } = useToast();
   const [selectedEntity, setSelectedEntity] = useState('squad'); // Changed to squad to show team chart
@@ -24,8 +31,15 @@ const Index = () => {
   const [reportGenerated, setReportGenerated] = useState(true); // Set to true to show sample data
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<any>(null);
-  const [modalType, setModalType] = useState<'team' | 'survey'>('team');
+  const [modalType, setModalType] = useState<'team' | 'survey' | 'individual'>('team');
   const [modalTitle, setModalTitle] = useState('');
+
+  // Dynamic entity data
+  const [entityData, setEntityData] = useState({
+    dpe: ['Juan Dela Cruz', 'Maria Santos', 'Carlos Rodriguez', 'Ana Garcia', 'Miguel Torres', 'Sofia Lopez', 'Diego Martinez', 'Isabella Chen', 'Add New DPE...'],
+    squad: ['Alpha Squad', 'Beta Squad', 'Gamma Squad', 'Delta Squad', 'Echo Squad', 'Add New Squad...'],
+    team: ['Platform Engineering', 'DevOps Infrastructure', 'Cloud Operations', 'Security Engineering', 'Site Reliability', 'Add New Team...']
+  });
 
   // Enhanced sample data with more realistic metrics
   const sampleTeamData = [
@@ -153,6 +167,68 @@ const Index = () => {
     setModalOpen(true);
   };
 
+  const handleIndividualBarClick = (member: TeamMember, metric: 'sct' | 'cases' | 'satisfaction') => {
+    // Generate sample detailed data for individual member metrics
+    const generateDetailedData = () => {
+      switch (metric) {
+        case 'sct':
+          return Array.from({ length: 15 }, (_, i) => ({
+            caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
+            title: `${['Server', 'Database', 'Network', 'Application', 'Security'][i % 5]} Issue`,
+            sct: Math.floor(Math.random() * 30) + 5,
+            priority: ['High', 'Medium', 'Low'][i % 3],
+            status: 'Closed',
+            complexity: Math.floor(Math.random() * 5) + 1,
+            createdDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString(),
+            closedDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString()
+          }));
+        case 'cases':
+          return Array.from({ length: member.cases }, (_, i) => ({
+            caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
+            title: `Case ${i + 1}: ${['Configuration', 'Performance', 'Integration', 'Security', 'Deployment'][i % 5]} Request`,
+            status: ['Closed', 'In Progress', 'Pending'][i % 3],
+            priority: ['High', 'Medium', 'Low'][i % 3],
+            customerSat: Math.floor(Math.random() * 5) + 1,
+            responseTime: `${Math.floor(Math.random() * 24) + 1}h`,
+            createdDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString()
+          }));
+        case 'satisfaction':
+          return Array.from({ length: 20 }, (_, i) => ({
+            surveyId: `SUR-${2024}${String(i + 1).padStart(3, '0')}`,
+            caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
+            rating: Math.floor(Math.random() * 5) + 1,
+            comment: [
+              'Excellent support, very responsive',
+              'Good technical knowledge',
+              'Could be faster',
+              'Very helpful and professional',
+              'Resolved issue quickly'
+            ][i % 5],
+            category: ['Technical', 'Communication', 'Speed', 'Quality'][i % 4],
+            submittedDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString()
+          }));
+        default:
+          return [];
+      }
+    };
+
+    setModalData({
+      member,
+      metric,
+      details: generateDetailedData()
+    });
+    setModalType('individual');
+    setModalTitle(`${member.name} - ${metric.toUpperCase()} Details`);
+    setModalOpen(true);
+  };
+
+  const handleEntityDataChange = (entityType: string, data: string[]) => {
+    setEntityData(prev => ({
+      ...prev,
+      [entityType]: data
+    }));
+  };
+
   // Dynamic data based on selected entity
   const getCurrentData = () => {
     if (selectedEntity === 'dpe') {
@@ -177,13 +253,13 @@ const Index = () => {
   const getEntityTitle = () => {
     switch (selectedEntity) {
       case 'dpe':
-        return 'DevOps Platform Engineer';
+        return 'DPE Performance Breakdown';
       case 'squad':
-        return 'Squad';
+        return 'Squad Performance Breakdown';
       case 'team':
-        return 'Team';
+        return 'Team Performance Breakdown';
       default:
-        return 'Entity';
+        return 'Entity Performance Breakdown';
     }
   };
 
@@ -213,6 +289,8 @@ const Index = () => {
         onEntityValueChange={setSelectedEntityValue}
         onTimeRangeChange={setSelectedTimeRange}
         onGenerateReport={handleGenerateReport}
+        entityData={entityData}
+        onEntityDataChange={handleEntityDataChange}
         isLoading={isLoading}
       />
 
@@ -263,13 +341,11 @@ const Index = () => {
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {selectedEntity !== 'dpe' && (
-              <TeamPerformanceChart
-                data={sampleTeamData}
-                title={`${getEntityTitle()} Performance Breakdown`}
-                onBarClick={(data) => handleChartClick(data, 'team', `${getEntityTitle()} Performance`)}
-              />
-            )}
+            <TeamPerformanceChart
+              data={sampleTeamData}
+              title={getEntityTitle()}
+              onBarClick={handleIndividualBarClick}
+            />
             <SurveyAnalysisChart
               data={sampleSurveyData}
               title="Customer Satisfaction Distribution"
@@ -297,6 +373,14 @@ const Index = () => {
           </p>
         </div>
       )}
+
+      <DetailedStatsModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        data={modalData}
+        type={modalType}
+        title={modalTitle}
+      />
     </div>
   );
 };
