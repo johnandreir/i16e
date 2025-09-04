@@ -7,8 +7,7 @@ interface KPICardProps {
   title: string;
   value: string | number;
   unit?: string;
-  trend?: 'up' | 'down' | 'neutral';
-  trendValue?: string;
+  target?: number;
   description?: string;
   variant?: 'default' | 'success' | 'warning' | 'danger';
   icon?: React.ReactNode;
@@ -18,23 +17,23 @@ const KPICard: React.FC<KPICardProps> = ({
   title,
   value,
   unit = '',
-  trend,
-  trendValue,
+  target,
   description,
   variant = 'default',
   icon
 }) => {
-  const getTrendIcon = () => {
-    switch (trend) {
-      case 'up':
-        return <TrendingUp className="h-4 w-4 text-accent" />;
-      case 'down':
-        return <TrendingDown className="h-4 w-4 text-destructive" />;
-      case 'neutral':
-        return <Minus className="h-4 w-4 text-muted-foreground" />;
-      default:
-        return null;
-    }
+  const getTargetStatus = () => {
+    if (!target) return null;
+    
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    const isMetOrExceeded = title.includes('Dissatisfaction') 
+      ? numValue <= target  // For dissatisfaction, lower is better
+      : numValue >= target; // For others, higher is better
+    
+    return {
+      isGood: isMetOrExceeded,
+      color: isMetOrExceeded ? 'text-green-600' : 'text-red-600'
+    };
   };
 
   const getVariantStyles = () => {
@@ -49,6 +48,8 @@ const KPICard: React.FC<KPICardProps> = ({
         return 'border-l-4 border-l-primary';
     }
   };
+
+  const targetStatus = getTargetStatus();
 
   return (
     <Card className={cn('kpi-card', getVariantStyles())}>
@@ -71,18 +72,11 @@ const KPICard: React.FC<KPICardProps> = ({
           )}
         </div>
 
-        {trend && trendValue && (
-          <div className="flex items-center gap-1 text-sm">
-            {getTrendIcon()}
-            <span
-              className={cn(
-                'font-medium',
-                trend === 'up' && 'text-accent',
-                trend === 'down' && 'text-destructive',
-                trend === 'neutral' && 'text-muted-foreground'
-              )}
-            >
-              {trendValue}
+        {target && targetStatus && (
+          <div className="flex flex-col items-end text-sm">
+            <span className="text-xs text-muted-foreground mb-1">Target</span>
+            <span className={cn('font-medium', targetStatus.color)}>
+              {target}{unit}
             </span>
           </div>
         )}

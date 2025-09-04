@@ -198,7 +198,7 @@ const Index = () => {
             caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
             title: `${['Server', 'Database', 'Network', 'Application', 'Security'][i % 5]} Issue`,
             sct: Math.floor(Math.random() * 30) + 5,
-            priority: ['High', 'Medium', 'Low', 'Low'][i % 4],
+            priority: ['P1', 'P2', 'P3', 'P3'][i % 4],
             status: 'Closed',
             complexity: Math.floor(Math.random() * 5) + 1,
             createdDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString(),
@@ -209,7 +209,7 @@ const Index = () => {
             caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
             title: `Case ${i + 1}: ${['Configuration', 'Performance', 'Integration', 'Security', 'Deployment'][i % 5]} Request`,
             status: ['Closed', 'In Progress', 'Pending'][i % 3],
-            priority: ['High', 'Medium', 'Low', 'Low'][i % 4],
+            priority: ['P1', 'P2', 'P3', 'P3'][i % 4],
             customerSat: Math.floor(Math.random() * 5) + 1,
             responseTime: `${Math.floor(Math.random() * 24) + 1}h`,
             createdDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString()
@@ -335,19 +335,24 @@ const Index = () => {
             <KPICard
               title="Solution Cycle Time"
               value={currentData.sct}
-              unit="days"
-              trend="down"
-              trendValue="12%"
+              unit=" days"
+              target={15}
               description="Average time to resolve cases"
               variant="success"
               icon={<Clock className="h-5 w-5" />}
             />
             <KPICard
+              title="Cases Close"
+              value={currentData.cases}
+              description="Total cases this period"
+              variant="default"
+              icon={<BarChart3 className="h-5 w-5" />}
+            />
+            <KPICard
               title="Customer Satisfaction"
               value={currentData.satisfaction}
               unit="%"
-              trend="up"
-              trendValue="5%"
+              target={85}
               description="CSAT rating 4-5 stars"
               variant="success"
               icon={<ThumbsUp className="h-5 w-5" />}
@@ -356,20 +361,10 @@ const Index = () => {
               title="Dissatisfaction Rate"
               value={6}
               unit="%"
-              trend="down"
-              trendValue="3%"
+              target={5}
               description="DSAT rating 1-2 stars"
               variant="warning"
               icon={<AlertCircle className="h-5 w-5" />}
-            />
-            <KPICard
-              title="Cases Handled"
-              value={currentData.cases}
-              trend="up"
-              trendValue="8%"
-              description="Total cases this period"
-              variant="default"
-              icon={<BarChart3 className="h-5 w-5" />}
             />
           </div>
 

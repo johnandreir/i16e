@@ -27,8 +27,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
           <TableRow>
             <TableHead>DPE Name</TableHead>
             <TableHead>SCT (Days)</TableHead>
-            <TableHead>Cases Handled</TableHead>
-            <TableHead>CSAT %</TableHead>
+            <TableHead>Cases Close</TableHead>
             <TableHead>Avg Response Time</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
@@ -43,11 +42,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                 </Badge>
               </TableCell>
               <TableCell>{member.cases}</TableCell>
-              <TableCell>
-                <Badge variant={member.satisfaction > 90 ? "success" : member.satisfaction < 80 ? "destructive" : "secondary"}>
-                  {member.satisfaction}%
-                </Badge>
-              </TableCell>
               <TableCell>{Math.floor(Math.random() * 3) + 2}h</TableCell>
               <TableCell>
                 <Badge variant={member.satisfaction > 85 ? "success" : "warning"}>
@@ -125,9 +119,9 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={detail.priority === 'High' ? "destructive" : detail.priority === 'Medium' ? "warning" : "secondary"}>
-                      {detail.priority === 'High' ? 'P1' : detail.priority === 'Medium' ? 'P2' : detail.priority === 'Low' ? 'P3' : 'P4'}
-                    </Badge>
+                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                    {detail.priority}
+                  </Badge>
                   </TableCell>
                   <TableCell>{detail.createdDate}</TableCell>
                   <TableCell>{detail.closedDate}</TableCell>
@@ -143,7 +137,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-2">{member.name} - Cases Handled</h3>
+            <h3 className="font-semibold text-foreground mb-2">{member.name} - Cases Close</h3>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Total Cases</p>
@@ -183,9 +177,9 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={detail.priority === 'High' ? "destructive" : detail.priority === 'Medium' ? "warning" : "secondary"}>
-                      {detail.priority === 'High' ? 'P1' : detail.priority === 'Medium' ? 'P2' : detail.priority === 'Low' ? 'P3' : 'P4'}
-                    </Badge>
+                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                    {detail.priority}
+                  </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={detail.customerSat >= 4 ? "success" : detail.customerSat >= 3 ? "warning" : "destructive"}>
