@@ -85,13 +85,8 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </div>
         </div>
 
-        {/* Entity Management and Generate Report Buttons */}
+        {/* Generate Report Button */}
         <div className="flex gap-3">
-          <EntityManagementDialog
-            entityType={selectedEntity as 'dpe' | 'squad' | 'team'}
-            entities={entityData[selectedEntity as keyof typeof entityData] || []}
-            onEntitiesChange={(entities) => onEntityDataChange(selectedEntity, entities)}
-          />
           <Button
             onClick={onGenerateReport}
             disabled={isLoading || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to}

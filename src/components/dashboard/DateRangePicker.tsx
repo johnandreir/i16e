@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CalendarIcon, Clock } from 'lucide-react';
-import { format, parse, isValid } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface DateRangePickerProps {
@@ -16,12 +15,10 @@ interface DateRangePickerProps {
 
 const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, className }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [fromTime, setFromTime] = useState('00:00');
-  const [toTime, setToTime] = useState('23:59');
 
-  const formatDateTimeDisplay = (date: Date | undefined, time: string) => {
+  const formatDateDisplay = (date: Date | undefined) => {
     if (!date) return null;
-    return `${format(date, 'MMM dd, yyyy')} ${time}`;
+    return format(date, 'MMM dd, yyyy');
   };
 
   const handleDateSelect = (date: Date | undefined, type: 'from' | 'to') => {
@@ -32,14 +29,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
     }
   };
 
-  const handleTimeChange = (time: string, type: 'from' | 'to') => {
-    if (type === 'from') {
-      setFromTime(time);
-    } else {
-      setToTime(time);
-    }
-  };
-
   const handleQuickSelect = (days: number) => {
     const to = new Date();
     const from = new Date();
@@ -47,11 +36,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
     
     onChange({ from, to });
     setIsOpen(false);
-  };
-
-  const validateTimeFormat = (time: string) => {
-    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return timeRegex.test(time);
   };
 
   const quickRanges = [
@@ -76,8 +60,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
             <CalendarIcon className="mr-2 h-4 w-4" />
             {value.from && value.to ? (
               <>
-                {formatDateTimeDisplay(value.from, fromTime)} -{' '}
-                {formatDateTimeDisplay(value.to, toTime)}
+                {formatDateDisplay(value.from)} - {formatDateDisplay(value.to)}
               </>
             ) : (
               <span>Select date range</span>
@@ -102,7 +85,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
               ))}
             </div>
 
-            {/* Calendar and Time Selection */}
+            {/* Calendar Selection */}
             <div className="p-4 space-y-4">
               <div className="flex gap-4">
                 {/* From Date */}
@@ -114,18 +97,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
                     onSelect={(date) => handleDateSelect(date, 'from')}
                     className="pointer-events-auto"
                   />
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Time</Label>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <Input
-                        type="time"
-                        value={fromTime}
-                        onChange={(e) => handleTimeChange(e.target.value, 'from')}
-                        className="text-xs"
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 {/* To Date */}
@@ -137,18 +108,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
                     onSelect={(date) => handleDateSelect(date, 'to')}
                     className="pointer-events-auto"
                   />
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Time</Label>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <Input
-                        type="time"
-                        value={toTime}
-                        onChange={(e) => handleTimeChange(e.target.value, 'to')}
-                        className="text-xs"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -164,7 +123,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
                 <Button
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  disabled={!value.from || !value.to || !validateTimeFormat(fromTime) || !validateTimeFormat(toTime)}
+                  disabled={!value.from || !value.to}
                 >
                   Apply
                 </Button>

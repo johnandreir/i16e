@@ -30,7 +30,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             <TableHead>Cases Handled</TableHead>
             <TableHead>CSAT %</TableHead>
             <TableHead>Avg Response Time</TableHead>
-            <TableHead>Complexity Score</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -50,7 +49,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                 </Badge>
               </TableCell>
               <TableCell>{Math.floor(Math.random() * 3) + 2}h</TableCell>
-              <TableCell>{(Math.random() * 2 + 7).toFixed(1)}/10</TableCell>
               <TableCell>
                 <Badge variant={member.satisfaction > 85 ? "success" : "warning"}>
                   {member.satisfaction > 85 ? "Excellent" : "Needs Improvement"}
@@ -112,7 +110,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                 <TableHead>Title</TableHead>
                 <TableHead>SCT (Days)</TableHead>
                 <TableHead>Priority</TableHead>
-                <TableHead>Complexity</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Closed</TableHead>
               </TableRow>
@@ -129,10 +126,9 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                   </TableCell>
                   <TableCell>
                     <Badge variant={detail.priority === 'High' ? "destructive" : detail.priority === 'Medium' ? "warning" : "secondary"}>
-                      {detail.priority}
+                      {detail.priority === 'High' ? 'P1' : detail.priority === 'Medium' ? 'P2' : detail.priority === 'Low' ? 'P3' : 'P4'}
                     </Badge>
                   </TableCell>
-                  <TableCell>{detail.complexity}/5</TableCell>
                   <TableCell>{detail.createdDate}</TableCell>
                   <TableCell>{detail.closedDate}</TableCell>
                 </TableRow>
@@ -188,7 +184,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                   </TableCell>
                   <TableCell>
                     <Badge variant={detail.priority === 'High' ? "destructive" : detail.priority === 'Medium' ? "warning" : "secondary"}>
-                      {detail.priority}
+                      {detail.priority === 'High' ? 'P1' : detail.priority === 'Medium' ? 'P2' : detail.priority === 'Low' ? 'P3' : 'P4'}
                     </Badge>
                   </TableCell>
                   <TableCell>

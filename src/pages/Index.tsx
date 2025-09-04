@@ -6,6 +6,7 @@ import TeamPerformanceChart from '@/components/dashboard/TeamPerformanceChart';
 import SurveyAnalysisChart from '@/components/dashboard/SurveyAnalysisChart';
 import InsightsPanel from '@/components/dashboard/InsightsPanel';
 import DetailedStatsModal from '@/components/dashboard/DetailedStatsModal';
+import EntityManagementDialog from '@/components/dashboard/EntityManagementDialog';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,11 +35,32 @@ const Index = () => {
   const [modalType, setModalType] = useState<'team' | 'survey' | 'individual'>('team');
   const [modalTitle, setModalTitle] = useState('');
 
-  // Dynamic entity data
+  // Dynamic entity data with mapping
   const [entityData, setEntityData] = useState({
     dpe: ['Juan Dela Cruz', 'Maria Santos', 'Carlos Rodriguez', 'Ana Garcia', 'Miguel Torres', 'Sofia Lopez', 'Diego Martinez', 'Isabella Chen', 'Add New DPE...'],
     squad: ['Alpha Squad', 'Beta Squad', 'Gamma Squad', 'Delta Squad', 'Echo Squad', 'Add New Squad...'],
     team: ['Platform Engineering', 'DevOps Infrastructure', 'Cloud Operations', 'Security Engineering', 'Site Reliability', 'Add New Team...']
+  });
+
+  // Entity mapping relationships
+  const [entityMappings, setEntityMappings] = useState({
+    dpeToSquad: {
+      'Juan Dela Cruz': 'Alpha Squad',
+      'Maria Santos': 'Alpha Squad',
+      'Carlos Rodriguez': 'Beta Squad',
+      'Ana Garcia': 'Beta Squad',
+      'Miguel Torres': 'Gamma Squad',
+      'Sofia Lopez': 'Gamma Squad',
+      'Diego Martinez': 'Delta Squad',
+      'Isabella Chen': 'Delta Squad'
+    },
+    squadToTeam: {
+      'Alpha Squad': 'Platform Engineering',
+      'Beta Squad': 'Platform Engineering',
+      'Gamma Squad': 'DevOps Infrastructure',
+      'Delta Squad': 'Cloud Operations',
+      'Echo Squad': 'Security Engineering'
+    }
   });
 
   // Enhanced sample data with more realistic metrics
@@ -176,7 +198,7 @@ const Index = () => {
             caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
             title: `${['Server', 'Database', 'Network', 'Application', 'Security'][i % 5]} Issue`,
             sct: Math.floor(Math.random() * 30) + 5,
-            priority: ['High', 'Medium', 'Low'][i % 3],
+            priority: ['High', 'Medium', 'Low', 'Low'][i % 4],
             status: 'Closed',
             complexity: Math.floor(Math.random() * 5) + 1,
             createdDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString(),
@@ -187,7 +209,7 @@ const Index = () => {
             caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
             title: `Case ${i + 1}: ${['Configuration', 'Performance', 'Integration', 'Security', 'Deployment'][i % 5]} Request`,
             status: ['Closed', 'In Progress', 'Pending'][i % 3],
-            priority: ['High', 'Medium', 'Low'][i % 3],
+            priority: ['High', 'Medium', 'Low', 'Low'][i % 4],
             customerSat: Math.floor(Math.random() * 5) + 1,
             responseTime: `${Math.floor(Math.random() * 24) + 1}h`,
             createdDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString()
@@ -229,6 +251,10 @@ const Index = () => {
     }));
   };
 
+  const handleMappingsChange = (mappings: any) => {
+    setEntityMappings(mappings);
+  };
+
   // Dynamic data based on selected entity
   const getCurrentData = () => {
     if (selectedEntity === 'dpe') {
@@ -267,7 +293,15 @@ const Index = () => {
     <div className="min-h-screen p-6 space-y-8">
       {/* Header */}
       <div className="relative">
-        <div className="absolute top-0 right-0 z-10">
+        <div className="absolute top-0 right-0 z-10 flex gap-2">
+          <EntityManagementDialog
+            entityType={selectedEntity as 'dpe' | 'squad' | 'team'}
+            entities={entityData[selectedEntity as keyof typeof entityData] || []}
+            onEntitiesChange={(entities) => handleEntityDataChange(selectedEntity, entities)}
+            entityMappings={entityMappings}
+            onMappingsChange={handleMappingsChange}
+            allEntityData={entityData}
+          />
           <ThemeToggle />
         </div>
         <div className="text-center space-y-4 mb-8">
