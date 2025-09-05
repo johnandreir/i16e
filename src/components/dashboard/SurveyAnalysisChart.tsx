@@ -102,17 +102,20 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
-               <Legend 
+              <Legend 
                 verticalAlign="bottom" 
                 height={56}
                 wrapperStyle={{ paddingTop: '20px' }}
-                formatter={(value, entry: any) => (
-                  <span style={{ color: entry.color, fontSize: '12px' }}>
-                    {value === 'CSAT (4-5)' ? 'CSAT' : 
-                     value === 'Neutral (3)' ? 'Neutral' : 
-                     value === 'DSAT (1-2)' ? 'DSAT' : value}
-                  </span>
-                )}
+                formatter={(value, entry: any) => {
+                  const displayName = value === 'CSAT (4-5)' ? 'CSAT' : 
+                                    value === 'Neutral (3)' ? 'Neutral' : 
+                                    value === 'DSAT (1-2)' ? 'DSAT' : value;
+                  return (
+                    <span style={{ color: entry.color, fontSize: '12px', fontWeight: '500' }}>
+                      {displayName}
+                    </span>
+                  );
+                }}
               />
             </PieChart>
           </ResponsiveContainer>
