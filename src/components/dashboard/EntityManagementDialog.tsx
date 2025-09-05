@@ -44,7 +44,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     return entities.filter(e => !e.includes('Add New')).map((name, index) => ({
       id: `${entityType}-${index}`,
       name,
-      description: `${entityType} description for ${name}`,
       status: 'active' as const,
       mappedTo: entityType === 'dpe' ? entityMappings.dpeToSquad[name] : 
                 entityType === 'squad' ? entityMappings.squadToTeam[name] : undefined
@@ -75,10 +74,8 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
   const entityData = getCurrentEntityData();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
   const [editMapping, setEditMapping] = useState('');
   const [newName, setNewName] = useState('');
-  const [newDescription, setNewDescription] = useState('');
   const [newMapping, setNewMapping] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -117,7 +114,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     const newEntity: EntityData = {
       id: `${activeTab}-${Date.now()}`,
       name: newName.trim(),
-      description: newDescription.trim() || `${activeTab} description for ${newName}`,
       status: 'active',
       mappedTo: newMapping || undefined
     };
@@ -138,7 +134,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     }
     
     setNewName('');
-    setNewDescription('');
     setNewMapping('');
     setIsAdding(false);
     
@@ -153,7 +148,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     if (entity) {
       setEditingId(id);
       setEditName(entity.name);
-      setEditDescription(entity.description || '');
       setEditMapping(entity.mappedTo || '');
     }
   };
@@ -171,7 +165,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     const oldEntity = entityData.find(e => e.id === editingId);
     const updatedData = entityData.map(e => 
       e.id === editingId 
-        ? { ...e, name: editName.trim(), description: editDescription.trim() || e.description, mappedTo: editMapping || undefined }
+        ? { ...e, name: editName.trim(), mappedTo: editMapping || undefined }
         : e
     );
     
@@ -197,7 +191,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     
     setEditingId(null);
     setEditName('');
-    setEditDescription('');
     setEditMapping('');
     
     toast({
@@ -327,7 +320,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                   <Button onClick={() => {
                     setIsAdding(false);
                     setNewName('');
-                    setNewDescription('');
                     setNewMapping('');
                   }} variant="outline" size="sm">
                     <X className="h-4 w-4 mr-2" />
@@ -403,16 +395,15 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                             <Button onClick={handleSaveEdit} size="sm" variant="outline">
                               <Check className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              onClick={() => {
-                                setEditingId(null);
-                                setEditName('');
-                                setEditDescription('');
-                                setEditMapping('');
-                              }} 
-                              size="sm" 
-                              variant="outline"
-                            >
+                  <Button 
+                            onClick={() => {
+                              setEditingId(null);
+                              setEditName('');
+                              setEditMapping('');
+                            }} 
+                            size="sm" 
+                            variant="outline"
+                          >
                               <X className="h-4 w-4" />
                             </Button>
                           </>

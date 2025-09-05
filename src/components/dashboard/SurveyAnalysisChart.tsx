@@ -40,15 +40,9 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
 
   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, value, index }: any) => {
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
+    const radius = outerRadius + 30; // Move labels further out
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    // Adjust positioning to prevent overlaps
-    const offsetX = Math.cos(-midAngle * RADIAN) * 20;
-    const offsetY = Math.sin(-midAngle * RADIAN) * 20;
-    const labelX = x + offsetX;
-    const labelY = y + offsetY;
 
     // Only show labels for segments with meaningful percentages
     if (percent < 0.05) return null;
@@ -56,24 +50,24 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
     return (
       <g>
         <text
-          x={labelX}
-          y={labelY}
+          x={x}
+          y={y}
           fill="hsl(var(--foreground))"
-          textAnchor={labelX > cx ? 'start' : 'end'}
+          textAnchor={x > cx ? 'start' : 'end'}
           dominantBaseline="central"
-          fontSize={12}
+          fontSize={11}
           fontWeight="600"
           className="drop-shadow-sm"
         >
-          <tspan x={labelX} dy="-0.3em">{`${(percent * 100).toFixed(0)}%`}</tspan>
-          <tspan x={labelX} dy="1.2em">{`(${value})`}</tspan>
+          <tspan x={x} dy="-0.4em">{`${(percent * 100).toFixed(0)}%`}</tspan>
+          <tspan x={x} dy="1.2em">{`(${value})`}</tspan>
         </text>
         {/* Connection line */}
         <line
-          x1={x}
-          y1={y}
-          x2={labelX - (labelX > cx ? 5 : -5)}
-          y2={labelY}
+          x1={cx + (outerRadius + 5) * Math.cos(-midAngle * RADIAN)}
+          y1={cy + (outerRadius + 5) * Math.sin(-midAngle * RADIAN)}
+          x2={x - (x > cx ? 5 : -5)}
+          y2={y}
           stroke="hsl(var(--muted-foreground))"
           strokeWidth={1}
           opacity={0.6}

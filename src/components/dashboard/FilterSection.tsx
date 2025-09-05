@@ -60,17 +60,15 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             <label className="text-sm font-medium text-foreground">
               Select {selectedEntity.toUpperCase()}
             </label>
-            <div className="w-full">
-              <Combobox
-                options={getCurrentEntityOptions()}
-                value={selectedEntityValue}
-                onValueChange={onEntityValueChange}
-                placeholder={`Choose ${selectedEntity}`}
-                searchPlaceholder={`Search ${selectedEntity}s...`}
-                emptyText={`No ${selectedEntity} found.`}
-                className="bg-card border-border w-full"
-              />
-            </div>
+            <Combobox
+              options={getCurrentEntityOptions()}
+              value={selectedEntityValue}
+              onValueChange={onEntityValueChange}
+              placeholder={`Choose ${selectedEntity}`}
+              searchPlaceholder={`Search ${selectedEntity}s...`}
+              emptyText={`No ${selectedEntity} found.`}
+              className="bg-card border-border w-full h-10"
+            />
           </div>
 
           {/* Date Range Selection */}
