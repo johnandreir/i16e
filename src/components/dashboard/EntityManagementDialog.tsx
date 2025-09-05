@@ -291,7 +291,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                 Add New {activeTab.toUpperCase()}
               </Button>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="newName">Name *</Label>
                   <Input
@@ -299,16 +299,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder={`Enter ${activeTab} name`}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="newDescription">Description</Label>
-                  <Input
-                    id="newDescription"
-                    value={newDescription}
-                    onChange={(e) => setNewDescription(e.target.value)}
-                    placeholder="Optional description"
                     className="mt-1"
                   />
                 </div>
@@ -329,7 +319,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                     </Select>
                   </div>
                 )}
-                <div className="flex gap-2 md:col-span-3">
+                <div className="flex gap-2 md:col-span-2">
                   <Button onClick={handleAdd} size="sm">
                     <Check className="h-4 w-4 mr-2" />
                     Add
@@ -355,7 +345,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
                   {targetEntityLabel && <TableHead>Mapped to {targetEntityLabel}</TableHead>}
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -373,17 +362,6 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                         />
                       ) : (
                         <span className="font-medium">{entity.name}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === entity.id ? (
-                        <Input
-                          value={editDescription}
-                          onChange={(e) => setEditDescription(e.target.value)}
-                          className="min-w-[200px]"
-                        />
-                      ) : (
-                        <span className="text-muted-foreground">{entity.description}</span>
                       )}
                     </TableCell>
                     {targetEntityLabel && (

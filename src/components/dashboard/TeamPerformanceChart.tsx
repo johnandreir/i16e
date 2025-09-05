@@ -28,9 +28,6 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
             <p className="text-sm">
               <span className="text-chart-secondary">Cases Close:</span> {payload[1]?.value}
             </p>
-            <p className="text-sm">
-              <span className="text-chart-tertiary">CSAT:</span> {payload[2]?.value}%
-            </p>
           </div>
         </div>
       );
@@ -38,7 +35,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
     return null;
   };
 
-  const handleBarClick = (data: any, index: number) => {
+  const handleBarClick = (data: any, barIndex: number) => {
     if (data && data.activePayload && data.activePayload.length > 0) {
       const memberData = data.activePayload[0].payload;
       const dataKey = data.activePayload[0].dataKey as 'sct' | 'cases' | 'satisfaction';
@@ -52,7 +49,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
     <Card className="chart-container">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
-        <p className="text-sm text-muted-foreground">Click SCT or Cases Close bars for detailed breakdown</p>
+        <p className="text-sm text-muted-foreground">Click individual SCT or Cases Close bars for detailed breakdown</p>
       </CardHeader>
       <CardContent>
         <div className="h-80">
@@ -60,7 +57,6 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
             <BarChart 
               data={data} 
               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              onClick={handleBarClick}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
@@ -80,20 +76,15 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 fill="hsl(var(--chart-primary))" 
                 radius={[4, 4, 0, 0]}
                 cursor="pointer"
+                onClick={handleBarClick}
               />
-                <Bar 
-                  dataKey="cases" 
-                  name="Cases Close"
-                  fill="hsl(var(--chart-secondary))" 
-                  radius={[4, 4, 0, 0]}
-                  cursor="pointer"
-                />
               <Bar 
-                dataKey="satisfaction" 
-                name="CSAT (%)"
-                fill="hsl(var(--chart-quaternary))" 
+                dataKey="cases" 
+                name="Cases Close"
+                fill="hsl(var(--chart-secondary))" 
                 radius={[4, 4, 0, 0]}
                 cursor="pointer"
+                onClick={handleBarClick}
               />
             </BarChart>
           </ResponsiveContainer>
