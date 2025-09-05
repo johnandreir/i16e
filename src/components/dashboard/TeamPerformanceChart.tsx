@@ -26,7 +26,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
               <span className="text-chart-primary">SCT:</span> {payload[0]?.value} days
             </p>
             <p className="text-sm">
-              <span className="text-chart-secondary">Cases:</span> {payload[1]?.value}
+              <span className="text-chart-secondary">Cases Close:</span> {payload[1]?.value}
             </p>
             <p className="text-sm">
               <span className="text-chart-tertiary">CSAT:</span> {payload[2]?.value}%
@@ -42,7 +42,9 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
     if (data && data.activePayload && data.activePayload.length > 0) {
       const memberData = data.activePayload[0].payload;
       const dataKey = data.activePayload[0].dataKey as 'sct' | 'cases' | 'satisfaction';
-      onBarClick?.(memberData, dataKey);
+      if (dataKey === 'sct' || dataKey === 'cases') {
+        onBarClick?.(memberData, dataKey);
+      }
     }
   };
 
@@ -50,7 +52,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
     <Card className="chart-container">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
-        <p className="text-sm text-muted-foreground">Click individual bars for detailed breakdown</p>
+        <p className="text-sm text-muted-foreground">Click SCT or Cases Close bars for detailed breakdown</p>
       </CardHeader>
       <CardContent>
         <div className="h-80">
@@ -79,13 +81,13 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 radius={[4, 4, 0, 0]}
                 cursor="pointer"
               />
-              <Bar 
-                dataKey="cases" 
-                name="Cases Handled"
-                fill="hsl(var(--chart-secondary))" 
-                radius={[4, 4, 0, 0]}
-                cursor="pointer"
-              />
+                <Bar 
+                  dataKey="cases" 
+                  name="Cases Close"
+                  fill="hsl(var(--chart-secondary))" 
+                  radius={[4, 4, 0, 0]}
+                  cursor="pointer"
+                />
               <Bar 
                 dataKey="satisfaction" 
                 name="CSAT (%)"

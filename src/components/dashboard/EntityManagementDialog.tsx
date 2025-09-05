@@ -23,34 +23,56 @@ interface EntityMappings {
 }
 
 interface EntityManagementDialogProps {
-  entityType: 'dpe' | 'squad' | 'team';
-  entities: string[];
-  onEntitiesChange: (entities: string[]) => void;
-  entityMappings: EntityMappings;
-  onMappingsChange: (mappings: EntityMappings) => void;
   allEntityData: Record<string, string[]>;
+  entityMappings: EntityMappings;
+  onEntityDataChange: (entityType: string, data: string[]) => void;
+  onMappingsChange: (mappings: EntityMappings) => void;
 }
 
 const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
-  entityType,
-  entities,
-  onEntitiesChange,
+  allEntityData,
   entityMappings,
-  onMappingsChange,
-  allEntityData
+  onEntityDataChange,
+  onMappingsChange
 }) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [entityData, setEntityData] = useState<EntityData[]>(() =>
-    entities.filter(e => !e.includes('Add New')).map((name, index) => ({
+  const [activeTab, setActiveTab] = useState<'dpe' | 'squad' | 'team'>('dpe');
+  
+  const initializeEntityData = (entityType: 'dpe' | 'squad' | 'team') => {
+    const entities = allEntityData[entityType] || [];
+    return entities.filter(e => !e.includes('Add New')).map((name, index) => ({
       id: `${entityType}-${index}`,
       name,
       description: `${entityType} description for ${name}`,
       status: 'active' as const,
       mappedTo: entityType === 'dpe' ? entityMappings.dpeToSquad[name] : 
                 entityType === 'squad' ? entityMappings.squadToTeam[name] : undefined
-    }))
-  );
+    }));
+  };
+  
+  const [dpeData, setDpeData] = useState<EntityData[]>(() => initializeEntityData('dpe'));
+  const [squadData, setSquadData] = useState<EntityData[]>(() => initializeEntityData('squad'));
+  const [teamData, setTeamData] = useState<EntityData[]>(() => initializeEntityData('team'));
+  
+  const getCurrentEntityData = () => {
+    switch (activeTab) {
+      case 'dpe': return dpeData;
+      case 'squad': return squadData;
+      case 'team': return teamData;
+      default: return [];
+    }
+  };
+  
+  const setCurrentEntityData = (data: EntityData[]) => {
+    switch (activeTab) {
+      case 'dpe': setDpeData(data); break;
+      case 'squad': setSquadData(data); break;
+      case 'team': setTeamData(data); break;
+    }
+  };
+  
+  const entityData = getCurrentEntityData();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -68,17 +90,17 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
   };
 
   const getTargetEntityOptions = () => {
-    if (entityType === 'dpe') {
+    if (activeTab === 'dpe') {
       return allEntityData.squad?.filter(s => !s.includes('Add New')) || [];
-    } else if (entityType === 'squad') {
+    } else if (activeTab === 'squad') {
       return allEntityData.team?.filter(t => !t.includes('Add New')) || [];
     }
     return [];
   };
 
   const getTargetEntityLabel = () => {
-    if (entityType === 'dpe') return 'Squad';
-    if (entityType === 'squad') return 'Team';
+    if (activeTab === 'dpe') return 'Squad';
+    if (activeTab === 'squad') return 'Team';
     return '';
   };
 
@@ -93,23 +115,23 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     }
 
     const newEntity: EntityData = {
-      id: `${entityType}-${Date.now()}`,
+      id: `${activeTab}-${Date.now()}`,
       name: newName.trim(),
-      description: newDescription.trim() || `${entityType} description for ${newName}`,
+      description: newDescription.trim() || `${activeTab} description for ${newName}`,
       status: 'active',
       mappedTo: newMapping || undefined
     };
 
     const updatedData = [...entityData, newEntity];
-    setEntityData(updatedData);
-    onEntitiesChange([...updatedData.map(e => e.name), `Add New ${entityType.toUpperCase()}...`]);
+    setCurrentEntityData(updatedData);
+    onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
     
     // Update mappings
     if (newMapping) {
       const updatedMappings = { ...entityMappings };
-      if (entityType === 'dpe') {
+      if (activeTab === 'dpe') {
         updatedMappings.dpeToSquad[newName.trim()] = newMapping;
-      } else if (entityType === 'squad') {
+      } else if (activeTab === 'squad') {
         updatedMappings.squadToTeam[newName.trim()] = newMapping;
       }
       onMappingsChange(updatedMappings);
@@ -122,7 +144,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     
     toast({
       title: "Success",
-      description: `${entityType.toUpperCase()} "${newName}" added successfully.`,
+      description: `${activeTab.toUpperCase()} "${newName}" added successfully.`,
     });
   };
 
@@ -153,18 +175,18 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
         : e
     );
     
-    setEntityData(updatedData);
-    onEntitiesChange([...updatedData.map(e => e.name), `Add New ${entityType.toUpperCase()}...`]);
+    setCurrentEntityData(updatedData);
+    onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
     
     // Update mappings
     if (oldEntity) {
       const updatedMappings = { ...entityMappings };
-      if (entityType === 'dpe') {
+      if (activeTab === 'dpe') {
         delete updatedMappings.dpeToSquad[oldEntity.name];
         if (editMapping) {
           updatedMappings.dpeToSquad[editName.trim()] = editMapping;
         }
-      } else if (entityType === 'squad') {
+      } else if (activeTab === 'squad') {
         delete updatedMappings.squadToTeam[oldEntity.name];
         if (editMapping) {
           updatedMappings.squadToTeam[editName.trim()] = editMapping;
@@ -180,22 +202,22 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     
     toast({
       title: "Success",
-      description: `${entityType.toUpperCase()} updated successfully.`,
+      description: `${activeTab.toUpperCase()} updated successfully.`,
     });
   };
 
   const handleDelete = (id: string) => {
     const entityToDelete = entityData.find(e => e.id === id);
     const updatedData = entityData.filter(e => e.id !== id);
-    setEntityData(updatedData);
-    onEntitiesChange([...updatedData.map(e => e.name), `Add New ${entityType.toUpperCase()}...`]);
+    setCurrentEntityData(updatedData);
+    onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
     
     // Remove from mappings
     if (entityToDelete) {
       const updatedMappings = { ...entityMappings };
-      if (entityType === 'dpe') {
+      if (activeTab === 'dpe') {
         delete updatedMappings.dpeToSquad[entityToDelete.name];
-      } else if (entityType === 'squad') {
+      } else if (activeTab === 'squad') {
         delete updatedMappings.squadToTeam[entityToDelete.name];
       }
       onMappingsChange(updatedMappings);
@@ -203,7 +225,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     
     toast({
       title: "Success",
-      description: `${entityType.toUpperCase()} deleted successfully.`,
+      description: `${activeTab.toUpperCase()} deleted successfully.`,
     });
   };
 
@@ -214,12 +236,12 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
         : e
     );
     
-    setEntityData(updatedData);
-    onEntitiesChange([...updatedData.filter(e => e.status === 'active').map(e => e.name), `Add New ${entityType.toUpperCase()}...`]);
+    setCurrentEntityData(updatedData);
+    onEntityDataChange(activeTab, [...updatedData.filter(e => e.status === 'active').map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
   };
 
   const getEntityLabel = () => {
-    switch (entityType) {
+    switch (activeTab) {
       case 'dpe': return 'DevOps Platform Engineers';
       case 'squad': return 'Squads';
       case 'team': return 'Teams';
@@ -239,17 +261,34 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
       </DialogTrigger>
       <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Manage {getEntityLabel()}</DialogTitle>
+          <DialogTitle>Entity Management</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
+          {/* Tab Navigation */}
+          <div className="flex space-x-4 border-b">
+            {(['dpe', 'squad', 'team'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 font-medium text-sm transition-colors ${
+                  activeTab === tab
+                    ? 'border-b-2 border-primary text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab === 'dpe' ? 'DPE Management' : tab === 'squad' ? 'Squad Management' : 'Team Management'}
+              </button>
+            ))}
+          </div>
+
           {/* Add New Entity */}
           <div className="border rounded-lg p-4">
-            <h3 className="font-semibold mb-4">Add New {entityType.toUpperCase()}</h3>
+            <h3 className="font-semibold mb-4">Add New {activeTab.toUpperCase()}</h3>
             {!isAdding ? (
               <Button onClick={() => setIsAdding(true)} variant="outline">
                 <Plus className="h-4 w-4 mr-2" />
-                Add New {entityType.toUpperCase()}
+                Add New {activeTab.toUpperCase()}
               </Button>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -259,7 +298,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                     id="newName"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder={`Enter ${entityType} name`}
+                    placeholder={`Enter ${activeTab} name`}
                     className="mt-1"
                   />
                 </div>

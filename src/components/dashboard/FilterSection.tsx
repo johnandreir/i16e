@@ -4,7 +4,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import DateRangePicker from './DateRangePicker';
-import EntityManagementDialog from './EntityManagementDialog';
 import { Filter, RefreshCcw } from 'lucide-react';
 
 interface FilterSectionProps {
@@ -16,7 +15,6 @@ interface FilterSectionProps {
   onTimeRangeChange: (range: { from: Date | undefined; to: Date | undefined }) => void;
   onGenerateReport: () => void;
   entityData: Record<string, string[]>;
-  onEntityDataChange: (entityType: string, data: string[]) => void;
   isLoading?: boolean;
 }
 
@@ -30,7 +28,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   onTimeRangeChange,
   onGenerateReport,
   entityData,
-  onEntityDataChange,
   isLoading = false
 }) => {
   const getCurrentEntityOptions = () => {
@@ -41,7 +38,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   };
   return (
     <Card className="glass-card p-6 mb-8">
-      <div className="flex flex-col lg:flex-row gap-6 items-end">
+      <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-end">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Entity Type Selection */}
           <div className="space-y-2">
@@ -86,11 +83,11 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </div>
 
         {/* Generate Report Button */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-end lg:self-end">
           <Button
             onClick={onGenerateReport}
             disabled={isLoading || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to}
-            className="min-w-[140px]"
+            className="min-w-[140px] h-10"
           >
             {isLoading ? (
               <RefreshCcw className="mr-2 h-4 w-4 animate-spin" />

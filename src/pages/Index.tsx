@@ -198,9 +198,8 @@ const Index = () => {
             caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
             title: `${['Server', 'Database', 'Network', 'Application', 'Security'][i % 5]} Issue`,
             sct: Math.floor(Math.random() * 30) + 5,
-            priority: ['P1', 'P2', 'P3', 'P3'][i % 4],
+            priority: ['P1', 'P2', 'P3', 'P4'][i % 4],
             status: 'Closed',
-            complexity: Math.floor(Math.random() * 5) + 1,
             createdDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString(),
             closedDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString()
           }));
@@ -209,7 +208,7 @@ const Index = () => {
             caseId: `CASE-${2024}${String(i + 1).padStart(3, '0')}`,
             title: `Case ${i + 1}: ${['Configuration', 'Performance', 'Integration', 'Security', 'Deployment'][i % 5]} Request`,
             status: ['Closed', 'In Progress', 'Pending'][i % 3],
-            priority: ['P1', 'P2', 'P3', 'P3'][i % 4],
+            priority: ['P1', 'P2', 'P3', 'P4'][i % 4],
             customerSat: Math.floor(Math.random() * 5) + 1,
             responseTime: `${Math.floor(Math.random() * 24) + 1}h`,
             createdDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString()
@@ -257,6 +256,10 @@ const Index = () => {
 
   // Dynamic data based on selected entity
   const getCurrentData = () => {
+    if (!reportGenerated || !selectedEntityValue) {
+      return null;
+    }
+    
     if (selectedEntity === 'dpe') {
       return {
         sct: individualDPEData.sct,
@@ -275,6 +278,71 @@ const Index = () => {
   };
 
   const currentData = getCurrentData();
+
+  // Get performance breakdown data based on entity type
+  const getPerformanceData = () => {
+    if (!reportGenerated || !selectedEntityValue) {
+      return [];
+    }
+
+    if (selectedEntity === 'dpe') {
+      // Show only selected DPE data
+      return sampleTeamData.filter(member => member.name === selectedEntityValue);
+    } else if (selectedEntity === 'squad') {
+      // Show squad members for selected squad
+      const squadMembers = Object.entries(entityMappings.dpeToSquad)
+        .filter(([_, squad]) => squad === selectedEntityValue)
+        .map(([dpe, _]) => dpe);
+      return sampleTeamData.filter(member => squadMembers.includes(member.name));
+    } else if (selectedEntity === 'team') {
+      // Show squads in selected team
+      const teamSquads = Object.entries(entityMappings.squadToTeam)
+        .filter(([_, team]) => team === selectedEntityValue)
+        .map(([squad, _]) => squad);
+      
+      // Calculate squad averages
+      return teamSquads.map(squad => {
+        const squadMembers = Object.entries(entityMappings.dpeToSquad)
+          .filter(([_, squadName]) => squadName === squad)
+          .map(([dpe, _]) => dpe);
+        
+        const squadData = sampleTeamData.filter(member => squadMembers.includes(member.name));
+        if (squadData.length === 0) return { name: squad, sct: 0, cases: 0, satisfaction: 0 };
+        
+        return {
+          name: squad,
+          sct: Math.round(squadData.reduce((sum, m) => sum + m.sct, 0) / squadData.length),
+          cases: squadData.reduce((sum, m) => sum + m.cases, 0),
+          satisfaction: Math.round(squadData.reduce((sum, m) => sum + m.satisfaction, 0) / squadData.length)
+        };
+      });
+    }
+    
+    return sampleTeamData;
+  };
+
+  // Get survey data based on entity type
+  const getSurveyData = () => {
+    if (!reportGenerated || !selectedEntityValue) {
+      return sampleSurveyData;
+    }
+
+    const performanceData = getPerformanceData();
+    const totalSurveys = performanceData.reduce((sum, member) => sum + (member.cases || 0), 0);
+    const avgSatisfaction = performanceData.length > 0 
+      ? performanceData.reduce((sum, member) => sum + (member.satisfaction || 0), 0) / performanceData.length 
+      : 85;
+
+    const csatCount = Math.floor(totalSurveys * (avgSatisfaction / 100));
+    const neutralCount = Math.floor(totalSurveys * 0.16);
+    const dsatCount = totalSurveys - csatCount - neutralCount;
+
+    return [
+      { name: 'CSAT (4-5)', value: csatCount, percentage: Math.round((csatCount / totalSurveys) * 100), color: 'hsl(var(--kpi-success))' },
+      { name: 'Neutral (3)', value: neutralCount, percentage: Math.round((neutralCount / totalSurveys) * 100), color: 'hsl(var(--kpi-warning))' },
+      { name: 'DSAT (1-2)', value: dsatCount, percentage: Math.round((dsatCount / totalSurveys) * 100), color: 'hsl(var(--kpi-danger))' },
+    ];
+  };
 
   const getEntityTitle = () => {
     switch (selectedEntity) {
@@ -295,12 +363,10 @@ const Index = () => {
       <div className="relative">
         <div className="absolute top-0 right-0 z-10 flex gap-2">
           <EntityManagementDialog
-            entityType={selectedEntity as 'dpe' | 'squad' | 'team'}
-            entities={entityData[selectedEntity as keyof typeof entityData] || []}
-            onEntitiesChange={(entities) => handleEntityDataChange(selectedEntity, entities)}
-            entityMappings={entityMappings}
-            onMappingsChange={handleMappingsChange}
             allEntityData={entityData}
+            entityMappings={entityMappings}
+            onEntityDataChange={handleEntityDataChange}
+            onMappingsChange={handleMappingsChange}
           />
           <ThemeToggle />
         </div>
@@ -324,7 +390,6 @@ const Index = () => {
         onTimeRangeChange={setSelectedTimeRange}
         onGenerateReport={handleGenerateReport}
         entityData={entityData}
-        onEntityDataChange={handleEntityDataChange}
         isLoading={isLoading}
       />
 
@@ -332,55 +397,76 @@ const Index = () => {
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <KPICard
-              title="Solution Cycle Time"
-              value={currentData.sct}
-              unit=" days"
-              target={15}
-              description="Average time to resolve cases"
-              variant="success"
-              icon={<Clock className="h-5 w-5" />}
-            />
-            <KPICard
-              title="Cases Close"
-              value={currentData.cases}
-              description="Total cases this period"
-              variant="default"
-              icon={<BarChart3 className="h-5 w-5" />}
-            />
-            <KPICard
-              title="Customer Satisfaction"
-              value={currentData.satisfaction}
-              unit="%"
-              target={85}
-              description="CSAT rating 4-5 stars"
-              variant="success"
-              icon={<ThumbsUp className="h-5 w-5" />}
-            />
-            <KPICard
-              title="Dissatisfaction Rate"
-              value={6}
-              unit="%"
-              target={5}
-              description="DSAT rating 1-2 stars"
-              variant="warning"
-              icon={<AlertCircle className="h-5 w-5" />}
-            />
+            {currentData ? (
+              <>
+                <KPICard
+                  title="Solution Cycle Time"
+                  value={currentData.sct}
+                  unit=" days"
+                  target={15}
+                  description="Average time to resolve cases"
+                  variant="success"
+                  icon={<Clock className="h-5 w-5" />}
+                />
+                <KPICard
+                  title="Cases Close"
+                  value={currentData.cases}
+                  description="Total cases this period"
+                  variant="default"
+                  icon={<BarChart3 className="h-5 w-5" />}
+                />
+                <KPICard
+                  title="Customer Satisfaction"
+                  value={currentData.satisfaction}
+                  unit="%"
+                  target={85}
+                  description="CSAT rating 4-5 stars"
+                  variant="success"
+                  icon={<ThumbsUp className="h-5 w-5" />}
+                />
+                <KPICard
+                  title="Dissatisfaction Rate"
+                  value={6}
+                  unit="%"
+                  target={5}
+                  description="DSAT rating 1-2 stars"
+                  variant="warning"
+                  icon={<AlertCircle className="h-5 w-5" />}
+                />
+              </>
+            ) : (
+              <div className="col-span-4 text-center py-8">
+                <p className="text-muted-foreground">No available data</p>
+              </div>
+            )}
           </div>
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TeamPerformanceChart
-              data={sampleTeamData}
-              title={getEntityTitle()}
-              onBarClick={handleIndividualBarClick}
-            />
-            <SurveyAnalysisChart
-              data={sampleSurveyData}
-              title="Customer Satisfaction Distribution"
-              totalSurveys={currentData.totalSurveys}
-              onPieClick={(data) => handleChartClick(data, 'survey', 'Customer Satisfaction')}
-            />
+            {getPerformanceData().length > 0 ? (
+              <TeamPerformanceChart
+                data={getPerformanceData()}
+                title={getEntityTitle()}
+                onBarClick={handleIndividualBarClick}
+              />
+            ) : (
+              <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
+                <p className="text-muted-foreground">No available data</p>
+              </div>
+            )}
+            
+            {currentData ? (
+              <SurveyAnalysisChart
+                data={getSurveyData()}
+                title="Customer Satisfaction Distribution"
+                totalSurveys={currentData.totalSurveys}
+                onPieClick={(data) => handleChartClick(data, 'survey', 'Customer Satisfaction')}
+              />
+            ) : (
+              <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
+                <p className="text-muted-foreground">No available data</p>
+              </div>
+            )}
           </div>
 
           {/* Insights Panel */}
