@@ -35,15 +35,15 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
     return null;
   };
 
-  const handleSCTBarClick = (data: any) => {
-    if (data && data.payload) {
-      onBarClick?.(data.payload, 'sct');
+  const handleSCTBarClick = (data: any, index: number) => {
+    if (data && onBarClick) {
+      onBarClick(data, 'sct');
     }
   };
 
-  const handleCasesBarClick = (data: any) => {
-    if (data && data.payload) {
-      onBarClick?.(data.payload, 'cases');
+  const handleCasesBarClick = (data: any, index: number) => {
+    if (data && onBarClick) {
+      onBarClick(data, 'cases');
     }
   };
 
@@ -71,13 +71,13 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-               <Bar 
+              <Bar 
                 dataKey="sct" 
                 name="Solution Cycle Time (Days)"
                 fill="hsl(var(--chart-primary))" 
                 radius={[4, 4, 0, 0]}
                 cursor="pointer"
-                onClick={handleSCTBarClick}
+                onClick={(data, index) => handleSCTBarClick(data, index)}
               />
               <Bar 
                 dataKey="cases" 
@@ -85,7 +85,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 fill="hsl(var(--chart-secondary))" 
                 radius={[4, 4, 0, 0]}
                 cursor="pointer"
-                onClick={handleCasesBarClick}
+                onClick={(data, index) => handleCasesBarClick(data, index)}
               />
             </BarChart>
           </ResponsiveContainer>
