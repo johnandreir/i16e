@@ -9,6 +9,8 @@ import DetailedStatsModal from '@/components/dashboard/DetailedStatsModal';
 import EntityManagementDialog from '@/components/dashboard/EntityManagementDialog';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { useToast } from '@/hooks/use-toast';
+import i16eLogoLight from '@/assets/i16e-logo-light.png';
+import i16eLogoDark from '@/assets/i16e-logo-dark.png';
 
 interface TeamMember {
   name: string;
@@ -371,12 +373,18 @@ const Index = () => {
           <ThemeToggle />
         </div>
         <div className="text-center space-y-4 mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-            DevOps KPI Insight Engine
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            AI-Powered Performance Analytics for DevOps Platform Engineers, Squads, and Teams
-          </p>
+          <div className="flex justify-center">
+            <img 
+              src={i16eLogoLight} 
+              alt="i16E IntelliPerformance" 
+              className="h-32 w-auto block dark:hidden"
+            />
+            <img 
+              src={i16eLogoDark} 
+              alt="i16E IntelliPerformance" 
+              className="h-32 w-auto hidden dark:block"
+            />
+          </div>
         </div>
       </div>
 
