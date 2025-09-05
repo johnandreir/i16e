@@ -63,7 +63,7 @@ const Index = () => {
     }
   });
 
-  // Enhanced sample data with more realistic metrics
+  // Enhanced sample data with more realistic metrics (no negative values)
   const sampleTeamData = [
     { name: 'Juan Dela Cruz', sct: 16, cases: 45, satisfaction: 87 },
     { name: 'Maria Santos', sct: 12, cases: 52, satisfaction: 92 },
@@ -443,7 +443,14 @@ const Index = () => {
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {getPerformanceData().length > 0 ? (
+            {!selectedEntityValue || !reportGenerated ? (
+              <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">{getEntityTitle()}</h3>
+                  <p className="text-muted-foreground">No available data</p>
+                </div>
+              </div>
+            ) : getPerformanceData().length > 0 ? (
               <TeamPerformanceChart
                 data={getPerformanceData()}
                 title={getEntityTitle()}
@@ -451,11 +458,21 @@ const Index = () => {
               />
             ) : (
               <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
-                <p className="text-muted-foreground">No available data</p>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">{getEntityTitle()}</h3>
+                  <p className="text-muted-foreground">No available data</p>
+                </div>
               </div>
             )}
             
-            {currentData ? (
+            {!selectedEntityValue || !reportGenerated ? (
+              <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Customer Satisfaction Distribution</h3>
+                  <p className="text-muted-foreground">No available data</p>
+                </div>
+              </div>
+            ) : currentData ? (
               <SurveyAnalysisChart
                 data={getSurveyData()}
                 title="Customer Satisfaction Distribution"
@@ -464,7 +481,10 @@ const Index = () => {
               />
             ) : (
               <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
-                <p className="text-muted-foreground">No available data</p>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Customer Satisfaction Distribution</h3>
+                  <p className="text-muted-foreground">No available data</p>
+                </div>
               </div>
             )}
           </div>

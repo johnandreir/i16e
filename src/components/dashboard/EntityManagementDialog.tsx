@@ -253,7 +253,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <DialogTitle>Entity Management</DialogTitle>
         </DialogHeader>
         
@@ -337,7 +337,13 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  {targetEntityLabel && <TableHead>Mapped to {targetEntityLabel}</TableHead>}
+                  {activeTab === 'dpe' && (
+                    <>
+                      <TableHead>Squad</TableHead>
+                      <TableHead>Team</TableHead>
+                    </>
+                  )}
+                  {activeTab === 'squad' && <TableHead>Team</TableHead>}
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -356,29 +362,27 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                         <span className="font-medium">{entity.name}</span>
                       )}
                     </TableCell>
-                    {targetEntityLabel && (
-                      <TableCell>
-                        {editingId === entity.id ? (
-                          <Select value={editMapping} onValueChange={setEditMapping}>
-                            <SelectTrigger className="min-w-[150px]">
-                              <SelectValue placeholder={`Select ${targetEntityLabel}`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="">None</SelectItem>
-                              {targetEntityOptions.map((option) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge variant="outline">
-                            {entity.mappedTo || 'Not mapped'}
-                          </Badge>
-                        )}
-                      </TableCell>
-                    )}
+                     {activeTab === 'dpe' && (
+                       <>
+                         <TableCell>
+                           <Badge variant="outline">
+                             {entity.mappedTo || 'Not mapped'}
+                           </Badge>
+                         </TableCell>
+                         <TableCell>
+                           <Badge variant="outline">
+                             {entity.mappedTo ? entityMappings.squadToTeam[entity.mappedTo] || 'Not mapped' : 'Not mapped'}
+                           </Badge>
+                         </TableCell>
+                       </>
+                     )}
+                     {activeTab === 'squad' && (
+                       <TableCell>
+                         <Badge variant="outline">
+                           {entity.mappedTo || 'Not mapped'}
+                         </Badge>
+                       </TableCell>
+                     )}
                     <TableCell>
                       <Badge 
                         variant={entity.status === 'active' ? 'success' : 'secondary'}

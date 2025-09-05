@@ -35,13 +35,15 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
     return null;
   };
 
-  const handleBarClick = (data: any, barIndex: number) => {
-    if (data && data.activePayload && data.activePayload.length > 0) {
-      const memberData = data.activePayload[0].payload;
-      const dataKey = data.activePayload[0].dataKey as 'sct' | 'cases' | 'satisfaction';
-      if (dataKey === 'sct' || dataKey === 'cases') {
-        onBarClick?.(memberData, dataKey);
-      }
+  const handleSCTBarClick = (data: any) => {
+    if (data && data.payload) {
+      onBarClick?.(data.payload, 'sct');
+    }
+  };
+
+  const handleCasesBarClick = (data: any) => {
+    if (data && data.payload) {
+      onBarClick?.(data.payload, 'cases');
     }
   };
 
@@ -49,7 +51,6 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
     <Card className="chart-container">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
-        <p className="text-sm text-muted-foreground">Click individual SCT or Cases Close bars for detailed breakdown</p>
       </CardHeader>
       <CardContent>
         <div className="h-80">
@@ -70,13 +71,13 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Bar 
+               <Bar 
                 dataKey="sct" 
                 name="Solution Cycle Time (Days)"
                 fill="hsl(var(--chart-primary))" 
                 radius={[4, 4, 0, 0]}
                 cursor="pointer"
-                onClick={handleBarClick}
+                onClick={handleSCTBarClick}
               />
               <Bar 
                 dataKey="cases" 
@@ -84,7 +85,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 fill="hsl(var(--chart-secondary))" 
                 radius={[4, 4, 0, 0]}
                 cursor="pointer"
-                onClick={handleBarClick}
+                onClick={handleCasesBarClick}
               />
             </BarChart>
           </ResponsiveContainer>

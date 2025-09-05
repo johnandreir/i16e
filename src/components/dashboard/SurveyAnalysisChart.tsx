@@ -80,10 +80,7 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
     <Card className="chart-container cursor-pointer" onClick={() => onPieClick?.(data)}>
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-muted-foreground">Total Surveys: {totalSurveys}</p>
-          <p className="text-sm text-muted-foreground">Click to view detailed breakdown</p>
-        </div>
+        <p className="text-sm text-muted-foreground">Total Surveys: {totalSurveys}</p>
       </CardHeader>
       <CardContent>
         <div className="h-80">
@@ -105,11 +102,16 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
-              <Legend 
+               <Legend 
                 verticalAlign="bottom" 
-                height={36}
+                height={56}
+                wrapperStyle={{ paddingTop: '20px' }}
                 formatter={(value, entry: any) => (
-                  <span style={{ color: entry.color }}>{value}</span>
+                  <span style={{ color: entry.color, fontSize: '12px' }}>
+                    {value === 'CSAT (4-5)' ? 'CSAT' : 
+                     value === 'Neutral (3)' ? 'Neutral' : 
+                     value === 'DSAT (1-2)' ? 'DSAT' : value}
+                  </span>
                 )}
               />
             </PieChart>
