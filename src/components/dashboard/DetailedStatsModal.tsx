@@ -321,12 +321,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-bold">{title} - Detailed Analysis</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-bold">{title} - Detailed Analysis</DialogTitle>
         </DialogHeader>
         
         <div className="mt-6">
