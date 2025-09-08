@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Users, ThumbsUp, AlertCircle, BarChart3, TrendingUp, Settings } from 'lucide-react';
+import { Clock, Users, ThumbsUp, ThumbsDown, BarChart3, TrendingUp, Settings } from 'lucide-react';
 import FilterSection from '@/components/dashboard/FilterSection';
 import KPICard from '@/components/dashboard/KPICard';
 import TeamPerformanceChart from '@/components/dashboard/TeamPerformanceChart';
@@ -21,8 +21,8 @@ interface TeamMember {
 
 const Index = () => {
   const { toast } = useToast();
-  const [selectedEntity, setSelectedEntity] = useState('squad'); // Changed to squad to show team chart
-  const [selectedEntityValue, setSelectedEntityValue] = useState('Alpha Squad'); // Pre-selected
+  const [selectedEntity, setSelectedEntity] = useState('');
+  const [selectedEntityValue, setSelectedEntityValue] = useState('');
   const [selectedTimeRange, setSelectedTimeRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -31,7 +31,7 @@ const Index = () => {
     to: new Date(2024, 7, 31),  // Aug 31, 2024
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [reportGenerated, setReportGenerated] = useState(true); // Set to true to show sample data
+  const [reportGenerated, setReportGenerated] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<any>(null);
   const [modalType, setModalType] = useState<'team' | 'survey' | 'individual'>('team');
@@ -401,110 +401,128 @@ const Index = () => {
         isLoading={isLoading}
       />
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {reportGenerated && currentData ? (
+          <>
+            <KPICard
+              title="Solution Cycle Time"
+              value={currentData.sct}
+              unit=" days"
+              target={15}
+              description="Average time to resolve cases"
+              variant="success"
+              icon={<Clock className="h-5 w-5" />}
+            />
+            <KPICard
+              title="Cases Close"
+              value={currentData.cases}
+              description="Total cases this period"
+              variant="default"
+              icon={<BarChart3 className="h-5 w-5" />}
+            />
+            <KPICard
+              title="Customer Satisfaction"
+              value={currentData.satisfaction}
+              unit="%"
+              target={85}
+              description="CSAT rating 4-5 stars"
+              variant="success"
+              icon={<ThumbsUp className="h-5 w-5" />}
+            />
+            <KPICard
+              title="Dissatisfaction Rate"
+              value={6}
+              unit="%"
+              target={5}
+              description="DSAT rating 1-2 stars"
+              variant="warning"
+              icon={<ThumbsDown className="h-5 w-5" />}
+            />
+          </>
+        ) : (
+          <>
+            <KPICard
+              title="Solution Cycle Time"
+              value="N/A"
+              unit=""
+              target={15}
+              description="Average time to resolve cases"
+              variant="success"
+              icon={<Clock className="h-5 w-5" />}
+            />
+            <KPICard
+              title="Cases Close"
+              value="N/A"
+              unit=""
+              description="Total cases this period"
+              variant="default"
+              icon={<BarChart3 className="h-5 w-5" />}
+            />
+            <KPICard
+              title="Customer Satisfaction"
+              value="N/A"
+              unit=""
+              target={85}
+              description="CSAT rating 4-5 stars"
+              variant="success"
+              icon={<ThumbsUp className="h-5 w-5" />}
+            />
+            <KPICard
+              title="Dissatisfaction Rate"
+              value="N/A"
+              unit=""
+              target={5}
+              description="DSAT rating 1-2 stars"
+              variant="warning"
+              icon={<ThumbsDown className="h-5 w-5" />}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {reportGenerated && selectedEntityValue ? (
+          <>
+            <TeamPerformanceChart
+              data={getPerformanceData()}
+              title={getEntityTitle()}
+              onBarClick={handleIndividualBarClick}
+            />
+            <SurveyAnalysisChart
+              data={getSurveyData()}
+              title="Customer Satisfaction Distribution"
+              totalSurveys={currentData?.totalSurveys || 500}
+              onPieClick={(data) => handleChartClick(data, 'survey', 'Customer Satisfaction')}
+            />
+          </>
+        ) : (
+          <>
+            <div className="bg-card border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">Performance Breakdown</h3>
+              <div className="flex items-center justify-center h-40 text-muted-foreground">
+                No available data
+              </div>
+            </div>
+            <div className="bg-card border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">Customer Satisfaction Distribution</h3>
+              <div className="flex items-center justify-center h-40 text-muted-foreground">
+                No available data
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Insights Panel */}
       {reportGenerated && (
-        <>
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {currentData ? (
-              <>
-                <KPICard
-                  title="Solution Cycle Time"
-                  value={currentData.sct}
-                  unit=" days"
-                  target={15}
-                  description="Average time to resolve cases"
-                  variant="success"
-                  icon={<Clock className="h-5 w-5" />}
-                />
-                <KPICard
-                  title="Cases Close"
-                  value={currentData.cases}
-                  description="Total cases this period"
-                  variant="default"
-                  icon={<BarChart3 className="h-5 w-5" />}
-                />
-                <KPICard
-                  title="Customer Satisfaction"
-                  value={currentData.satisfaction}
-                  unit="%"
-                  target={85}
-                  description="CSAT rating 4-5 stars"
-                  variant="success"
-                  icon={<ThumbsUp className="h-5 w-5" />}
-                />
-                <KPICard
-                  title="Dissatisfaction Rate"
-                  value={6}
-                  unit="%"
-                  target={5}
-                  description="DSAT rating 1-2 stars"
-                  variant="warning"
-                  icon={<AlertCircle className="h-5 w-5" />}
-                />
-              </>
-            ) : (
-              <div className="col-span-4 text-center py-8">
-                <p className="text-muted-foreground">No available data</p>
-              </div>
-            )}
-          </div>
-
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {!selectedEntityValue || !reportGenerated ? (
-              <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{getEntityTitle()}</h3>
-                  <p className="text-muted-foreground">No available data</p>
-                </div>
-              </div>
-            ) : getPerformanceData().length > 0 ? (
-              <TeamPerformanceChart
-                data={getPerformanceData()}
-                title={getEntityTitle()}
-                onBarClick={handleIndividualBarClick}
-              />
-            ) : (
-              <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">{getEntityTitle()}</h3>
-                  <p className="text-muted-foreground">No available data</p>
-                </div>
-              </div>
-            )}
-            
-            {!selectedEntityValue || !reportGenerated ? (
-              <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Customer Satisfaction Distribution</h3>
-                  <p className="text-muted-foreground">No available data</p>
-                </div>
-              </div>
-            ) : currentData ? (
-              <SurveyAnalysisChart
-                data={getSurveyData()}
-                title="Customer Satisfaction Distribution"
-                totalSurveys={currentData.totalSurveys}
-                onPieClick={(data) => handleChartClick(data, 'survey', 'Customer Satisfaction')}
-              />
-            ) : (
-              <div className="chart-container flex items-center justify-center h-80 bg-card rounded-lg border">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Customer Satisfaction Distribution</h3>
-                  <p className="text-muted-foreground">No available data</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Insights Panel */}
-          <InsightsPanel
-            insights={sampleInsights}
-            onScrubCases={handleScrubCases}
-            onAnalyzeEmails={handleAnalyzeEmails}
-            isLoading={isLoading}
-          />
-        </>
+        <InsightsPanel
+          insights={sampleInsights}
+          onScrubCases={handleScrubCases}
+          onAnalyzeEmails={handleAnalyzeEmails}
+          isLoading={isLoading}
+        />
       )}
 
       {!reportGenerated && (

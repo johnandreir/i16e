@@ -84,9 +84,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
         {/* Generate Report Button */}
         <div className="flex gap-3 items-end lg:self-end">
-          <Button
+            <Button
             onClick={onGenerateReport}
-            disabled={isLoading || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to}
+            disabled={isLoading || !selectedEntity || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to}
             className="min-w-[140px] h-10"
           >
             {isLoading ? (

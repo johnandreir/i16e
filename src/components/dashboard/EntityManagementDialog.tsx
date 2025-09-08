@@ -382,16 +382,32 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                            {entity.mappedTo || 'Not mapped'}
                          </Badge>
                        </TableCell>
-                     )}
-                    <TableCell>
-                      <Badge 
-                        variant={entity.status === 'active' ? 'success' : 'secondary'}
-                        className="cursor-pointer"
-                        onClick={() => handleToggleStatus(entity.id)}
-                      >
-                        {entity.status}
-                      </Badge>
-                    </TableCell>
+                      )}
+                      {editingId === entity.id && activeTab === 'squad' && (
+                        <TableCell>
+                          <Select value={editMapping} onValueChange={setEditMapping}>
+                            <SelectTrigger className="min-w-[120px]">
+                              <SelectValue placeholder={`Select ${targetEntityLabel}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {targetEntityOptions.map((option) => (
+                                <SelectItem key={option} value={option}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
+                     <TableCell>
+                       <Badge 
+                         variant={entity.status === 'active' ? 'success' : 'secondary'}
+                         className="cursor-pointer"
+                         onClick={() => handleToggleStatus(entity.id)}
+                       >
+                         {entity.status}
+                       </Badge>
+                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         {editingId === entity.id ? (
