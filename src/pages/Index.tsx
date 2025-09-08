@@ -40,6 +40,11 @@ const Index = () => {
   const [cxAnalyzed, setCxAnalyzed] = useState(false);
   const [entityChanged, setEntityChanged] = useState(false);
 
+  // Separate state for generated report data - only updates when Generate Report is clicked
+  const [generatedEntity, setGeneratedEntity] = useState('');
+  const [generatedEntityValue, setGeneratedEntityValue] = useState('');
+  const [generatedTimeRange, setGeneratedTimeRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
+
   // Dynamic entity data with mapping
   const [entityData, setEntityData] = useState({
     dpe: ['Juan Dela Cruz', 'Maria Santos', 'Carlos Rodriguez', 'Ana Garcia', 'Miguel Torres', 'Sofia Lopez', 'Diego Martinez', 'Isabella Chen', 'Add New DPE...'],
@@ -307,13 +312,13 @@ const Index = () => {
     setEntityMappings(mappings);
   };
 
-  // Dynamic data based on selected entity
+  // Dynamic data based on generated entity (not form selection)
   const getCurrentData = () => {
-    if (!reportGenerated || !selectedEntityValue) {
+    if (!reportGenerated || !generatedEntityValue) {
       return null;
     }
     
-    if (selectedEntity === 'dpe') {
+    if (generatedEntity === 'dpe') {
       return {
         sct: individualDPEData.sct,
         cases: individualDPEData.cases,
@@ -374,9 +379,9 @@ const Index = () => {
     return sampleTeamData;
   };
 
-  // Get survey data based on entity type
+  // Get survey data based on generated entity type (not form selection)
   const getSurveyData = () => {
-    if (!reportGenerated || !selectedEntityValue) {
+    if (!reportGenerated || !generatedEntityValue) {
       return sampleSurveyData;
     }
 
@@ -398,7 +403,7 @@ const Index = () => {
   };
 
   const getEntityTitle = () => {
-    switch (selectedEntity) {
+    switch (generatedEntity) {
       case 'dpe':
         return 'DPE Performance Breakdown';
       case 'squad':
@@ -536,7 +541,7 @@ const Index = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {reportGenerated && selectedEntityValue ? (
+        {reportGenerated && generatedEntityValue ? (
           <>
             <TeamPerformanceChart
               data={getPerformanceData()}
@@ -578,6 +583,8 @@ const Index = () => {
           cxAnalyzed={cxAnalyzed}
           selectedEntity={selectedEntity}
           selectedEntityValue={selectedEntityValue}
+          generatedEntity={generatedEntity}
+          generatedEntityValue={generatedEntityValue}
           isLoading={isLoading}
           isAnalysisEnabled={isAnalysisEnabled}
         />

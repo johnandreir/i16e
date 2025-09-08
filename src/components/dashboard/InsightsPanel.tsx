@@ -22,6 +22,8 @@ interface InsightsPanelProps {
   cxAnalyzed: boolean;
   selectedEntity: string;
   selectedEntityValue: string;
+  generatedEntity?: string;
+  generatedEntityValue?: string;
   isLoading?: boolean;
   isAnalysisEnabled?: boolean;
 }
@@ -34,6 +36,8 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
   cxAnalyzed,
   selectedEntity,
   selectedEntityValue,
+  generatedEntity = '',
+  generatedEntityValue = '',
   isLoading = false,
   isAnalysisEnabled = false 
 }) => {
@@ -66,34 +70,34 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     }
   };
 
-  // Generate sample SCT insights based on selected entity
+  // Generate sample SCT insights based on generated entity (not form selection)
   const getSCTInsights = () => {
-    if (!sctAnalyzed) return [];
+    if (!sctAnalyzed || !generatedEntityValue) return [];
     
     const baseInsights = [
       {
         id: 'sct-1',
         type: 'improvement' as const,
-        title: `${selectedEntityValue} - SCT Optimization Opportunity`,
-        description: `Average Solution Cycle Time for ${selectedEntityValue} is 18.5 days, which is 15% above the target of 16 days.`,
+        title: `${generatedEntityValue} - SCT Optimization Opportunity`,
+        description: `Average Solution Cycle Time for ${generatedEntityValue} is 18.5 days, which is 15% above the target of 16 days.`,
         recommendation: `Focus on initial triage accuracy and implement automated diagnostic tools. Consider skill-based case routing to reduce escalation delays.`,
       },
       {
         id: 'sct-2',
         type: 'warning' as const,
         title: 'Complex Case Pattern Detected',
-        description: `30% of cases in ${selectedEntityValue} require multiple touchpoints, increasing average SCT by 6 days.`,
+        description: `30% of cases in ${generatedEntityValue} require multiple touchpoints, increasing average SCT by 6 days.`,
         recommendation: 'Implement knowledge base enhancements and provide advanced training for complex scenarios.',
       }
     ];
 
-    if (selectedEntity === 'dpe') {
+    if (generatedEntity === 'dpe') {
       return [
         {
           id: 'sct-dpe-1',
           type: 'improvement' as const,
-          title: `${selectedEntityValue} - Individual Performance Analysis`,
-          description: `${selectedEntityValue} shows inconsistent SCT patterns with peaks during P1 incidents.`,
+          title: `${generatedEntityValue} - Individual Performance Analysis`,
+          description: `${generatedEntityValue} shows inconsistent SCT patterns with peaks during P1 incidents.`,
           recommendation: 'Provide incident management training and establish buddy system for P1 case handling.',
         }
       ];
@@ -102,35 +106,35 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     return baseInsights;
   };
 
-  // Generate sample CX insights based on selected entity
+  // Generate sample CX insights based on generated entity (not form selection)
   const getCXInsights = () => {
-    if (!cxAnalyzed) return [];
+    if (!cxAnalyzed || !generatedEntityValue) return [];
     
     const baseInsights = [
       {
         id: 'cx-1',
         type: 'success' as const,
-        title: `${selectedEntityValue} - Strong Customer Satisfaction`,
-        description: `Customer satisfaction for ${selectedEntityValue} is at 89%, exceeding the 85% target.`,
+        title: `${generatedEntityValue} - Strong Customer Satisfaction`,
+        description: `Customer satisfaction for ${generatedEntityValue} is at 89%, exceeding the 85% target.`,
         recommendation: 'Maintain current service levels and document best practices for knowledge sharing.',
       },
       {
         id: 'cx-2',
         type: 'info' as const,
         title: 'Communication Pattern Analysis',
-        description: `Analysis shows customers prefer detailed technical explanations for ${selectedEntityValue} cases.`,
+        description: `Analysis shows customers prefer detailed technical explanations for ${generatedEntityValue} cases.`,
         recommendation: 'Continue providing comprehensive technical documentation and maintain proactive communication.',
       }
     ];
 
-    if (selectedEntity === 'squad') {
+    if (generatedEntity === 'squad') {
       return [
         ...baseInsights,
         {
           id: 'cx-squad-1',
           type: 'improvement' as const,
           title: 'Squad Consistency Opportunity',
-          description: `Customer satisfaction varies by 12% across ${selectedEntityValue} members.`,
+          description: `Customer satisfaction varies by 12% across ${generatedEntityValue} members.`,
           recommendation: 'Implement peer review process and standardize customer interaction protocols.',
         }
       ];
