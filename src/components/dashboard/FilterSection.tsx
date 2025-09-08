@@ -16,6 +16,8 @@ interface FilterSectionProps {
   onGenerateReport: () => void;
   entityData: Record<string, string[]>;
   isLoading?: boolean;
+  reportGenerated?: boolean;
+  entityChanged?: boolean;
 }
 
 
@@ -28,7 +30,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   onTimeRangeChange,
   onGenerateReport,
   entityData,
-  isLoading = false
+  isLoading = false,
+  reportGenerated = false,
+  entityChanged = false
 }) => {
   const getCurrentEntityOptions = () => {
     const entities = entityData[selectedEntity as keyof typeof entityData] || [];
@@ -86,7 +90,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         <div className="flex gap-3 items-end lg:self-end">
             <Button
             onClick={onGenerateReport}
-            disabled={isLoading || !selectedEntity || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to}
+            disabled={isLoading || !selectedEntity || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to || (reportGenerated && entityChanged)}
             className="min-w-[140px] h-10"
           >
             {isLoading ? (

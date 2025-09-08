@@ -176,7 +176,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
       <Card className="glass-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-foreground">
-            AI-Generated Insights & Recommendations
+            Insights & Recommendations
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

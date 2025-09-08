@@ -38,6 +38,7 @@ const Index = () => {
   const [modalTitle, setModalTitle] = useState('');
   const [sctAnalyzed, setSctAnalyzed] = useState(false);
   const [cxAnalyzed, setCxAnalyzed] = useState(false);
+  const [entityChanged, setEntityChanged] = useState(false);
 
   // Dynamic entity data with mapping
   const [entityData, setEntityData] = useState({
@@ -158,6 +159,28 @@ const Index = () => {
     }
   ];
 
+  const handleEntityChange = (entity: string) => {
+    setSelectedEntity(entity);
+    setSelectedEntityValue('');
+    if (reportGenerated) {
+      setEntityChanged(true);
+    }
+  };
+
+  const handleEntityValueChange = (value: string) => {
+    setSelectedEntityValue(value);
+    if (reportGenerated) {
+      setEntityChanged(true);
+    }
+  };
+
+  const handleTimeRangeChange = (range: { from: Date | undefined; to: Date | undefined }) => {
+    setSelectedTimeRange(range);
+    if (reportGenerated) {
+      setEntityChanged(true);
+    }
+  };
+
   const handleGenerateReport = async () => {
     // Validate entity selection
     if (!selectedEntity || !selectedEntityValue || selectedEntityValue.includes('Add New')) {
@@ -175,6 +198,10 @@ const Index = () => {
     setTimeout(() => {
       setIsLoading(false);
       setReportGenerated(true);
+      setEntityChanged(false);
+      // Clear previous analysis when generating new report
+      setSctAnalyzed(false);
+      setCxAnalyzed(false);
       toast({
         title: "Report Generated Successfully",
         description: `KPI analysis for ${selectedEntityValue} from ${selectedTimeRange.from?.toLocaleDateString()} to ${selectedTimeRange.to?.toLocaleDateString()}`,
@@ -414,12 +441,14 @@ const Index = () => {
         selectedEntity={selectedEntity}
         selectedEntityValue={selectedEntityValue}
         selectedTimeRange={selectedTimeRange}
-        onEntityChange={setSelectedEntity}
-        onEntityValueChange={setSelectedEntityValue}
-        onTimeRangeChange={setSelectedTimeRange}
+        onEntityChange={handleEntityChange}
+        onEntityValueChange={handleEntityValueChange}
+        onTimeRangeChange={handleTimeRangeChange}
         onGenerateReport={handleGenerateReport}
         entityData={entityData}
         isLoading={isLoading}
+        reportGenerated={reportGenerated}
+        entityChanged={entityChanged}
       />
 
       {/* KPI Cards */}
