@@ -36,6 +36,8 @@ const Index = () => {
   const [modalData, setModalData] = useState<any>(null);
   const [modalType, setModalType] = useState<'team' | 'survey' | 'individual'>('team');
   const [modalTitle, setModalTitle] = useState('');
+  const [sctAnalyzed, setSctAnalyzed] = useState(false);
+  const [cxAnalyzed, setCxAnalyzed] = useState(false);
 
   // Dynamic entity data with mapping
   const [entityData, setEntityData] = useState({
@@ -157,6 +159,16 @@ const Index = () => {
   ];
 
   const handleGenerateReport = async () => {
+    // Validate entity selection
+    if (!selectedEntity || !selectedEntityValue || selectedEntityValue.includes('Add New')) {
+      toast({
+        title: "Invalid Selection",
+        description: "Please select a valid entity before generating the report.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     // Simulate API call
@@ -170,10 +182,19 @@ const Index = () => {
     }, 2000);
   };
 
-  const handleScrubCases = () => {
+  const handleAnalyzeSCT = () => {
+    setSctAnalyzed(true);
     toast({
-      title: "Case Scrubbing Initiated",
-      description: "Analyzing D365 cases for performance insights...",
+      title: "SCT Analysis Complete",
+      description: "Solution Cycle Time analysis has been completed with recommendations.",
+    });
+  };
+
+  const handleCXInsight = () => {
+    setCxAnalyzed(true);
+    toast({
+      title: "CX Insight Analysis Complete", 
+      description: "Customer satisfaction insights have been generated.",
     });
   };
 
@@ -519,8 +540,12 @@ const Index = () => {
       {reportGenerated && (
         <InsightsPanel
           insights={sampleInsights}
-          onScrubCases={handleScrubCases}
-          onAnalyzeEmails={handleAnalyzeEmails}
+          onAnalyzeSCT={handleAnalyzeSCT}
+          onCXInsight={handleCXInsight}
+          sctAnalyzed={sctAnalyzed}
+          cxAnalyzed={cxAnalyzed}
+          selectedEntity={selectedEntity}
+          selectedEntityValue={selectedEntityValue}
           isLoading={isLoading}
         />
       )}

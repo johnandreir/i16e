@@ -365,9 +365,24 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                      {activeTab === 'dpe' && (
                        <>
                          <TableCell>
-                           <Badge variant="outline">
-                             {entity.mappedTo || 'Not mapped'}
-                           </Badge>
+                           {editingId === entity.id ? (
+                             <Select value={editMapping} onValueChange={setEditMapping}>
+                               <SelectTrigger className="min-w-[120px]">
+                                 <SelectValue placeholder="Select Squad" />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 {targetEntityOptions.map((option) => (
+                                   <SelectItem key={option} value={option}>
+                                     {option}
+                                   </SelectItem>
+                                 ))}
+                               </SelectContent>
+                             </Select>
+                           ) : (
+                             <Badge variant="outline">
+                               {entity.mappedTo || 'Not mapped'}
+                             </Badge>
+                           )}
                          </TableCell>
                          <TableCell>
                            <Badge variant="outline">
@@ -378,26 +393,25 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
                      )}
                      {activeTab === 'squad' && (
                        <TableCell>
-                         <Badge variant="outline">
-                           {entity.mappedTo || 'Not mapped'}
-                         </Badge>
+                         {editingId === entity.id ? (
+                           <Select value={editMapping} onValueChange={setEditMapping}>
+                             <SelectTrigger className="min-w-[120px]">
+                               <SelectValue placeholder="Select Team" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {targetEntityOptions.map((option) => (
+                                 <SelectItem key={option} value={option}>
+                                   {option}
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                         ) : (
+                           <Badge variant="outline">
+                             {entity.mappedTo || 'Not mapped'}
+                           </Badge>
+                         )}
                        </TableCell>
-                      )}
-                      {editingId === entity.id && activeTab === 'squad' && (
-                        <TableCell>
-                          <Select value={editMapping} onValueChange={setEditMapping}>
-                            <SelectTrigger className="min-w-[120px]">
-                              <SelectValue placeholder={`Select ${targetEntityLabel}`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {targetEntityOptions.map((option) => (
-                                <SelectItem key={option} value={option}>
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
                       )}
                      <TableCell>
                        <Badge 
