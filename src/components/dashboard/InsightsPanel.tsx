@@ -23,6 +23,7 @@ interface InsightsPanelProps {
   selectedEntity: string;
   selectedEntityValue: string;
   isLoading?: boolean;
+  isAnalysisEnabled?: boolean;
 }
 
 const InsightsPanel: React.FC<InsightsPanelProps> = ({ 
@@ -33,7 +34,8 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
   cxAnalyzed,
   selectedEntity,
   selectedEntityValue,
-  isLoading = false 
+  isLoading = false,
+  isAnalysisEnabled = false 
 }) => {
   const [sctOpen, setSctOpen] = useState(false);
   const [cxOpen, setCxOpen] = useState(false);
@@ -153,7 +155,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
         <div className="flex flex-wrap gap-3">
           <Button 
             onClick={onAnalyzeSCT}
-            disabled={isLoading}
+            disabled={isLoading || !isAnalysisEnabled}
             variant="outline"
             className="flex items-center gap-2"
           >
@@ -162,7 +164,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
           </Button>
           <Button 
             onClick={onCXInsight}
-            disabled={isLoading}
+            disabled={isLoading || !isAnalysisEnabled}
             variant="outline"
             className="flex items-center gap-2"
           >

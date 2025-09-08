@@ -181,6 +181,9 @@ const Index = () => {
     }
   };
 
+  // Check if analysis buttons should be enabled
+  const isAnalysisEnabled = selectedEntity && selectedEntityValue && !selectedEntityValue.includes('Add New') && reportGenerated;
+
   const handleGenerateReport = async () => {
     // Validate entity selection
     if (!selectedEntity || !selectedEntityValue || selectedEntityValue.includes('Add New')) {
@@ -576,6 +579,7 @@ const Index = () => {
           selectedEntity={selectedEntity}
           selectedEntityValue={selectedEntityValue}
           isLoading={isLoading}
+          isAnalysisEnabled={isAnalysisEnabled}
         />
       )}
 

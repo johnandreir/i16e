@@ -22,11 +22,23 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
   };
 
   const handleDateSelect = (date: Date | undefined, type: 'from' | 'to') => {
+    let newRange = { ...value };
+    
     if (type === 'from') {
-      onChange({ ...value, from: date });
+      newRange.from = date;
+      // If from date is after to date, clear to date
+      if (date && value.to && date > value.to) {
+        newRange.to = undefined;
+      }
     } else {
-      onChange({ ...value, to: date });
+      // Don't allow to date before from date
+      if (date && value.from && date < value.from) {
+        return; // Don't update if invalid range
+      }
+      newRange.to = date;
     }
+    
+    onChange(newRange);
   };
 
   const handleQuickSelect = (days: number) => {
@@ -96,6 +108,10 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
                     selected={value.from}
                     onSelect={(date) => handleDateSelect(date, 'from')}
                     className="pointer-events-auto"
+                    disabled={(date) => {
+                      // Disable dates after the selected 'to' date
+                      return value.to ? date > value.to : false;
+                    }}
                   />
                 </div>
 
@@ -107,6 +123,10 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
                     selected={value.to}
                     onSelect={(date) => handleDateSelect(date, 'to')}
                     className="pointer-events-auto"
+                    disabled={(date) => {
+                      // Disable dates before the selected 'from' date
+                      return value.from ? date < value.from : false;
+                    }}
                   />
                 </div>
               </div>
