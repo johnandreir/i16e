@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 interface KPICardProps {
   title: string;
-  value: string | number;
+  value: string | number | null;
   unit?: string;
   target?: number;
   description?: string;
@@ -23,11 +23,13 @@ const KPICard: React.FC<KPICardProps> = ({
   icon
 }) => {
   const getTargetStatus = () => {
-    if (!target) return null;
+    if (!target || value === null || value === undefined) return null;
     
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    const isMetOrExceeded = title.includes('Dissatisfaction') 
-      ? numValue <= target  // For dissatisfaction, lower is better
+    
+    // For SCT Score and DSAT Score, lower is better
+    const isMetOrExceeded = (title.includes('SCT Score') || title.includes('DSAT Score'))
+      ? numValue <= target  // For SCT and DSAT, lower is better
       : numValue >= target; // For others, higher is better
     
     return {
@@ -52,19 +54,24 @@ const KPICard: React.FC<KPICardProps> = ({
   const targetStatus = getTargetStatus();
 
   return (
-    <Card className={cn('kpi-card', getVariantStyles())}>
+    <Card className={cn('kpi-card-compact', getVariantStyles())}>
       <div className="flex items-start justify-between">
-        <div className="space-y-2">
+        <div className="space-y-1 flex-1 min-w-0">
           <div className="flex items-center gap-2">
             {icon && <div className="text-muted-foreground">{icon}</div>}
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>
           </div>
           
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-foreground">
-              {typeof value === 'number' ? value.toLocaleString() : value}
+            <span className="text-2xl font-bold text-foreground">
+              {(() => {
+                if (title === "DSAT Score") {
+                  console.log(`KPICard DSAT - value: ${value}, hasData: ${value !== null && value !== undefined}`);
+                }
+                return value === null || value === undefined ? 'N/A' : (typeof value === 'number' ? value.toLocaleString() : value);
+              })()}
             </span>
-            {unit && <span className="text-lg text-muted-foreground">{unit}</span>}
+            {unit && value !== null && value !== undefined && <span className="text-sm text-muted-foreground">{unit}</span>}
           </div>
 
           {description && (
@@ -73,10 +80,10 @@ const KPICard: React.FC<KPICardProps> = ({
         </div>
 
         {target && targetStatus && (
-          <div className="flex flex-col items-end text-sm">
+          <div className="flex flex-col items-end text-sm flex-shrink-0 ml-2">
             <span className="text-xs text-muted-foreground mb-1">Target</span>
             <span className={cn('font-medium', targetStatus.color)}>
-              {target}{unit}
+              {target}{unit && ` ${unit}`}
             </span>
           </div>
         )}

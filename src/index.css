@@ -166,6 +166,10 @@ All colors MUST be HSL.
     @apply glass-card rounded-xl p-6 transition-all duration-300 hover:scale-105;
   }
 
+  .kpi-card-compact {
+    @apply glass-card rounded-xl p-4 transition-all duration-300 hover:scale-105;
+  }
+
   .chart-container {
     @apply glass-card rounded-xl p-4;
   }

@@ -1,4 +1,6 @@
-# Welcome to your Lovable project
+# Intelliperformance
+
+AI-Powered Performance Analytics Platform
 
 ## Project info
 

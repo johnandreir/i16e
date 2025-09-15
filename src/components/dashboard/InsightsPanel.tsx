@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { AlertTriangle, CheckCircle, Info, TrendingUp, Clock, ThumbsUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, TrendingUp, Clock, ThumbsUp, ChevronDown, ChevronRight, Lightbulb } from 'lucide-react';
 
 interface Insight {
   id: string;
@@ -12,6 +12,7 @@ interface Insight {
   description: string;
   recommendation?: string;
   member?: string;
+  category?: string;
 }
 
 interface InsightsPanelProps {
@@ -21,7 +22,6 @@ interface InsightsPanelProps {
   sctAnalyzed: boolean;
   cxAnalyzed: boolean;
   selectedEntity: string;
-  selectedEntityValue: string;
   generatedEntity?: string;
   generatedEntityValue?: string;
   isLoading?: boolean;
@@ -35,11 +35,10 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
   sctAnalyzed,
   cxAnalyzed,
   selectedEntity,
-  selectedEntityValue,
   generatedEntity = '',
   generatedEntityValue = '',
   isLoading = false,
-  isAnalysisEnabled = false 
+  isAnalysisEnabled = false
 }) => {
   const [sctOpen, setSctOpen] = useState(false);
   const [cxOpen, setCxOpen] = useState(false);
@@ -70,134 +69,72 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     }
   };
 
-  // Generate sample SCT insights based on generated entity (not form selection)
-  const getSCTInsights = () => {
-    if (!sctAnalyzed || !generatedEntityValue) return [];
-    
-    const baseInsights = [
-      {
-        id: 'sct-1',
-        type: 'improvement' as const,
-        title: `${generatedEntityValue} - SCT Optimization Opportunity`,
-        description: `Average Solution Cycle Time for ${generatedEntityValue} is 18.5 days, which is 15% above the target of 16 days.`,
-        recommendation: `Focus on initial triage accuracy and implement automated diagnostic tools. Consider skill-based case routing to reduce escalation delays.`,
-      },
-      {
-        id: 'sct-2',
-        type: 'warning' as const,
-        title: 'Complex Case Pattern Detected',
-        description: `30% of cases in ${generatedEntityValue} require multiple touchpoints, increasing average SCT by 6 days.`,
-        recommendation: 'Implement knowledge base enhancements and provide advanced training for complex scenarios.',
-      }
-    ];
-
-    if (generatedEntity === 'dpe') {
-      return [
-        {
-          id: 'sct-dpe-1',
-          type: 'improvement' as const,
-          title: `${generatedEntityValue} - Individual Performance Analysis`,
-          description: `${generatedEntityValue} shows inconsistent SCT patterns with peaks during P1 incidents.`,
-          recommendation: 'Provide incident management training and establish buddy system for P1 case handling.',
-        }
-      ];
-    }
-
-    return baseInsights;
-  };
-
-  // Generate sample CX insights based on generated entity (not form selection)
-  const getCXInsights = () => {
-    if (!cxAnalyzed || !generatedEntityValue) return [];
-    
-    const baseInsights = [
-      {
-        id: 'cx-1',
-        type: 'success' as const,
-        title: `${generatedEntityValue} - Strong Customer Satisfaction`,
-        description: `Customer satisfaction for ${generatedEntityValue} is at 89%, exceeding the 85% target.`,
-        recommendation: 'Maintain current service levels and document best practices for knowledge sharing.',
-      },
-      {
-        id: 'cx-2',
-        type: 'info' as const,
-        title: 'Communication Pattern Analysis',
-        description: `Analysis shows customers prefer detailed technical explanations for ${generatedEntityValue} cases.`,
-        recommendation: 'Continue providing comprehensive technical documentation and maintain proactive communication.',
-      }
-    ];
-
-    if (generatedEntity === 'squad') {
-      return [
-        ...baseInsights,
-        {
-          id: 'cx-squad-1',
-          type: 'improvement' as const,
-          title: 'Squad Consistency Opportunity',
-          description: `Customer satisfaction varies by 12% across ${generatedEntityValue} members.`,
-          recommendation: 'Implement peer review process and standardize customer interaction protocols.',
-        }
-      ];
-    }
-
-    return baseInsights;
-  };
-
-  const sctInsights = getSCTInsights();
-  const cxInsights = getCXInsights();
+  // Filter insights by category from passed props - only show when analysis is performed
+  const sctInsights = sctAnalyzed ? insights.filter(insight => 
+    insight.category?.toLowerCase().includes('performance') || 
+    insight.category?.toLowerCase().includes('process') ||
+    insight.category?.toLowerCase().includes('trending') ||
+    insight.category?.toLowerCase().includes('resource') ||
+    insight.title.toLowerCase().includes('sct') ||
+    insight.title.toLowerCase().includes('cycle time') ||
+    insight.title.toLowerCase().includes('development') ||
+    insight.title.toLowerCase().includes('testing') ||
+    insight.title.toLowerCase().includes('analysis')
+  ) : [];
+  
+  const cxInsights = cxAnalyzed ? insights.filter(insight => 
+    insight.category?.toLowerCase().includes('satisfaction') ||
+    insight.category?.toLowerCase().includes('feedback') ||
+    insight.category?.toLowerCase().includes('customer') ||
+    insight.category?.toLowerCase().includes('channel') ||
+    insight.category?.toLowerCase().includes('efficiency') ||
+    insight.category?.toLowerCase().includes('loyalty') ||
+    insight.title.toLowerCase().includes('customer') ||
+    insight.title.toLowerCase().includes('satisfaction') ||
+    insight.title.toLowerCase().includes('csat') ||
+    insight.title.toLowerCase().includes('dsat') ||
+    insight.title.toLowerCase().includes('cx') ||
+    insight.title.toLowerCase().includes('feedback')
+  ) : [];
 
   return (
     <div className="space-y-6">
-      {/* Analysis Actions */}
-      <Card className="glass-card p-6">
-        <CardHeader className="p-0 mb-4">
-          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Performance Analysis Tools
-          </CardTitle>
-        </CardHeader>
-        <div className="flex flex-wrap gap-3">
-          <Button 
-            onClick={onAnalyzeSCT}
-            disabled={isLoading || !isAnalysisEnabled}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Clock className="h-4 w-4" />
-            Analyze SCT
-          </Button>
-          <Button 
-            onClick={onCXInsight}
-            disabled={isLoading || !isAnalysisEnabled}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <ThumbsUp className="h-4 w-4" />
-            CX Insight
-          </Button>
-        </div>
-      </Card>
-
       {/* Insights and Recommendations */}
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground">
+          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Lightbulb className="h-5 w-5 text-yellow-500" />
             Insights & Recommendations
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Solution Cycle Time Group */}
-          <Collapsible open={sctOpen} onOpenChange={setSctOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                <span className="font-medium">Solution Cycle Time</span>
-                {sctInsights.length > 0 && (
-                  <Badge variant="secondary">{sctInsights.length}</Badge>
-                )}
+          {/* Show message when no analysis has been performed */}
+          {!sctAnalyzed && !cxAnalyzed && (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="space-y-2">
+                <p className="text-sm">Click the analysis buttons above to generate insights and recommendations</p>
+                <div className="flex justify-center gap-2 text-xs">
+                  <span className="bg-muted px-2 py-1 rounded">Analyze SCT</span>
+                  <span>or</span>
+                  <span className="bg-muted px-2 py-1 rounded">CX Insight</span>
+                </div>
               </div>
-              {sctOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </CollapsibleTrigger>
+            </div>
+          )}
+
+          {/* Solution Cycle Time Group - Only show when analyzed */}
+          {sctAnalyzed && (
+            <Collapsible open={sctOpen} onOpenChange={setSctOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Solution Cycle Time</span>
+                  {sctInsights.length > 0 && (
+                    <Badge variant="secondary">{sctInsights.length}</Badge>
+                  )}
+                </div>
+                {sctOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 mt-3">
               {sctInsights.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
@@ -208,8 +145,8 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                   <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-3 bg-muted/20 rounded-r-lg">
                     <div className="flex items-start gap-3">
                       {getInsightIcon(insight.type)}
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex-1 space-y-2 min-w-0">
+                        <div className="flex items-center gap-2">
                           <h4 className="font-medium text-foreground">{insight.title}</h4>
                           <Badge variant={getInsightBadgeVariant(insight.type)}>
                             {insight.type}
@@ -230,9 +167,11 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
               )}
             </CollapsibleContent>
           </Collapsible>
+          )}
 
-          {/* Customer Satisfaction Group */}
-          <Collapsible open={cxOpen} onOpenChange={setCxOpen}>
+          {/* Customer Satisfaction Group - Only show when analyzed */}
+          {cxAnalyzed && (
+            <Collapsible open={cxOpen} onOpenChange={setCxOpen}>
             <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
               <div className="flex items-center gap-2">
                 <ThumbsUp className="h-4 w-4 text-primary" />
@@ -253,8 +192,8 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                   <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-3 bg-muted/20 rounded-r-lg">
                     <div className="flex items-start gap-3">
                       {getInsightIcon(insight.type)}
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex-1 space-y-2 min-w-0">
+                        <div className="flex items-center gap-2">
                           <h4 className="font-medium text-foreground">{insight.title}</h4>
                           <Badge variant={getInsightBadgeVariant(insight.type)}>
                             {insight.type}
@@ -275,6 +214,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
               )}
             </CollapsibleContent>
           </Collapsible>
+          )}
         </CardContent>
       </Card>
     </div>

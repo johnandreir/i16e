@@ -74,6 +74,14 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
   );
 
   const renderIndividualDetails = () => {
+    if (!data) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No data available</p>
+        </div>
+      );
+    }
+
     const { member, metric, details } = data;
     
     if (metric === 'sct') {
@@ -138,7 +146,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
             <h3 className="font-semibold text-foreground mb-2">{member.name} - Cases Close</h3>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Total Cases</p>
                 <p className="font-semibold text-lg">{member.cases}</p>
@@ -146,10 +154,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
               <div>
                 <p className="text-muted-foreground">Closed Cases</p>
                 <p className="font-semibold text-lg">{details.filter(d => d.status === 'Closed').length}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Avg Response Time</p>
-                <p className="font-semibold text-lg">4.2h</p>
               </div>
             </div>
           </div>
@@ -161,9 +165,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                 <TableHead>Title</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Priority</TableHead>
-                <TableHead>Customer Rating</TableHead>
-                <TableHead>Response Time</TableHead>
-                <TableHead>Created</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -181,13 +182,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                     {detail.priority}
                   </Badge>
                   </TableCell>
-                  <TableCell>
-                    <Badge variant={detail.customerSat >= 4 ? "success" : detail.customerSat >= 3 ? "warning" : "destructive"}>
-                      {detail.customerSat}/5
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{detail.responseTime}</TableCell>
-                  <TableCell>{detail.createdDate}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

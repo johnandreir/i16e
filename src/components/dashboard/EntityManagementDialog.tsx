@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ interface EntityData {
   description?: string;
   status: 'active' | 'inactive';
   mappedTo?: string;
+  email?: string;
 }
 
 interface EntityMappings {
@@ -27,13 +28,44 @@ interface EntityManagementDialogProps {
   entityMappings: EntityMappings;
   onEntityDataChange: (entityType: string, data: string[]) => void;
   onMappingsChange: (mappings: EntityMappings) => void;
+  // Database operations for direct entity creation
+  createTeam?: (name: string, description?: string) => Promise<boolean>;
+  createSquad?: (name: string, teamName: string, description?: string) => Promise<boolean>;
+  createDPE?: (name: string, squadName: string, description?: string) => Promise<boolean>;
+  // Database operations for entity updates
+  updateTeam?: (id: number, name: string, description?: string) => Promise<boolean>;
+  updateSquad?: (id: number, name: string, teamName: string, description?: string) => Promise<boolean>;
+  updateDPE?: (id: number, name: string, squadName: string, email?: string) => Promise<boolean>;
+  // Database operations for entity deletion
+  deleteTeam?: (id: number) => Promise<boolean>;
+  deleteSquad?: (id: number) => Promise<boolean>;
+  deleteDPE?: (id: number) => Promise<boolean>;
+  // Methods to get entities with database IDs
+  getTeamsWithIds?: () => Promise<any[]>;
+  getSquadsWithIds?: () => Promise<any[]>;
+  getDPEsWithIds?: () => Promise<any[]>;
+  // Optional refresh key to force re-initialization
+  refreshKey?: string | number;
 }
 
 const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
   allEntityData,
   entityMappings,
   onEntityDataChange,
-  onMappingsChange
+  onMappingsChange,
+  createTeam,
+  createSquad,
+  createDPE,
+  updateTeam,
+  updateSquad,
+  updateDPE,
+  deleteTeam,
+  deleteSquad,
+  deleteDPE,
+  getTeamsWithIds,
+  getSquadsWithIds,
+  getDPEsWithIds,
+  refreshKey
 }) => {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -53,6 +85,86 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
   const [dpeData, setDpeData] = useState<EntityData[]>(() => initializeEntityData('dpe'));
   const [squadData, setSquadData] = useState<EntityData[]>(() => initializeEntityData('squad'));
   const [teamData, setTeamData] = useState<EntityData[]>(() => initializeEntityData('team'));
+  
+  // Update local state when allEntityData or entityMappings change
+  useEffect(() => {
+    const loadEntitiesWithIds = async () => {
+      try {
+        if (getTeamsWithIds && getSquadsWithIds && getDPEsWithIds) {
+          const [teams, squads, dpes] = await Promise.all([
+            getTeamsWithIds(),
+            getSquadsWithIds(),
+            getDPEsWithIds()
+          ]);
+
+          // Convert database entities to EntityData format
+          const teamData = teams.map(team => ({
+            id: team.id.toString(),
+            name: team.name,
+            status: 'active' as const,
+            description: team.description
+          }));
+
+          const squadData = squads.map(squad => ({
+            id: squad.id.toString(),
+            name: squad.name,
+            status: 'active' as const,
+            description: squad.description,
+            mappedTo: teams.find(t => t.id === squad.team_id)?.name
+          }));
+
+          const dpeData = dpes.map(dpe => ({
+            id: dpe.id.toString(),
+            name: dpe.name,
+            status: 'active' as const,
+            email: dpe.email,
+            mappedTo: squads.find(s => s.id === dpe.squad_id)?.name
+          }));
+
+          setTeamData(teamData);
+          setSquadData(squadData);
+          setDpeData(dpeData);
+        } else {
+          // Fallback to index-based IDs if database methods not available
+          const initializeData = (entityType: 'dpe' | 'squad' | 'team') => {
+            const entities = allEntityData[entityType] || [];
+            const filtered = entities.filter(e => !e.includes('Add New'));
+            return filtered.map((name, index) => ({
+              id: `${entityType}-${index}`,
+              name,
+              status: 'active' as const,
+              mappedTo: entityType === 'dpe' ? entityMappings.dpeToSquad[name] : 
+                        entityType === 'squad' ? entityMappings.squadToTeam[name] : undefined
+            }));
+          };
+          
+          setDpeData(initializeData('dpe'));
+          setSquadData(initializeData('squad'));
+          setTeamData(initializeData('team'));
+        }
+      } catch (error) {
+        console.error('Error loading entities with IDs:', error);
+        // Fallback to the old method
+        const initializeData = (entityType: 'dpe' | 'squad' | 'team') => {
+          const entities = allEntityData[entityType] || [];
+          const filtered = entities.filter(e => !e.includes('Add New'));
+          return filtered.map((name, index) => ({
+            id: `${entityType}-${index}`,
+            name,
+            status: 'active' as const,
+            mappedTo: entityType === 'dpe' ? entityMappings.dpeToSquad[name] : 
+                      entityType === 'squad' ? entityMappings.squadToTeam[name] : undefined
+          }));
+        };
+        
+        setDpeData(initializeData('dpe'));
+        setSquadData(initializeData('squad'));
+        setTeamData(initializeData('team'));
+      }
+    };
+
+    loadEntitiesWithIds();
+  }, [allEntityData, entityMappings, refreshKey, getTeamsWithIds, getSquadsWithIds, getDPEsWithIds]);
   
   const getCurrentEntityData = () => {
     switch (activeTab) {
@@ -101,7 +213,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     return '';
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!validateName(newName)) {
       toast({
         title: "Invalid Name",
@@ -111,36 +223,91 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
       return;
     }
 
-    const newEntity: EntityData = {
-      id: `${activeTab}-${Date.now()}`,
-      name: newName.trim(),
-      status: 'active',
-      mappedTo: newMapping || undefined
-    };
-
-    const updatedData = [...entityData, newEntity];
-    setCurrentEntityData(updatedData);
-    onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
-    
-    // Update mappings
-    if (newMapping) {
-      const updatedMappings = { ...entityMappings };
-      if (activeTab === 'dpe') {
-        updatedMappings.dpeToSquad[newName.trim()] = newMapping;
-      } else if (activeTab === 'squad') {
-        updatedMappings.squadToTeam[newName.trim()] = newMapping;
-      }
-      onMappingsChange(updatedMappings);
+    // Validate mapping requirement for squads and DPEs
+    if ((activeTab === 'squad' || activeTab === 'dpe') && !newMapping) {
+      toast({
+        title: "Missing Mapping",
+        description: `Please select a ${activeTab === 'squad' ? 'team' : 'squad'} for this ${activeTab}.`,
+        variant: "destructive"
+      });
+      return;
     }
-    
-    setNewName('');
-    setNewMapping('');
-    setIsAdding(false);
-    
-    toast({
-      title: "Success",
-      description: `${activeTab.toUpperCase()} "${newName}" added successfully.`,
-    });
+
+    try {
+      let success = false;
+      
+      // Use database operations if available
+      if (activeTab === 'team' && createTeam) {
+        success = await createTeam(newName.trim());
+        if (success) {
+          // Trigger parent component refresh
+          onEntityDataChange(activeTab, []); // Empty array will trigger refresh
+        }
+      } else if (activeTab === 'squad' && createSquad && newMapping) {
+        success = await createSquad(newName.trim(), newMapping);
+        if (success) {
+          // Trigger parent component refresh
+          onEntityDataChange(activeTab, []); // Empty array will trigger refresh
+          onMappingsChange(entityMappings); // Trigger mappings refresh
+        }
+      } else if (activeTab === 'dpe' && createDPE && newMapping) {
+        success = await createDPE(newName.trim(), newMapping);
+        if (success) {
+          // Trigger parent component refresh
+          onEntityDataChange(activeTab, []); // Empty array will trigger refresh
+          onMappingsChange(entityMappings); // Trigger mappings refresh
+        }
+      } else {
+        // Fallback to original method if database operations not available
+        const newEntity: EntityData = {
+          id: `${activeTab}-${Date.now()}`,
+          name: newName.trim(),
+          status: 'active',
+          mappedTo: newMapping || undefined
+        };
+
+        const updatedData = [...entityData, newEntity];
+        setCurrentEntityData(updatedData);
+        onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
+        
+        // Update mappings for fallback method
+        if (newMapping) {
+          const updatedMappings = { ...entityMappings };
+          if (activeTab === 'dpe') {
+            updatedMappings.dpeToSquad[newName.trim()] = newMapping;
+          } else if (activeTab === 'squad') {
+            updatedMappings.squadToTeam[newName.trim()] = newMapping;
+          }
+          onMappingsChange(updatedMappings);
+        }
+        success = true;
+      }
+
+      if (success) {
+        toast({
+          title: "Success",
+          description: `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} "${newName}" added successfully`,
+        });
+        
+        // Reset form
+        setNewName('');
+        setNewMapping('');
+        setIsAdding(false);
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to add ${activeTab}`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error(`Error adding ${activeTab}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to add ${activeTab}`,
+        variant: "destructive"
+      });
+    }
   };
 
   const handleEdit = (id: string) => {
@@ -152,7 +319,7 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!validateName(editName)) {
       toast({
         title: "Invalid Name",
@@ -163,63 +330,147 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
     }
 
     const oldEntity = entityData.find(e => e.id === editingId);
-    const updatedData = entityData.map(e => 
-      e.id === editingId 
-        ? { ...e, name: editName.trim(), mappedTo: editMapping || undefined }
-        : e
-    );
-    
-    setCurrentEntityData(updatedData);
-    onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
-    
-    // Update mappings
-    if (oldEntity) {
-      const updatedMappings = { ...entityMappings };
-      if (activeTab === 'dpe') {
-        delete updatedMappings.dpeToSquad[oldEntity.name];
-        if (editMapping) {
-          updatedMappings.dpeToSquad[editName.trim()] = editMapping;
-        }
-      } else if (activeTab === 'squad') {
-        delete updatedMappings.squadToTeam[oldEntity.name];
-        if (editMapping) {
-          updatedMappings.squadToTeam[editName.trim()] = editMapping;
-        }
+    if (!oldEntity) return;
+
+    try {
+      // Check if this is a database entity (numeric ID) or fallback entity (string ID)
+      const isNumericId = /^\d+$/.test(oldEntity.id);
+      
+      if (!isNumericId) {
+        toast({
+          title: "Error",
+          description: "Cannot update entity: Database ID not available. Please refresh the page.",
+          variant: "destructive"
+        });
+        return;
       }
-      onMappingsChange(updatedMappings);
+
+      // Use database update functions with numeric IDs
+      const numericId = parseInt(oldEntity.id);
+      let success = false;
+
+      if (activeTab === 'team' && updateTeam) {
+        success = await updateTeam(numericId, editName.trim(), oldEntity.description);
+      } else if (activeTab === 'squad' && updateSquad && editMapping) {
+        success = await updateSquad(numericId, editName.trim(), editMapping, oldEntity.description);
+      } else if (activeTab === 'dpe' && updateDPE && editMapping) {
+        success = await updateDPE(numericId, editName.trim(), editMapping, oldEntity.email);
+      }
+
+      if (success) {
+        // Update local state
+        const updatedData = entityData.map(e => 
+          e.id === editingId 
+            ? { ...e, name: editName.trim(), mappedTo: editMapping || undefined }
+            : e
+        );
+        
+        setCurrentEntityData(updatedData);
+        onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
+        
+        // Update mappings
+        const updatedMappings = { ...entityMappings };
+        if (activeTab === 'dpe') {
+          delete updatedMappings.dpeToSquad[oldEntity.name];
+          if (editMapping) {
+            updatedMappings.dpeToSquad[editName.trim()] = editMapping;
+          }
+        } else if (activeTab === 'squad') {
+          delete updatedMappings.squadToTeam[oldEntity.name];
+          if (editMapping) {
+            updatedMappings.squadToTeam[editName.trim()] = editMapping;
+          }
+        }
+        onMappingsChange(updatedMappings);
+        
+        setEditingId(null);
+        setEditName('');
+        setEditMapping('');
+        
+        toast({
+          title: "Success",
+          description: `${activeTab.toUpperCase()} updated successfully.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to update ${activeTab}`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error(`Error updating ${activeTab}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to update ${activeTab}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
     }
-    
-    setEditingId(null);
-    setEditName('');
-    setEditMapping('');
-    
-    toast({
-      title: "Success",
-      description: `${activeTab.toUpperCase()} updated successfully.`,
-    });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const entityToDelete = entityData.find(e => e.id === id);
-    const updatedData = entityData.filter(e => e.id !== id);
-    setCurrentEntityData(updatedData);
-    onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
-    
-    // Remove from mappings
-    if (entityToDelete) {
-      const updatedMappings = { ...entityMappings };
-      if (activeTab === 'dpe') {
-        delete updatedMappings.dpeToSquad[entityToDelete.name];
-      } else if (activeTab === 'squad') {
-        delete updatedMappings.squadToTeam[entityToDelete.name];
+    if (!entityToDelete) return;
+
+    try {
+      // Check if this is a database entity (numeric ID) or fallback entity (string ID)
+      const isNumericId = /^\d+$/.test(entityToDelete.id);
+      
+      if (!isNumericId) {
+        toast({
+          title: "Error",
+          description: "Cannot delete entity: Database ID not available. Please refresh the page.",
+          variant: "destructive"
+        });
+        return;
       }
-      onMappingsChange(updatedMappings);
+
+      // Use database delete functions with numeric IDs
+      const numericId = parseInt(entityToDelete.id);
+      let success = false;
+
+      if (activeTab === 'team' && deleteTeam) {
+        success = await deleteTeam(numericId);
+      } else if (activeTab === 'squad' && deleteSquad) {
+        success = await deleteSquad(numericId);
+      } else if (activeTab === 'dpe' && deleteDPE) {
+        success = await deleteDPE(numericId);
+      }
+
+      if (success) {
+        // Update local state after successful database deletion
+        const updatedData = entityData.filter(e => e.id !== id);
+        setCurrentEntityData(updatedData);
+        onEntityDataChange(activeTab, [...updatedData.map(e => e.name), `Add New ${activeTab.toUpperCase()}...`]);
+        
+        // Remove from mappings
+        const updatedMappings = { ...entityMappings };
+        if (activeTab === 'dpe') {
+          delete updatedMappings.dpeToSquad[entityToDelete.name];
+        } else if (activeTab === 'squad') {
+          delete updatedMappings.squadToTeam[entityToDelete.name];
+        }
+        onMappingsChange(updatedMappings);
+        
+        toast({
+          title: "Success",
+          description: `${activeTab.toUpperCase()} deleted successfully.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: `Failed to delete ${activeTab}`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error(`Error deleting ${activeTab}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to delete ${activeTab}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
     }
-    
-    toast({
-      title: "Success",
-      description: `${activeTab.toUpperCase()} deleted successfully.`,
-    });
   };
 
   const handleToggleStatus = (id: string) => {
@@ -332,7 +583,10 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
 
           {/* Entity List */}
           <div>
-            <h3 className="font-semibold mb-4">Current {getEntityLabel()}</h3>
+            <h3 className="font-semibold mb-4">Current {getEntityLabel()} ({entityData.length})</h3>
+            {entityData.length === 0 ? (
+              <p className="text-muted-foreground text-sm mb-4">No {activeTab}s found. Add one using the form above.</p>
+            ) : null}
             <Table>
               <TableHeader>
                 <TableRow>

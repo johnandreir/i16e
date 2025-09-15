@@ -31,31 +31,31 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
         newRange.to = undefined;
       }
     } else {
-      // Don't allow to date before from date
-      if (date && value.from && date < value.from) {
-        return; // Don't update if invalid range
-      }
       newRange.to = date;
+      // Don't enforce validation here, let user pick freely
     }
     
     onChange(newRange);
   };
 
   const handleQuickSelect = (days: number) => {
-    const to = new Date();
-    const from = new Date();
-    from.setDate(to.getDate() - days);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
     
-    onChange({ from, to });
+    const from = new Date();
+    from.setDate(today.getDate() - days + 1); // +1 to include today
+    from.setHours(0, 0, 0, 0); // Start of day
+    
+    onChange({ from, to: today });
     setIsOpen(false);
   };
 
   const quickRanges = [
-    { label: 'Last 7 days', days: 7 },
-    { label: 'Last 30 days', days: 30 },
-    { label: 'Last 3 months', days: 90 },
-    { label: 'Last 6 months', days: 180 },
-    { label: 'Last year', days: 365 },
+    { label: '7 days', days: 7 },
+    { label: '30 days', days: 30 },
+    { label: '3 months', days: 90 },
+    { label: '6 months', days: 180 },
+    { label: '1 year', days: 365 },
   ];
 
   return (
@@ -64,8 +64,9 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
         <PopoverTrigger asChild>
           <Button
             variant="outline"
+            size="sm"
             className={cn(
-              "justify-start text-left font-normal min-w-[280px]",
+              "justify-start text-left font-normal min-w-[200px] h-10 text-sm",
               !value.from && !value.to && "text-muted-foreground"
             )}
           >
@@ -82,14 +83,14 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
         <PopoverContent className="w-auto p-0" align="start">
           <div className="flex">
             {/* Quick Range Selection */}
-            <div className="border-r p-4 space-y-2 min-w-[140px]">
-              <h4 className="font-medium text-sm">Quick ranges</h4>
+            <div className="border-r p-2 space-y-1 w-20">
+              <h4 className="font-medium text-xs mb-1">Quick</h4>
               {quickRanges.map((range) => (
                 <Button
                   key={range.days}
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-start text-xs"
+                  className="w-full justify-start text-xs h-7 px-1"
                   onClick={() => handleQuickSelect(range.days)}
                 >
                   {range.label}
@@ -98,7 +99,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
             </div>
 
             {/* Calendar Selection */}
-            <div className="p-4 space-y-4">
+            <div className="p-3 space-y-3">
               <div className="flex gap-4">
                 {/* From Date */}
                 <div className="space-y-2">
@@ -107,10 +108,14 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
                     mode="single"
                     selected={value.from}
                     onSelect={(date) => handleDateSelect(date, 'from')}
-                    className="pointer-events-auto"
+                    className="rounded-md border"
+                    numberOfMonths={1}
+                    showOutsideDays={false}
                     disabled={(date) => {
-                      // Disable dates after the selected 'to' date
-                      return value.to ? date > value.to : false;
+                      // Only disable future dates beyond today
+                      const today = new Date();
+                      today.setHours(23, 59, 59, 999);
+                      return date > today;
                     }}
                   />
                 </div>
@@ -122,10 +127,14 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
                     mode="single"
                     selected={value.to}
                     onSelect={(date) => handleDateSelect(date, 'to')}
-                    className="pointer-events-auto"
+                    className="rounded-md border"
+                    numberOfMonths={1}
+                    showOutsideDays={false}
                     disabled={(date) => {
-                      // Disable dates before the selected 'from' date
-                      return value.from ? date < value.from : false;
+                      // Only disable future dates beyond today
+                      const today = new Date();
+                      today.setHours(23, 59, 59, 999);
+                      return date > today;
                     }}
                   />
                 </div>
@@ -136,12 +145,14 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, clas
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-8 px-3 text-sm"
                   onClick={() => setIsOpen(false)}
                 >
                   Cancel
                 </Button>
                 <Button
                   size="sm"
+                  className="h-8 px-3 text-sm"
                   onClick={() => setIsOpen(false)}
                   disabled={!value.from || !value.to}
                 >

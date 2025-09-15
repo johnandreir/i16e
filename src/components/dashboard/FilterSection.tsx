@@ -38,11 +38,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     const entities = entityData[selectedEntity as keyof typeof entityData] || [];
     return entities
       .filter(entity => !entity.includes('Add New'))
+      .sort((a, b) => a.localeCompare(b))
       .map(entity => ({ value: entity, label: entity }));
   };
   return (
-    <Card className="glass-card p-6 mb-8">
-      <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-end">
+    <Card className="glass-card p-4 mb-4">
+      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Entity Type Selection */}
           <div className="space-y-2">
