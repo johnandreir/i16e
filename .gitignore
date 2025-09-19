@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Bun lockfile (using npm as package manager)
+bun.lockb

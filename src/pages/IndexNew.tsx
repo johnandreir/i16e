@@ -13,6 +13,7 @@ import InsightsPanel from '@/components/dashboard/InsightsPanel';
 import DetailedStatsModal from '@/components/dashboard/DetailedStatsModal';
 import QuickEntityAdd from '@/components/dashboard/QuickEntityAdd';
 import EntityManagementDialog from '@/components/dashboard/EntityManagementDialog';
+import BackendStatus from '@/components/dashboard/BackendStatus';
 import { useEntityDatabase } from '@/hooks/useEntityDatabase';
 import { DashboardData } from '@/lib/entityService';
 
@@ -1634,6 +1635,9 @@ const Index = () => {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Backend Status Panel */}
+              <BackendStatus className="mt-6" />
               
               {/* Insights Panel */}
               <InsightsPanel 
