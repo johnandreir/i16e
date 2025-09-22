@@ -34,6 +34,8 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   reportGenerated = false,
   entityChanged = false
 }) => {
+  // Debug the button disabled state
+  const isButtonDisabled = isLoading || !selectedEntity || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to;
   const getCurrentEntityOptions = () => {
     const entities = entityData[selectedEntity as keyof typeof entityData] || [];
     return entities
@@ -53,7 +55,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 <SelectValue placeholder="Choose entity type" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="dpe">DPE Name</SelectItem>
+                <SelectItem value="dpe">DPE</SelectItem>
                 <SelectItem value="squad">Squad Name</SelectItem>
                 <SelectItem value="team">Team Name</SelectItem>
               </SelectContent>
@@ -63,15 +65,15 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           {/* Entity Value Selection with Search */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">
-              Select {selectedEntity.toUpperCase()}
+              Select {selectedEntity ? selectedEntity.toUpperCase() : 'Entity'}
             </label>
             <Combobox
               options={getCurrentEntityOptions()}
               value={selectedEntityValue}
               onValueChange={onEntityValueChange}
-              placeholder={selectedEntity === 'dpe' ? 'Choose DPE' : selectedEntity === 'squad' ? 'Choose Squad' : 'Choose Team'}
-              searchPlaceholder={`Search ${selectedEntity}s...`}
-              emptyText={`No ${selectedEntity} found.`}
+              placeholder={selectedEntity === 'dpe' ? 'Choose DPE' : selectedEntity === 'squad' ? 'Choose Squad' : selectedEntity === 'team' ? 'Choose Team' : 'Choose entity name'}
+              searchPlaceholder={`Search ${selectedEntity || 'entities'}...`}
+              emptyText={selectedEntity ? `No ${selectedEntity} found.` : 'Please select entity type first'}
               className="bg-card border-border w-full h-10"
             />
           </div>
@@ -91,7 +93,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         <div className="flex gap-3 items-end lg:self-end">
             <Button
             onClick={onGenerateReport}
-            disabled={isLoading || !selectedEntity || !selectedEntityValue || !selectedTimeRange.from || !selectedTimeRange.to}
+            disabled={isButtonDisabled}
             className="min-w-[140px] h-10"
           >
             {isLoading ? (

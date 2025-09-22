@@ -30,9 +30,6 @@ services:
     environment:
       - DB_TYPE=mongodb
       - DB_MONGODB_CONNECTION_URL=mongodb://admin:N0virus1!@mongodb:27017/n8n?authSource=admin
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=N0virus1!
       - N8N_HOST=localhost
       - N8N_PORT=5678
       - N8N_PROTOCOL=http

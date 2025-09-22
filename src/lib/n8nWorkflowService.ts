@@ -31,8 +31,8 @@ export class N8nWorkflowService {
   private workflowId: string;
 
   constructor() {
-    // Update these with your actual n8n instance details
-    this.baseUrl = import.meta.env.VITE_N8N_BASE_URL || 'http://localhost:5678';
+    // Use backend API proxy endpoints to avoid CORS issues
+    this.baseUrl = 'http://localhost:3001/api/n8n';
     this.workflowId = import.meta.env.VITE_N8N_WORKFLOW_ID || 'phJFt9t02Ssy2ADE';
   }
 
@@ -122,8 +122,8 @@ export class N8nWorkflowService {
 
       console.log('Triggering n8n workflow with payload:', workflowPayload);
 
-      // Trigger n8n workflow (manual trigger)
-      const response = await fetch(`${this.baseUrl}/api/v1/workflows/${this.workflowId}/execute`, {
+      // Use backend proxy endpoint for N8N workflow execution
+      const response = await fetch(`${this.baseUrl}/calculate-metrics`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -200,26 +200,29 @@ export class N8nWorkflowService {
    */
   async getWorkflowStatus(): Promise<{ isActive: boolean; lastExecution?: string }> {
     try {
-      // Test the actual webhook endpoint through proxy
-      const webhookUrl = '/api/n8n/webhook-test/dpe-performance';
-      
-      const response = await fetch(webhookUrl, {
-        method: 'GET', // Use GET to check availability
+      // Use backend health endpoint to check N8N status
+      const response = await fetch(`${this.baseUrl}/health`, {
+        method: 'GET',
       });
       
-      // If webhook responds (even with 404 for GET), it means workflow is active
-      // N8n returns 404 for GET on POST-only webhooks, but that means it's active
-      const isActive = response.status === 404 || (response.status >= 200 && response.status < 300);
-      
-      // Only log if there's an unexpected error (not 404)
-      if (!isActive && response.status !== 404) {
-        console.warn(`Unexpected webhook response status: ${response.status}`);
+      if (response.ok) {
+        const healthData = await response.json();
+        // Check if both N8N workflows are active and webhooks are listening
+        const workflowActive = healthData.n8nHealth?.n8nWorkflowStatus?.reachable;
+        const webhooksActive = healthData.n8nHealth?.n8nWebhookStatus?.getCases?.reachable && 
+                             healthData.n8nHealth?.n8nWebhookStatus?.calculateMetrics?.reachable;
+        const isActive = workflowActive && webhooksActive;
+        
+        return {
+          isActive,
+          lastExecution: new Date().toISOString()
+        };
+      } else {
+        return {
+          isActive: false,
+          lastExecution: undefined
+        };
       }
-      
-      return {
-        isActive,
-        lastExecution: new Date().toISOString()
-      };
     } catch (error) {
       // Only log network errors, not expected 404s
       console.warn('Network error checking workflow status:', error);

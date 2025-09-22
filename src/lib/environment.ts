@@ -1,13 +1,14 @@
 ﻿// Environment configuration for the DevOps Insight Engine
 
 export const environment = {
-  // N8N Webhook Configuration
+  // N8N Webhook Configuration (via Backend API Proxy to avoid CORS)
   webhook: {
-    baseUrl: 'http://localhost:5678',
+    baseUrl: 'http://localhost:3001',
     endpoints: {
-      dpePerformance: '/webhook-test/dpe-performance',
-      getCases: '/webhook-test/get-cases',
-      getPerformance: '/webhook-test/get-performance'
+      dpePerformance: '/api/n8n/calculate-metrics',
+      getCases: '/api/n8n/get-cases',
+      getPerformance: '/api/n8n/get-cases',
+      health: '/api/n8n/health'
     },
     timeout: 30000, // 30 seconds
   },
@@ -64,15 +65,15 @@ export const environment = {
 
 // Helper functions to get full URLs
 export const getWebhookUrl = (endpoint: keyof typeof environment.webhook.endpoints): string => {
-  return ${environment.webhook.baseUrl};
+  return `${environment.webhook.baseUrl}${environment.webhook.endpoints[endpoint]}`;
 };
 
 export const getMongoUrl = (endpoint: keyof typeof environment.mongodb.endpoints): string => {
-  return ${environment.mongodb.apiUrl};
+  return `${environment.mongodb.apiUrl}${environment.mongodb.endpoints[endpoint]}`;
 };
 
 export const getEurekaUrl = (endpoint: keyof typeof environment.eureka.endpoints): string => {
-  return ${environment.eureka.baseUrl};
+  return `${environment.eureka.baseUrl}${environment.eureka.endpoints[endpoint]}`;
 };
 
 // Environment validation

@@ -2,33 +2,27 @@
   "name": "Calculate metrics",
   "nodes": [
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "get-performance",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "b8bb21b1-5929-4c2e-bf64-86569e492b09",
-      "name": "Webhook",
-      "type": "n8n-nodes-base.webhook",
+      "parameters": {},
+      "id": "0f6f3afc-8439-41e6-8cc9-5bfecffffe48",
+      "name": "Calculate Metrics Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
       "position": [
-        672,
-        272
-      ],
-      "webhookId": "dpe-performance"
+        -464,
+        -144
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Get webhook data\nconst webhookData = $input.first().json;\nconsole.log('Full webhook data:', webhookData);\n\n// Extract entity value with multiple fallbacks\nlet entityValue = 'Mharlee Dela Cruz'; // Default fallback\nlet action = 'getMetrics'; // Default action\n\nif (webhookData.body) {\n  if (webhookData.body.entityValue) {\n    entityValue = webhookData.body.entityValue;\n    console.log('Found entityValue in body:', entityValue);\n  }\n  if (webhookData.body.action) {\n    action = webhookData.body.action;\n    console.log('Found action in body:', action);\n  }\n} else if (webhookData.entityValue) {\n  entityValue = webhookData.entityValue;\n  console.log('Found entityValue at root:', entityValue);\n  if (webhookData.action) {\n    action = webhookData.action;\n    console.log('Found action at root:', action);\n  }\n} else {\n  console.log('No entityValue found, using fallback:', entityValue);\n}\n\n// Build the MongoDB query with the extracted entity\nconst mongoQuery = {\n  \"owner_full_name\": entityValue,\n  \"status\": \"Resolved\"\n};\n\nconsole.log('MongoDB query will be:', mongoQuery);\nconsole.log('Action type:', action);\n\n// Return the query for MongoDB node\nreturn [{\n  json: {\n    query: mongoQuery,\n    entityValue: entityValue,\n    action: action,\n    debug: {\n      webhookStructure: webhookData,\n      extractedEntity: entityValue,\n      extractedAction: action\n    }\n  }\n}];"
+        "jsCode": "// Get input data from the Webhook Trigger - NO FALLBACK DATA\nlet entityValue = null;\nlet action = 'getMetrics';\nlet inputData = {};\n\ntry {\n  console.log('=== CALCULATE METRICS - WEBHOOK INPUT PROCESSING ===');\n  \n  // Get input from the Webhook Trigger node\n  const webhookData = $input.first().json;\n  console.log('Webhook data received:', JSON.stringify(webhookData, null, 2));\n  \n  if (webhookData) {\n    inputData = webhookData;\n    \n    // Extract entity information - NO FALLBACK\n    entityValue = inputData.entityValue || inputData.entityName || \n                 inputData.owner_full_name || inputData.ownerNames?.[0];\n    action = inputData.action || action;\n    \n    console.log('✅ Extracted values from webhook:', { entityValue, action });\n  } else {\n    console.log('⚠️ No data from webhook trigger');\n  }\n  \n} catch (error) {\n  console.error('❌ Error accessing webhook data:', error.message);\n  console.error('❌ Stack trace:', error.stack);\n}\n\nconsole.log('=== FINAL PROCESSING VALUES ===');\nconsole.log('entityValue:', entityValue);\nconsole.log('action:', action);\nconsole.log('hasInputData:', Object.keys(inputData).length > 0);\n\n// FAIL if no entityValue found - DO NOT USE FALLBACK\nif (!entityValue) {\n  console.error('❌ CRITICAL ERROR: No entityValue found in webhook data');\n  console.error('❌ Webhook data structure:', JSON.stringify(inputData, null, 2));\n  throw new Error('CRITICAL: No entityValue found in webhook data - cannot proceed with metrics calculation.');\n}\n\n// Build the MongoDB query\nconst mongoQuery = {\n  \"owner_full_name\": entityValue,\n  \"status\": \"Resolved\"\n};\n\nconsole.log('=== MONGODB QUERY ===');\nconsole.log('Query to execute:', JSON.stringify(mongoQuery, null, 2));\n\n// Return the query for MongoDB node\nconst outputData = {\n  query: mongoQuery,\n  entityValue: entityValue,\n  action: action,\n  debug: {\n    inputData: inputData,\n    extractedEntity: entityValue,\n    extractedAction: action,\n    triggerType: 'webhook',\n    timestamp: new Date().toISOString(),\n    mongoQueryString: JSON.stringify(mongoQuery)\n  }\n};\n\nconsole.log('=== OUTPUT DATA ===');\nconsole.log('Data to pass to MongoDB node:', JSON.stringify(outputData, null, 2));\n\nreturn [{ json: outputData }];"
       },
-      "id": "0e264fa3-e625-4dc3-9695-1f95da156822",
+      "id": "6f1fa3d9-2224-4525-9451-405ad9c0f935",
       "name": "Extract Entity",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        864,
-        272
+        -256,
+        -160
       ]
     },
     {
@@ -37,63 +31,48 @@
         "options": {},
         "query": "={{ JSON.stringify($json.query) }}"
       },
-      "id": "06e50c09-59d3-47fe-aa34-c3bcb7428b5a",
+      "id": "109f81bc-1171-4e78-bf2c-46d8b52285bf",
       "name": "MongoDB Query - Get Cases",
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
       "position": [
-        1024,
-        208
+        -32,
+        -160
       ],
       "credentials": {
         "mongoDb": {
-          "id": "tOaY9uUbWbjJyidX",
+          "id": "Pl29NJOEfuRbqWf6",
           "name": "MongoDB account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Get webhook payload and action\nconst extractedData = $('Extract Entity').first().json;\nconst action = extractedData.action || 'getMetrics';\nconst entityValue = extractedData.entityValue;\n\n// Get cases from MongoDB find operation\nconst cases = $('MongoDB Query - Get Cases').all();\nconsole.log('MongoDB Find Results:', {\n  casesCount: cases.length,\n  entityValue,\n  action\n});\n\n// If action is getDetails, return all case details\nif (action === 'getDetails') {\n  const detailedCases = cases.map((caseNode, index) => {\n    const caseData = caseNode.json;\n    console.log(`Processing case ${index + 1}:`, {\n      case_id: caseData.case_id,\n      title: caseData.title,\n      status: caseData.status,\n      case_age_days: caseData.case_age_days\n    });\n    \n    return {\n      case_id: caseData.case_id || 'N/A',\n      title: caseData.title || 'No title',\n      status: caseData.status || 'Unknown',\n      priority: caseData.priority || 'N/A',\n      case_age_days: caseData.case_age_days || 0,\n      created_date: caseData.created_date || null,\n      closed_date: caseData.closed_date || null,\n      owner_full_name: caseData.owner_full_name || 'Unknown',\n      products: caseData.products || [],\n      // Exclude structured_email_thread as requested\n    };\n  });\n  \n  console.log('Returning detailed cases:', detailedCases.length);\n  \n  const detailResult = {\n    action: 'getDetails',\n    entityValue,\n    cases: detailedCases,\n    totalCases: detailedCases.length,\n    retrievedAt: new Date().toISOString()\n  };\n  \n  console.log('Detail response:', detailResult);\n  return [{ json: detailResult }];\n}\n\n// Default: Calculate aggregated metrics\nlet totalSct = 0;\nlet validSctCases = 0;\nconst closedCases = cases.length;\n\n// Calculate average SCT from case_age_days\ncases.forEach((caseNode, index) => {\n  const caseData = caseNode.json;\n  if (caseData.case_age_days && typeof caseData.case_age_days === 'number') {\n    totalSct += caseData.case_age_days;\n    validSctCases++;\n    console.log(`Case ${index + 1}: ${caseData.case_id} - ${caseData.case_age_days} days`);\n  }\n});\n\n// Calculate average SCT\nconst avgSct = validSctCases > 0 ? Math.round((totalSct / validSctCases) * 10) / 10 : 0;\n\nconsole.log('Final SCT calculation:', {\n  totalSct,\n  validSctCases,\n  avgSct,\n  closedCases\n});\n\n// Return the aggregated metrics\nconst finalResult = {\n  sct: avgSct,\n  closedCases: closedCases,\n  entityValue,\n  calculatedAt: new Date().toISOString(),\n  debug: {\n    totalCases: cases.length,\n    validSctCases: validSctCases,\n    avgCalculation: `${totalSct} total days / ${validSctCases} valid cases = ${avgSct} avg SCT`\n  }\n};\n\nconsole.log('Calculate Metrics Final Result:', finalResult);\n\nreturn [{ json: finalResult }];"
+        "jsCode": "// Get webhook payload and action with error handling\nlet extractedData = {};\nlet action = 'getMetrics';\nlet entityValue = 'Unknown';\n\ntry {\n  console.log('=== CALCULATE METRICS NODE ===');\n  \n  // Safely get data from Extract Entity node\n  const extractNode = $('Extract Entity').first();\n  if (extractNode && extractNode.json) {\n    extractedData = extractNode.json;\n    action = extractedData.action || 'getMetrics';\n    entityValue = extractedData.entityValue || 'Unknown';\n    console.log('✅ Extracted data:', { action, entityValue });\n  } else {\n    console.log('⚠️ No data from Extract Entity node');\n  }\n  \n  // Get cases from MongoDB find operation with error handling\n  let cases = [];\n  try {\n    const mongoResults = $('MongoDB Query - Get Cases').all();\n    cases = mongoResults || [];\n    console.log('✅ MongoDB Find Results:', {\n      casesCount: cases.length,\n      entityValue,\n      action\n    });\n  } catch (mongoError) {\n    console.error('❌ Error getting MongoDB results:', mongoError.message);\n    cases = [];\n  }\n  \n  // If action is getDetails, return all case details\n  if (action === 'getDetails') {\n    const detailedCases = cases.map((caseNode, index) => {\n      try {\n        const caseData = caseNode.json || {};\n        console.log(`Processing case ${index + 1}:`, {\n          case_id: caseData.case_id,\n          title: caseData.title,\n          status: caseData.status,\n          case_age_days: caseData.case_age_days\n        });\n        \n        return {\n          case_id: caseData.case_id || 'N/A',\n          title: caseData.title || 'No title',\n          status: caseData.status || 'Unknown',\n          priority: caseData.priority || 'N/A',\n          case_age_days: caseData.case_age_days || 0,\n          created_date: caseData.created_date || null,\n          closed_date: caseData.closed_date || null,\n          owner_full_name: caseData.owner_full_name || 'Unknown',\n          products: caseData.products || []\n        };\n      } catch (caseError) {\n        console.error(`❌ Error processing case ${index + 1}:`, caseError.message);\n        return {\n          case_id: 'ERROR',\n          title: 'Error processing case',\n          status: 'Error',\n          priority: 'N/A',\n          case_age_days: 0,\n          created_date: null,\n          closed_date: null,\n          owner_full_name: 'Unknown',\n          products: []\n        };\n      }\n    });\n    \n    console.log('Returning detailed cases:', detailedCases.length);\n    \n    const detailResult = {\n      action: 'getDetails',\n      entityValue,\n      cases: detailedCases,\n      totalCases: detailedCases.length,\n      retrievedAt: new Date().toISOString()\n    };\n    \n    console.log('✅ Detail response prepared successfully');\n    return [{ json: detailResult }];\n  }\n  \n  // Default: Calculate aggregated metrics\n  let totalSct = 0;\n  let validSctCases = 0;\n  const closedCases = cases.length;\n  \n  console.log('=== SCT CALCULATION ===');\n  \n  // Calculate average SCT from case_age_days with error handling\n  cases.forEach((caseNode, index) => {\n    try {\n      const caseData = caseNode.json || {};\n      if (caseData.case_age_days && typeof caseData.case_age_days === 'number' && !isNaN(caseData.case_age_days)) {\n        totalSct += caseData.case_age_days;\n        validSctCases++;\n        console.log(`Case ${index + 1}: ${caseData.case_id} - ${caseData.case_age_days} days`);\n      } else {\n        console.log(`Case ${index + 1}: ${caseData.case_id} - Invalid/missing case_age_days: ${caseData.case_age_days}`);\n      }\n    } catch (caseError) {\n      console.error(`❌ Error processing case ${index + 1} for SCT:`, caseError.message);\n    }\n  });\n  \n  // Calculate average SCT with validation\n  const avgSct = validSctCases > 0 ? Math.round((totalSct / validSctCases) * 10) / 10 : 0;\n  \n  console.log('Final SCT calculation:', {\n    totalSct,\n    validSctCases,\n    avgSct,\n    closedCases\n  });\n  \n  // Return the aggregated metrics\n  const finalResult = {\n    sct: avgSct,\n    closedCases: closedCases,\n    entityValue,\n    calculatedAt: new Date().toISOString(),\n    debug: {\n      totalCases: cases.length,\n      validSctCases: validSctCases,\n      avgCalculation: `${totalSct} total days / ${validSctCases} valid cases = ${avgSct} avg SCT`,\n      processingSuccess: true\n    }\n  };\n  \n  console.log('✅ Calculate Metrics Final Result:', JSON.stringify(finalResult, null, 2));\n  \n  return [{ json: finalResult }];\n  \n} catch (error) {\n  console.error('❌ Fatal error in Calculate Metrics node:', error.message);\n  console.error('❌ Stack trace:', error.stack);\n  \n  // Return error result\n  const errorResult = {\n    sct: 0,\n    closedCases: 0,\n    entityValue: entityValue || 'Unknown',\n    calculatedAt: new Date().toISOString(),\n    error: {\n      message: error.message,\n      type: 'Calculate Metrics Error',\n      timestamp: new Date().toISOString()\n    },\n    debug: {\n      totalCases: 0,\n      validSctCases: 0,\n      avgCalculation: 'Error in calculation',\n      processingSuccess: false\n    }\n  };\n  \n  console.log('❌ Returning error result:', JSON.stringify(errorResult, null, 2));\n  return [{ json: errorResult }];\n}"
       },
-      "id": "d408d566-328a-4749-90c5-c93bcbc5745b",
+      "id": "b39ca185-376e-4c28-b47d-4ebf98d9f92d",
       "name": "Calculate Metrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1200,
-        272
+        192,
+        -160
       ]
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}",
-        "options": {}
-      },
-      "id": "e326fd6e-b6a9-470b-81ec-b91466aa0888",
-      "name": "Respond to Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {},
+      "id": "e62dc041-b4c9-4c4c-a2e9-6c678f95e244",
+      "name": "Done",
+      "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1632,
-        272
+        416,
+        -160
       ]
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook": {
-      "main": [
-        [
-          {
-            "node": "Extract Entity",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Extract Entity": {
       "main": [
         [
@@ -120,7 +99,18 @@
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Metrics Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Entity",
             "type": "main",
             "index": 0
           }
@@ -128,15 +118,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "e7ed8c28-2cb2-4759-bc5c-8a0fa342e6aa",
+  "versionId": "75022119-e6ff-4750-878a-1b41818f754b",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "91ea575691e96319b81c444c73b27637c88eef71c15d6b90e29f2d14f0fc4b63"
+    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
   },
-  "id": "klabo62avQEG6HNS",
+  "id": "VaX3w979KjLLcgNY",
   "tags": []
 }

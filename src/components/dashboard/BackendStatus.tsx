@@ -52,20 +52,20 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
       priority: 'high'
     },
     {
-      name: 'n8n Workflow Engine',
+      name: 'n8n Workflow Status',
       status: 'unknown',
       lastCheck: new Date(),
-      details: 'Checking workflow engine status...',
-      url: 'http://localhost:5678/healthz',
+      details: 'Checking workflow status...',
+      url: 'http://localhost:3001/api/n8n/health',
       category: 'workflow',
       priority: 'high'
     },
     {
-      name: 'n8n Webhook Endpoint',
+      name: 'n8n Webhook Status',
       status: 'unknown',
       lastCheck: new Date(),
-      details: 'Checking webhook endpoint status...',
-      url: 'http://localhost:5678/webhook-test/dpe-performance',
+      details: 'Checking webhook status...',
+      url: 'http://localhost:3001/api/n8n/health',
       category: 'workflow',
       priority: 'medium'
     }
@@ -109,39 +109,82 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
 
   const checkN8nHealth = async (): Promise<{ status: ServiceStatus['status'], details: string }> => {
     try {
-      const response = await fetch('http://localhost:5678/healthz', {
+      // Use backend API proxy to check N8N health (avoiding CORS)
+      const response = await fetch('http://localhost:3001/api/n8n/health', {
         method: 'GET',
         signal: AbortSignal.timeout(5000)
       });
 
-      return {
-        status: response.ok ? 'healthy' : 'unhealthy',
-        details: response.ok ? 'n8n Engine Running' : `Error: ${response.status} ${response.statusText}`
-      };
+      if (!response.ok) {
+        return {
+          status: 'unhealthy',
+          details: `Backend API error: ${response.status} ${response.statusText}`
+        };
+      }
+
+      const healthData = await response.json();
+      const workflowStatus = healthData.n8nHealth?.n8nWorkflowStatus;
+
+      if (workflowStatus?.reachable) {
+        return {
+          status: 'healthy',
+          details: workflowStatus.message || 'Workflows accessible'
+        };
+      } else {
+        return {
+          status: 'unhealthy',
+          details: workflowStatus?.message || 'Workflow status unavailable'
+        };
+      }
     } catch (error) {
       return {
         status: 'unhealthy',
-        details: error instanceof Error ? error.message : 'n8n connection failed'
+        details: error instanceof Error ? error.message : 'Workflow status check failed'
       };
     }
   };
 
   const checkWebhookHealth = async (): Promise<{ status: ServiceStatus['status'], details: string }> => {
     try {
-      // Test with a HEAD request to avoid triggering the webhook
-      const response = await fetch('http://localhost:5678/webhook-test/dpe-performance', {
-        method: 'HEAD',
+      // Use backend API proxy to check webhook health (avoiding CORS)
+      const response = await fetch('http://localhost:3001/api/n8n/health', {
+        method: 'GET',
         signal: AbortSignal.timeout(5000)
       });
 
-      return {
-        status: response.status === 200 || response.status === 405 ? 'healthy' : 'unhealthy', // 405 is expected for HEAD on webhook
-        details: response.status === 405 ? 'Webhook Endpoint Ready' : `Status: ${response.status}`
-      };
+      if (!response.ok) {
+        return {
+          status: 'unhealthy',
+          details: `Backend API error: ${response.status} ${response.statusText}`
+        };
+      }
+
+      const healthData = await response.json();
+      const webhookStatus = healthData.n8nHealth?.n8nWebhookStatus;
+      
+      const getCasesHealthy = webhookStatus?.getCases?.reachable;
+      const metricsHealthy = webhookStatus?.calculateMetrics?.reachable;
+      
+      if (getCasesHealthy && metricsHealthy) {
+        return {
+          status: 'healthy',
+          details: 'All webhook endpoints listening'
+        };
+      } else if (getCasesHealthy || metricsHealthy) {
+        return {
+          status: 'unhealthy',
+          details: 'Some webhook endpoints unavailable'
+        };
+      } else {
+        return {
+          status: 'unhealthy',
+          details: 'All webhook endpoints unreachable'
+        };
+      }
     } catch (error) {
       return {
         status: 'unhealthy',
-        details: error instanceof Error ? error.message : 'Webhook unreachable'
+        details: error instanceof Error ? error.message : 'Webhook status check failed'
       };
     }
   };
@@ -169,10 +212,10 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
           ));
         }
         break;
-      case 'n8n Workflow Engine':
+      case 'n8n Workflow Status':
         result = await checkN8nHealth();
         break;
-      case 'n8n Webhook Endpoint':
+      case 'n8n Webhook Status':
         result = await checkWebhookHealth();
         break;
       case 'MongoDB Database':

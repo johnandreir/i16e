@@ -1,5 +1,5 @@
 {
-  "name": "GET CASES",
+  "name": "Get cases",
   "nodes": [
     {
       "parameters": {
@@ -66,10 +66,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        224,
-        -416
+        96,
+        320
       ],
-      "id": "67ca8afd-a8f2-4d37-a0b4-322b42b31533",
+      "id": "7dbd2759-ca30-47fd-b795-dd39b633a5ad",
       "name": "onlyDocs"
     },
     {
@@ -99,14 +99,14 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -640,
-        -80
+        -800,
+        512
       ],
-      "id": "de7cfe13-453a-4c45-9fb8-9d225e081e7b",
+      "id": "327ffe90-8c46-45c4-adae-77bec9bbb726",
       "name": "eurekaAPI",
       "credentials": {
         "httpBasicAuth": {
-          "id": "VThbDp9oNKjKorHJ",
+          "id": "LuqOI2Vp6NW9GEzF",
           "name": "Unnamed credential"
         }
       }
@@ -119,10 +119,10 @@
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
       "position": [
-        64,
-        -416
+        -128,
+        320
       ],
-      "id": "6d64b95b-5382-47ff-b20d-77854ea4dfb0",
+      "id": "0f71b3c0-faa1-43f9-ac01-56db62a00a01",
       "name": "Split Out"
     },
     {
@@ -130,10 +130,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -304,
-        -416
+        -576,
+        320
       ],
-      "id": "7b84848c-e62c-48da-b8e4-869c51e49fb3",
+      "id": "b015a11d-ad35-4cae-bdb6-ba34fc45c939",
       "name": "Merge",
       "executeOnce": false
     },
@@ -144,10 +144,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -96,
-        -416
+        -352,
+        320
       ],
-      "id": "621952a3-363c-4c10-b2b3-f042fd7cedb1",
+      "id": "797dd0cf-51ff-4258-a357-fd81e774ccae",
       "name": "cleanHTML&PII"
     },
     {
@@ -157,10 +157,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        352,
-        -416
+        320,
+        320
       ],
-      "id": "2936c057-f803-417c-8d46-7de3887da28b",
+      "id": "d3df4908-68f4-43a8-906a-b2e6268d9bd5",
       "name": "structurizeEmail"
     },
     {
@@ -170,25 +170,25 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        496,
-        -416
+        544,
+        320
       ],
-      "id": "3551b3ac-3019-4e23-8edc-ab252b1647a7",
+      "id": "2bf02b9b-317e-400e-892d-c63899031c9b",
       "name": "calcCaseAgeDay"
     },
     {
       "parameters": {
         "content": "## Clean API Response (HTML and PII), then Populate MongoDB",
-        "height": 224,
-        "width": 1184
+        "height": 256,
+        "width": 1616
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -352,
-        -480
+        -672,
+        224
       ],
       "typeVersion": 1,
-      "id": "22c6058f-4021-4f90-a4bf-1d273c06c357",
+      "id": "7ff222f2-8690-492b-a1bf-1bb57b3029ad",
       "name": "Sticky Note"
     },
     {
@@ -201,15 +201,15 @@
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
       "position": [
-        656,
-        -416
+        768,
+        320
       ],
-      "id": "3de05012-371f-4d61-81aa-26f19c574458",
+      "id": "62020d46-ce18-4544-b9eb-860809873bf5",
       "name": "populateDB",
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "tOaY9uUbWbjJyidX",
+          "id": "Pl29NJOEfuRbqWf6",
           "name": "MongoDB account"
         }
       }
@@ -222,15 +222,15 @@
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
       "position": [
-        -864,
-        -400
+        -1248,
+        512
       ],
-      "id": "8dcff089-0749-4e60-8d1e-044981a98e42",
+      "id": "8a5015ae-b42c-49bc-b101-d0e0a586ec8e",
       "name": "deleteDB",
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "tOaY9uUbWbjJyidX",
+          "id": "Pl29NJOEfuRbqWf6",
           "name": "MongoDB account"
         }
       }
@@ -238,17 +238,17 @@
     {
       "parameters": {
         "content": "## Loop\nIterate through queried cases (Eureka API limit is 30 cases per query)",
-        "height": 288,
-        "width": 560,
+        "height": 336,
+        "width": 672,
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -704,
-        -160
+        -864,
+        480
       ],
       "typeVersion": 1,
-      "id": "09de1217-3abc-4cfb-ae1f-12c7b36a70e8",
+      "id": "c103f96d-9b53-47e6-93e6-138d304bd2b6",
       "name": "Sticky Note1"
     },
     {
@@ -258,10 +258,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -320,
-        -80
+        -352,
+        656
       ],
-      "id": "c79397e8-69c5-46b9-9380-b5a51f42b244",
+      "id": "231203b0-e79c-4c7c-8b4e-41de4a9cfafe",
       "name": "Edit Fields"
     },
     {
@@ -291,41 +291,41 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -480,
-        -80
+        -576,
+        512
       ],
-      "id": "ec54c9c4-f571-430f-b1d9-c515bf2d6659",
+      "id": "447fd022-9715-4c8f-be88-791f6a38b149",
       "name": "If"
     },
     {
       "parameters": {
         "content": "## Main Workflow - Dynamic Entity and Date Processing",
-        "height": 720,
-        "width": 2208,
+        "height": 816,
+        "width": 2768,
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -1328,
-        -560
+        -1792,
+        0
       ],
       "typeVersion": 1,
-      "id": "626fd4bd-fa0d-43dc-b0c3-e880fb5e2b74",
+      "id": "7c7245ae-8bb1-4c93-87de-5a8b8f2db3d2",
       "name": "Sticky Note3"
     },
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "get-cases",
+        "path": "get-performance",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -1136,
-        -208
+        -1696,
+        416
       ],
-      "id": "1c2068e8-f38b-4f29-92dc-6cec1613e048",
+      "id": "4288d3c9-0e72-4840-8a0b-db422db43587",
       "name": "Webhook",
       "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
     },
@@ -336,10 +336,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1008,
-        -208
+        -1472,
+        416
       ],
-      "id": "4c55d94a-2931-48b5-a109-d0bc0825e6fa",
+      "id": "95f982c9-355b-4e11-8b59-cd993226142e",
       "name": "ProcessWebhookData"
     },
     {
@@ -349,11 +349,47 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -752,
-        -208
+        -1024,
+        512
       ],
-      "id": "51cbd945-7593-4f8d-a2b9-316d89a8a696",
+      "id": "5a85f40d-eda4-4fea-a0f1-375124606ac6",
       "name": "Edit Fields_declareStart"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare entity data directly from ProcessWebhookData for Execute Workflow\nconsole.log('=== PREPARE ENTITY DATA FOR EXECUTE WORKFLOW ===');\n\n// Get the original webhook data directly from ProcessWebhookData node\nconst processedData = $('ProcessWebhookData').first().json;\nconsole.log('Data from ProcessWebhookData node:', JSON.stringify(processedData, null, 2));\n\nif (!processedData || !processedData.webhookData) {\n  throw new Error('No webhook data found from ProcessWebhookData node');\n}\n\nconst webhookData = processedData.webhookData;\nconsole.log('Extracted webhookData:', JSON.stringify(webhookData, null, 2));\n\n// Extract entity value from webhook data\nlet entityValue = null;\n\n// Try different extraction strategies\nif (webhookData.ownerNames && Array.isArray(webhookData.ownerNames) && webhookData.ownerNames.length > 0) {\n  entityValue = webhookData.ownerNames[0];\n  console.log('✅ Found entityValue in ownerNames[0]:', entityValue);\n} else if (webhookData.entityValue) {\n  entityValue = webhookData.entityValue;\n  console.log('✅ Found entityValue in entityValue:', entityValue);\n} else if (webhookData.entityName) {\n  entityValue = webhookData.entityName;\n  console.log('✅ Found entityValue in entityName:', entityValue);\n}\n\n// FAIL if no entity value - no fallbacks\nif (!entityValue) {\n  console.error('❌ CRITICAL: No entityValue found in webhook data');\n  console.error('Available webhook data keys:', Object.keys(webhookData));\n  throw new Error('CRITICAL: No entityValue found - cannot execute Calculate Metrics workflow');\n}\n\n// Create simple data structure for Execute Workflow\nconst executeData = {\n  entityValue: entityValue,\n  owner_full_name: entityValue,\n  source: 'get-cases-workflow',\n  timestamp: new Date().toISOString()\n};\n\nconsole.log('✅ Entity data prepared for Execute Workflow:', JSON.stringify(executeData, null, 2));\n\nreturn [{ json: executeData }];"
+      },
+      "id": "fb22ef56-6eec-4fed-8f53-d369d61c12cb",
+      "name": "Prepare Entity Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "VaX3w979KjLLcgNY",
+          "cachedResultName": "Calculate metrics"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        608
+      ],
+      "id": "ef900854-c963-45f6-b8c9-7efe09ad65db",
+      "name": "Call 'Calculate metrics'"
     }
   ],
   "pinData": {},
@@ -508,7 +544,24 @@
     },
     "populateDB": {
       "main": [
-        []
+        [
+          {
+            "node": "Prepare Entity Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Entity Data": {
+      "main": [
+        [
+          {
+            "node": "Call 'Calculate metrics'",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -516,11 +569,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "45614bad-dddf-4292-8059-e336bc815e7a",
+  "versionId": "dd9cd16e-c23e-4c49-9178-a2999e43f5dd",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "91ea575691e96319b81c444c73b27637c88eef71c15d6b90e29f2d14f0fc4b63"
+    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
   },
-  "id": "K7xl4zp8iHZAdTC6",
+  "id": "W23DBMrR9IOmmFC6",
   "tags": []
 }

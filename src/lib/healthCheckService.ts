@@ -15,7 +15,7 @@ export interface SystemHealth {
 class HealthCheckService {
   private healthChecks: Map<string, HealthStatus> = new Map();
 
-  async checkService(name: string, url: string, timeout: number = 5000): Promise<HealthStatus> {
+  async checkService(name: string, url: string, timeout: number = 5000, method: string = 'GET'): Promise<HealthStatus> {
     const startTime = Date.now();
     
     try {
@@ -23,7 +23,7 @@ class HealthCheckService {
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       const response = await fetch(url, {
-        method: 'GET',
+        method: method,
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal
       });
@@ -35,7 +35,7 @@ class HealthCheckService {
         service: name,
         status: response.ok ? 'healthy' : 'unhealthy',
         lastCheck: new Date(),
-        details: response.ok ? OK () : Error ,
+        details: response.ok ? 'OK' : 'Error',
         responseTime
       };
 
@@ -60,7 +60,9 @@ class HealthCheckService {
   async checkWebhookService(): Promise<HealthStatus> {
     return this.checkService(
       'N8N Webhook',
-      'http://localhost:5678/webhook-test/dpe-performance'
+      'http://localhost:3001/api/n8n/health',
+      5000,
+      'GET'
     );
   }
 

@@ -16,9 +16,12 @@ import EntityManagementDialog from '@/components/dashboard/EntityManagementDialo
 import BackendStatus from '@/components/dashboard/BackendStatus';
 import { useEntityDatabase } from '@/hooks/useEntityDatabase';
 import { DashboardData } from '@/lib/entityService';
+import { useToast } from '@/hooks/use-toast';
 
 const IndexNew = () => {
   console.log('IndexNew component rendering...');
+  
+  const { toast } = useToast();
   
   // Database operations
   const { 
@@ -41,8 +44,7 @@ const IndexNew = () => {
   } = useEntityDatabase();
 
   // State management
-  const [selectedEntity, setSelectedEntity] = useState<string>('dpe');
-  const [selectedEntityType, setSelectedEntityType] = useState<string>('dpe');
+  const [selectedEntity, setSelectedEntity] = useState<string>('');
   const [selectedEntityValue, setSelectedEntityValue] = useState<string>('');
   const [selectedTimeRange, setSelectedTimeRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
     const to = new Date();
@@ -72,26 +74,7 @@ const IndexNew = () => {
   const [sctAnalysisResults, setSctAnalysisResults] = useState<any>(null);
   const [cxInsightResults, setCxInsightResults] = useState<any>(null);
 
-  // Auto-select first DPE when no entity value is selected and data is available
-  useEffect(() => {
-    if (!selectedEntityValue && !reportGenerated && entityData && entityData.dpes && entityData.dpes.length > 0) {
-      const availableDPEs = entityData.dpes.filter(dpe => !dpe.includes('Add New'));
-
-      if (availableDPEs.length > 0) {
-        const firstDPE = availableDPEs[0];
-        console.log('Auto-selecting first DPE:', firstDPE);
-
-        // Ensure we're using DPE as entity type and set the value
-        setSelectedEntity('dpe');
-        setSelectedEntityValue(firstDPE);
-
-        // Trigger report generation for the auto-selected DPE
-        setTimeout(() => {
-          handleGenerateReport();
-        }, 100); // Small delay to ensure state is updated
-      }
-    }
-  }, [entityData, selectedEntityValue, reportGenerated]);
+  // Removed auto-selection to allow user to manually choose entities
 
   // Handler functions
   const handleEntityChange = (entity: string) => {
@@ -162,58 +145,91 @@ const IndexNew = () => {
   };
 
   const handleGenerateReport = async () => {
+    console.log('🚀 handleGenerateReport called in IndexNew.tsx!');
+    
+    console.log('Current state values:', {
+      selectedEntity,
+      selectedEntityValue,
+      selectedTimeRange,
+      isLoading
+    });
+    
     // Comprehensive validation before generating report
     if (!selectedEntity) {
-      console.error('No entity type selected');
+      console.error('❌ VALIDATION FAILED: No entity type selected');
       return;
     }
+    console.log('✅ Entity type validation passed');
     
     if (!selectedEntityValue || selectedEntityValue.includes('Add New')) {
-      console.error('No valid entity selected');
+      console.error('❌ VALIDATION FAILED: No valid entity selected', selectedEntityValue);
       return;
     }
+    console.log('✅ Entity value validation passed');
     
     // Validate entity type
     if (!['dpe', 'squad', 'team'].includes(selectedEntity)) {
-      console.error('Invalid entity type:', selectedEntity);
+      console.error('❌ VALIDATION FAILED: Invalid entity type:', selectedEntity);
       return;
     }
+    console.log('✅ Entity type enum validation passed');
     
     // Validate that selected entity value exists in current data
     const formattedData = formatEntityDataForComponents();
+    console.log('Formatted data:', formattedData);
+    
     const entityOptions = formattedData[selectedEntity as 'team' | 'squad' | 'dpe'] || [];
+    console.log(`Entity options for ${selectedEntity}:`, entityOptions);
+    
     const validOptions = entityOptions.filter(e => !e.includes('Add New'));
+    console.log('Valid options:', validOptions);
+    console.log('Checking if selectedEntityValue exists in validOptions:', {
+      selectedEntityValue,
+      exists: validOptions.includes(selectedEntityValue)
+    });
+    
     if (!validOptions.includes(selectedEntityValue)) {
-      console.error('Selected entity not found in current data:', selectedEntityValue);
+      console.error('❌ VALIDATION FAILED: Selected entity not found in current data:', selectedEntityValue);
       return;
     }
+    console.log('✅ Entity exists in current data validation passed');
     
     // Validate mappings for squad and dpe
     if (selectedEntity === 'dpe') {
       const mappedSquad = entityMappings.dpeToSquad[selectedEntityValue];
+      console.log(`DPE ${selectedEntityValue} mapped to squad:`, mappedSquad);
       if (!mappedSquad) {
-        console.warn('DPE is not mapped to any squad:', selectedEntityValue);
+        console.warn('⚠️ DPE is not mapped to any squad:', selectedEntityValue);
       }
     }
     
     if (selectedEntity === 'squad') {
       const mappedTeam = entityMappings.squadToTeam[selectedEntityValue];
+      console.log(`Squad ${selectedEntityValue} mapped to team:`, mappedTeam);
       if (!mappedTeam) {
-        console.warn('Squad is not mapped to any team:', selectedEntityValue);
+        console.warn('⚠️ Squad is not mapped to any team:', selectedEntityValue);
       }
     }
     
+    console.log('✅ All validations passed, setting loading state...');
     setIsLoading(true);
+    console.log('✅ Loading state set to true');
     
     // Add diagnostic logging
+    console.log('🔍 Running diagnostic...');
     diagnoseEntityData(selectedEntity, selectedEntityValue);
+    console.log('✅ Diagnostic completed');
     
     try {
+      console.log('📅 Processing date range...');
       // Fetch real dashboard data based on entity selection and time range
       const startDate = selectedTimeRange.from?.toISOString().split('T')[0];
       const endDate = selectedTimeRange.to?.toISOString().split('T')[0];
+      console.log('Date range processed:', { startDate, endDate });
       
+      console.log('📊 Fetching dashboard data...');
       const dashboardData = await getDashboardData(selectedEntity, selectedEntityValue, startDate, endDate);
+      console.log('✅ Dashboard data fetched successfully!');
       
       console.log(`Dashboard data fetch for ${selectedEntity} "${selectedEntityValue}":`, {
         dashboardData,
@@ -243,12 +259,135 @@ const IndexNew = () => {
         console.log('Dashboard data loaded:', dashboardData);
         console.log('Report current data captured:', reportData);
         
+        // Trigger N8N webhook for case data
+        try {
+          console.log('🔗 Triggering N8N webhook for case data...');
+          
+          // Format date range for API
+          const startDate = selectedTimeRange.from!.toISOString().split('T')[0];
+          const endDate = selectedTimeRange.to!.toISOString().split('T')[0];
+          const formattedDateRange = `${startDate}T00:00:00Z TO ${endDate}T23:59:59Z`;
+          
+          // Create payload based on entity type and value
+          let ownerNames: string[] = [];
+          
+          console.log('🔍 Starting entity to owner name mapping for:', {
+            selectedEntity,
+            selectedEntityValue
+          });
+          
+          if (selectedEntity === 'dpe') {
+            ownerNames = [selectedEntityValue];
+            console.log('✅ DPE mapping complete:', ownerNames);
+          } else if (selectedEntity === 'squad') {
+            // Get DPEs for this squad
+            const dpes = await getDPEsWithIds();
+            const squads = await getSquadsWithIds();
+            console.log('📊 Available squads:', squads.map(s => ({ id: s.id, name: s.name })));
+            console.log('📊 Available DPEs:', dpes.map(d => ({ id: d.id, name: d.name, squadID: d.squadID })));
+            
+            const squad = squads.find(s => s.name === selectedEntityValue);
+            console.log('🎯 Found squad:', squad);
+            
+            if (squad) {
+              const squadDPEs = dpes.filter(dpe => dpe.squadID === squad.id);
+              ownerNames = squadDPEs.map(dpe => dpe.name);
+              console.log('✅ Squad DPEs found:', squadDPEs, 'Owner names:', ownerNames);
+            }
+          } else if (selectedEntity === 'team') {
+            // Get all DPEs for this team
+            const allDPEs = await getDPEsWithIds();
+            const allSquads = await getSquadsWithIds();
+            const teams = await getTeamsWithIds();
+            console.log('📊 Available teams:', teams.map(t => ({ id: t.id, name: t.name })));
+            console.log('📊 Available squads:', allSquads.map(s => ({ id: s.id, name: s.name, teamID: s.teamID })));
+            console.log('📊 Available DPEs:', allDPEs.map(d => ({ id: d.id, name: d.name, squadID: d.squadID })));
+            
+            const team = teams.find(t => t.name === selectedEntityValue);
+            console.log('🎯 Found team:', team);
+            
+            if (team) {
+              const teamSquads = allSquads.filter(squad => squad.teamID === team.id);
+              console.log('🎯 Team squads:', teamSquads);
+              
+              const teamSquadIds = teamSquads.map(squad => squad.id);
+              console.log('🎯 Team squad IDs:', teamSquadIds);
+              
+              const teamDPEs = allDPEs.filter(dpe => teamSquadIds.includes(dpe.squadID));
+              ownerNames = teamDPEs.map(dpe => dpe.name);
+              console.log('✅ Team DPEs found:', teamDPEs, 'Owner names:', ownerNames);
+            }
+          }
+          
+          if (ownerNames.length === 0) {
+            throw new Error(`No owner names found for ${selectedEntity}: ${selectedEntityValue}`);
+          }
+          
+          console.log('🔍 Debug webhook data generation:', {
+            selectedEntity,
+            selectedEntityValue, 
+            ownerNames,
+            formattedDateRange,
+            startDate,
+            endDate
+          });
+          
+          const payload = {
+            entityType: selectedEntity,
+            entityName: selectedEntityValue,
+            ownerNames: ownerNames,
+            eurekaDateRange: formattedDateRange,
+            // Also include the original format for compatibility
+            owner_full_name: ownerNames,
+            closed_date: [formattedDateRange]
+          };
+          
+          console.log('📤 Webhook payload:', payload);
+          
+          // Step 1: Call get-cases webhook
+          console.log('🚀 Step 1: Triggering get-cases webhook...');
+          const getCasesResponse = await fetch('http://localhost:3001/api/n8n/get-cases', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+          
+          const getCasesResult = await getCasesResponse.json();
+          
+          if (getCasesResponse.ok && getCasesResult.success) {
+            console.log('✅ Get-cases webhook triggered successfully:', getCasesResult.message);
+            console.log('ℹ️ Calculate-metrics workflow will be triggered automatically after case data processing completes');
+            toast({
+              title: "Workflow Started",
+              description: "N8N workflow started successfully. Case data collection and metrics calculation will run sequentially.",
+            });
+          } else {
+            console.error('❌ Get-cases webhook failed:', getCasesResult.message || 'Unknown error');
+            toast({
+              title: "Workflow Failed", 
+              description: `Get-cases workflow trigger failed: ${getCasesResult.message || 'Unknown error'}`,
+              variant: "destructive"
+            });
+          }
+        } catch (webhookError) {
+          console.error('❌ Error triggering N8N webhook:', webhookError);
+          toast({
+            title: "Webhook Error",
+            description: "Failed to trigger N8N workflow, but report generation continues.",
+            variant: "destructive"
+          });
+        }
+        
         // Always generate report - let dashboard components handle "No data available" display
         setReportGenerated(true);
         setGeneratedEntity(selectedEntity);
         setGeneratedEntityValue(selectedEntityValue);
         setEntityChanged(false);
         setIsAnalysisEnabled(true);
+        
+        console.log('🎉 SUCCESS: Report generation completed successfully!');
       } else {
         console.warn('No dashboard data found for:', { selectedEntity, selectedEntityValue });
         // Set empty data structure as fallback
@@ -283,9 +422,11 @@ const IndexNew = () => {
         setGeneratedEntityValue(selectedEntityValue);
         setEntityChanged(false);
         setIsAnalysisEnabled(true);
+        
+        console.log('⚠️ COMPLETED: Report generated with no data available');
       }
     } catch (error) {
-      console.error('Error generating report:', error);
+      console.error('❌ ERROR in handleGenerateReport:', error);
       // Set fallback data on error
       setCachedDashboardData({
         entityData: null,
@@ -293,6 +434,7 @@ const IndexNew = () => {
         performanceData: []
       });
     } finally {
+      console.log('🏁 handleGenerateReport finally block - setting loading to false');
       setIsLoading(false);
     }
   };
@@ -1330,10 +1472,7 @@ const IndexNew = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KPICard
                   title="SCT Score"
-                  value={(() => {
-                    console.log('KPI Debug - SCT:', reportCurrentData?.sct);
-                    return reportCurrentData?.sct;
-                  })()}
+                  value={reportCurrentData?.sct}
                   target={reportCurrentData?.sct !== undefined ? 15 : null}
                   unit="days"
                   icon={<Clock className="h-4 w-4" />}
@@ -1341,10 +1480,7 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="Closed Cases"
-                  value={(() => {
-                    console.log('KPI Debug - Cases:', reportCurrentData?.cases);
-                    return reportCurrentData?.cases;
-                  })()}
+                  value={reportCurrentData?.cases}
                   target={null}
                   unit=""
                   icon={<CheckCircle className="h-4 w-4" />}
@@ -1352,10 +1488,7 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="CSAT Score"
-                  value={(() => {
-                    console.log('KPI Debug - CSAT:', reportCurrentData?.satisfaction);
-                    return reportCurrentData?.satisfaction;
-                  })()}
+                  value={reportCurrentData?.satisfaction}
                   target={reportCurrentData?.satisfaction !== undefined ? 85 : null}
                   unit="%"
                   icon={<ThumbsUp className="h-4 w-4" />}
@@ -1363,10 +1496,7 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="DSAT Score"
-                  value={(() => {
-                    console.log('KPI Debug - DSAT:', reportCurrentData?.dsatPercentage);
-                    return reportCurrentData?.dsatPercentage;
-                  })()}
+                  value={reportCurrentData?.dsatPercentage}
                   target={reportCurrentData?.dsatPercentage !== undefined ? 5 : null}
                   unit="%"
                   icon={<ThumbsDown className="h-4 w-4" />}

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>N8N API Endpoint Tests</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button { 
+            padding: 12px 24px; 
+            margin: 8px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 4px;
+            background: #007acc;
+            color: white;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a9e;
+        }
+        .result { 
+            margin: 15px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            background: #f9f9f9; 
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .error { 
+            background: #ffebee; 
+            border-color: #f44336;
+            color: #c62828;
+        }
+        .success { 
+            background: #e8f5e8; 
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+        .loading {
+            background: #fff3e0;
+            border-color: #ff9800;
+            color: #f57c00;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .buttons {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .endpoint-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 N8N API Server Test Dashboard</h1>
+        
+        <div class="endpoint-info">
+            <strong>Server:</strong> http://localhost:3001<br>
+            <strong>Status:</strong> <span id="serverStatus">Checking...</span>
+        </div>
+        
+        <div class="buttons">
+            <button onclick="testBasicHealth()">🏥 Basic Health</button>
+            <button onclick="testSimpleDebug()">🔍 Simple Debug</button>
+            <button onclick="testN8NHealth()">🎯 N8N Health</button>
+            <button onclick="testN8NPost()">📤 Test N8N POST</button>
+            <button onclick="clearResults()">🗑️ Clear Results</button>
+        </div>
+        
+        <div id="result" class="result">
+Ready to test endpoints. Click any button above to start testing.
+
+Available endpoints:
+• GET /api/health - Basic server health check
+• GET /api/simple-debug - Simple debugging endpoint  
+• GET /api/n8n/health - N8N service health and workflow count
+• POST /api/n8n/get-cases - N8N get-performance webhook proxy
+• POST /api/n8n/calculate-metrics - N8N get-metrics webhook proxy
+        </div>
+    </div>
+
+    <script>
+        // Check server status on load
+        window.onload = function() {
+            checkServerStatus();
+        };
+        
+        async function checkServerStatus() {
+            const statusElement = document.getElementById('serverStatus');
+            try {
+                const response = await fetch('http://localhost:3001/api/health');
+                if (response.ok) {
+                    statusElement.textContent = '✅ Online';
+                    statusElement.style.color = 'green';
+                } else {
+                    statusElement.textContent = '⚠️ Server Error';
+                    statusElement.style.color = 'orange';
+                }
+            } catch (error) {
+                statusElement.textContent = '❌ Offline';
+                statusElement.style.color = 'red';
+            }
+        }
+        
+        async function testBasicHealth() {
+            await testEndpoint('/api/health', 'GET', null, 'Basic Health Check');
+        }
+        
+        async function testSimpleDebug() {
+            await testEndpoint('/api/simple-debug', 'GET', null, 'Simple Debug');
+        }
+        
+        async function testN8NHealth() {
+            await testEndpoint('/api/n8n/health', 'GET', null, 'N8N Health Check');
+        }
+        
+        async function testN8NPost() {
+            const testData = {
+                dateFrom: "2024-01-01",
+                dateTo: "2024-12-31",
+                test: true
+            };
+            await testEndpoint('/api/n8n/get-cases', 'POST', testData, 'N8N Get Cases (POST)');
+        }
+        
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Results cleared. Ready for new tests.';
+        }
+        
+        async function testEndpoint(url, method, body, name) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result loading';
+            resultDiv.innerHTML = `⏳ Testing ${name} (${method} ${url})...\n\nPlease wait...`;
+            
+            const startTime = Date.now();
+            
+            try {
+                const options = {
+                    method,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`http://localhost:3001${url}`, options);
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                resultDiv.className = 'result ' + (response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `✅ ${name} - SUCCESS!
+                    
+📊 Response Details:
+• Status: ${response.status} ${response.statusText}
+• Duration: ${duration}ms
+• Content-Type: ${response.headers.get('content-type')}
+
+📋 Response Data:
+${JSON.stringify(data, null, 2)}`;
+                } else {
+                    const text = await response.text();
+                    resultDiv.innerHTML = `❌ ${name} - FAILED!
+                    
+📊 Error Details:
+• Status: ${response.status} ${response.statusText}
+• Duration: ${duration}ms
+• URL: ${url}
+
+📋 Response:
+${text}`;
+                }
+            } catch (error) {
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+                
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `💥 ${name} - CONNECTION ERROR!
+                
+📊 Error Details:
+• Duration: ${duration}ms
+• Error Type: ${error.name}
+• URL: ${url}
+
+📋 Error Message:
+${error.message}
+
+🔧 Troubleshooting:
+• Check if the server is running on port 3001
+• Verify no firewall is blocking the connection
+• Ensure the endpoint exists in the server code`;
+            }
+        }
+    </script>
+</body>
+</html>
