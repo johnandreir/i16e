@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import MongoEntityService, { EntityData, EntityMappings, DashboardData } from '@/lib/mongoEntityService';
+import { mongoEntityService, EntityData, EntityMappings, DashboardData } from '@/lib/mongoEntityService';
 
 export const useMongoEntityDatabase = () => {
-  const [entityService] = useState(() => new MongoEntityService());
+  const [entityService] = useState(() => mongoEntityService);
   const [entityData, setEntityData] = useState<EntityData>({
     teams: ['Add New Team...'],
     squads: ['Add New Squad...'],
@@ -20,13 +20,35 @@ export const useMongoEntityDatabase = () => {
       try {
         setIsLoading(true);
         setError(null);
-        
-        const data = await entityService.getEntityData();
-        const mappings = await entityService.getEntityMappings();
-        
-        setEntityData(data);
-        setEntityMappings(mappings);
-        console.log('✅ Successfully loaded entity data from MongoDB');
+
+        // Load entity data and mappings
+        const dataResponse = await entityService.getEntityData();
+        const mappingsResponse = await entityService.getEntityMappings();
+
+        if (dataResponse.success && dataResponse.data) {
+          setEntityData(dataResponse.data);
+          console.log('✅ Successfully loaded entity data from MongoDB');
+        } else {
+          console.error('❌ Failed to load entity data:', dataResponse.error);
+          setError(`Failed to load entity data: ${dataResponse.error}`);
+          setEntityData({
+            teams: [],
+            squads: [],
+            dpes: []
+          });
+        }
+
+        if (mappingsResponse.success && mappingsResponse.data) {
+          setEntityMappings(mappingsResponse.data);
+        } else {
+          console.error('❌ Failed to load entity mappings:', mappingsResponse.error);
+          setError(`Failed to load entity mappings: ${mappingsResponse.error}`);
+          setEntityMappings({
+            dpeToSquad: {},
+            squadToTeam: {}
+          });
+        }
+
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to connect to MongoDB';
         setError(`MongoDB Connection Error: ${errorMessage}`);
@@ -48,240 +70,299 @@ export const useMongoEntityDatabase = () => {
     };
 
     initializeAndLoad();
-  }, []);
+  }, [entityService]);
 
-  const loadEntityData = async () => {
+  const loadData = async () => {
     try {
+      setIsLoading(true);
       setError(null);
-      const data = await entityService.getEntityData();
-      const mappings = await entityService.getEntityMappings();
-      setEntityData(data);
-      setEntityMappings(mappings);
-      console.log('✅ Successfully reloaded entity data from MongoDB');
+
+      const dataResponse = await entityService.getEntityData();
+      const mappingsResponse = await entityService.getEntityMappings();
+
+      if (dataResponse.success && dataResponse.data) {
+        setEntityData(dataResponse.data);
+      }
+
+      if (mappingsResponse.success && mappingsResponse.data) {
+        setEntityMappings(mappingsResponse.data);
+      }
+
+      if (!dataResponse.success || !mappingsResponse.success) {
+        setError('Failed to refresh data');
+      }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to MongoDB';
-      setError(`MongoDB Connection Error: ${errorMessage}`);
-      console.error('❌ Failed to reload entity data:', err);
-      
-      // Reset entity data on error
-      setEntityData({
-        teams: [],
-        squads: [],
-        dpes: []
-      });
-      setEntityMappings({
-        dpeToSquad: {},
-        squadToTeam: {}
-      });
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Team operations
-  const createTeam = async (name: string, description?: string) => {
+  const addTeam = async (name: string, description?: string) => {
     try {
       setError(null);
-      const result = await entityService.createTeam();
-      if (result) {
-        await loadEntityData();
+      const response = await entityService.createTeam(name, description);
+      
+      if (response.success) {
+        await loadData();
         return true;
+      } else {
+        setError(response.error || 'Failed to create team');
+        return false;
       }
-      return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create team');
       return false;
     }
   };
 
-  const updateTeam = async (oldName: string, newName: string, description?: string) => {
+  const updateTeam = async (id: string, name: string, description?: string) => {
     try {
       setError(null);
-      const success = await entityService.updateTeam();
-      if (success) {
-        await loadEntityData();
+      const response = await entityService.updateTeam(id, name, description);
+      
+      if (response.success) {
+        await loadData();
+        return true;
+      } else {
+        setError(response.error || 'Failed to update team');
+        return false;
       }
-      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update team');
       return false;
     }
   };
 
-  const deleteTeam = async (name: string) => {
+  const deleteTeam = async (id: string) => {
     try {
       setError(null);
-      const success = await entityService.deleteTeam();
-      if (success) {
-        await loadEntityData();
+      const response = await entityService.deleteTeam(id);
+      
+      if (response.success) {
+        await loadData();
+        return true;
+      } else {
+        setError(response.error || 'Failed to delete team');
+        return false;
       }
-      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete team');
       return false;
     }
   };
 
-  // Squad operations
-  const createSquad = async (name: string, teamName: string, description?: string) => {
+  const addSquad = async (name: string, teamId: string, description?: string) => {
     try {
       setError(null);
-      const result = await entityService.createSquad();
-      if (result) {
-        await loadEntityData();
+      const response = await entityService.createSquad(name, teamId, description);
+      
+      if (response.success) {
+        await loadData();
         return true;
+      } else {
+        setError(response.error || 'Failed to create squad');
+        return false;
       }
-      return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create squad');
       return false;
     }
   };
 
-  const updateSquad = async (oldName: string, newName: string, teamName: string, description?: string) => {
+  const updateSquad = async (id: string, name: string, teamId: string, description?: string) => {
     try {
       setError(null);
-      const success = await entityService.updateSquad();
-      if (success) {
-        await loadEntityData();
+      const response = await entityService.updateSquad(id, name, teamId, description);
+      
+      if (response.success) {
+        await loadData();
+        return true;
+      } else {
+        setError(response.error || 'Failed to update squad');
+        return false;
       }
-      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update squad');
       return false;
     }
   };
 
-  const deleteSquad = async (name: string) => {
+  const deleteSquad = async (id: string) => {
     try {
       setError(null);
-      const success = await entityService.deleteSquad();
-      if (success) {
-        await loadEntityData();
+      const response = await entityService.deleteSquad(id);
+      
+      if (response.success) {
+        await loadData();
+        return true;
+      } else {
+        setError(response.error || 'Failed to delete squad');
+        return false;
       }
-      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete squad');
       return false;
     }
   };
 
-  // DPE operations
-  const createDPE = async (name: string, squadName: string, email?: string) => {
+  const addDPE = async (name: string, squadId: string, email?: string, role?: string) => {
     try {
       setError(null);
-      const result = await entityService.createDPE();
-      if (result) {
-        await loadEntityData();
+      const response = await entityService.createDPE(name, squadId, email, role);
+      
+      if (response.success) {
+        await loadData();
         return true;
+      } else {
+        setError(response.error || 'Failed to create DPE');
+        return false;
       }
-      return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create DPE');
       return false;
     }
   };
 
-  const updateDPE = async (oldName: string, newName: string, squadName: string, email?: string) => {
+  const updateDPE = async (id: string, name: string, squadId: string, email?: string, role?: string) => {
     try {
       setError(null);
-      const success = await entityService.updateDPE();
-      if (success) {
-        await loadEntityData();
+      const response = await entityService.updateDPE(id, name, squadId, email, role);
+      
+      if (response.success) {
+        await loadData();
+        return true;
+      } else {
+        setError(response.error || 'Failed to update DPE');
+        return false;
       }
-      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update DPE');
       return false;
     }
   };
 
-  const deleteDPE = async (name: string) => {
+  const deleteDPE = async (id: string) => {
     try {
       setError(null);
-      const success = await entityService.deleteDPE();
-      if (success) {
-        await loadEntityData();
+      const response = await entityService.deleteDPE(id);
+      
+      if (response.success) {
+        await loadData();
+        return true;
+      } else {
+        setError(response.error || 'Failed to delete DPE');
+        return false;
       }
-      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete DPE');
       return false;
     }
   };
 
-  // Dashboard operations
-  const getDashboardData = async (entityType: string, entityValue: string): Promise<DashboardData | null> => {
+  const getDashboardData = async (entityType: string, entityValue: string, startDate?: string, endDate?: string): Promise<DashboardData | null> => {
     try {
       setError(null);
-      return await entityService.getDashboardData();
+      const response = await entityService.getDashboardData(entityType, entityValue, startDate, endDate);
+      
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        setError(response.error || 'Failed to get dashboard data');
+        return null;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get dashboard data');
       return null;
     }
   };
 
-  // Performance operations
-  const addPerformanceMetrics = async (
-    dpeName: string, 
-    sct: number, 
-    cases: number, 
-    satisfaction: number, 
-    periodStart: string, 
-    periodEnd: string
-  ) => {
+  const addPerformanceMetrics = async (entityId: string, entityType: 'team' | 'squad' | 'dpe', date: Date, metrics: { sct: number, cases: number, satisfaction: number }) => {
     try {
       setError(null);
-      const success = await entityService.addPerformanceMetrics();
-      return success;
+      const response = await entityService.createPerformanceData(entityId, entityType, date, metrics);
+      
+      if (response.success) {
+        return true;
+      } else {
+        setError(response.error || 'Failed to add performance metrics');
+        return false;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add performance metrics');
       return false;
     }
   };
 
-  const getPerformanceHistory = async (dpeName: string, days: number = 30) => {
+  const getPerformanceHistory = async (entityType: string, entityId: string, startDate?: string, endDate?: string) => {
     try {
       setError(null);
-      return await entityService.getPerformanceHistory();
+      const response = await entityService.getPerformanceData(entityType, entityId, startDate, endDate);
+      
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        setError(response.error || 'Failed to get performance history');
+        return [];
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get performance history');
       return [];
     }
   };
 
-  // Migration placeholder (not needed for MongoDB)
-  const migrateLegacyData = async () => {
+  const validateEntityRelationships = async () => {
     try {
       setError(null);
-      console.log('Migration not needed for MongoDB implementation');
-      return true;
+      const response = await entityService.validateEntityRelationships();
+      
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        setError(response.error || 'Failed to validate relationships');
+        return { valid: false, issues: ['Validation failed'] };
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Migration failed');
+      setError(err instanceof Error ? err.message : 'Failed to validate relationships');
+      return { valid: false, issues: ['Validation failed'] };
+    }
+  };
+
+  const validateDatabase = async () => {
+    // Use the actual service validation method
+    return await validateEntityRelationships();
+  };
+
+  const exportData = () => {
+    return {
+      entityData,
+      entityMappings,
+      exportedAt: new Date().toISOString()
+    };
+  };
+
+  const importData = async (data: any) => {
+    try {
+      setError(null);
+      if (data.entityData && data.entityMappings) {
+        setEntityData(data.entityData);
+        setEntityMappings(data.entityMappings);
+        return true;
+      }
+      throw new Error('Invalid data format');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to import data');
       return false;
     }
   };
 
-  const regenerateSampleData = async () => {
-    try {
-      setError(null);
-      await entityService.regenerateSampleData();
-      await loadEntityData();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to regenerate sample data');
-      return false;
-    }
-  };
-
-  const clearAllData = async () => {
-    try {
-      setError(null);
-      await entityService.clearAllData();
-      await loadEntityData();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to clear all data');
-      return false;
-    }
+  // Debug utilities
+  const debug = {
+    entityData,
+    entityMappings,
+    loadData,
+    exportData,
+    importData
   };
 
   return {
@@ -291,44 +372,28 @@ export const useMongoEntityDatabase = () => {
     isLoading,
     error,
     
-    // Operations
-    refreshData: loadEntityData,
-    
-    // Team operations
-    createTeam,
+    // Core operations
+    loadData,
+    addTeam,
     updateTeam,
     deleteTeam,
-    
-    // Squad operations
-    createSquad,
+    addSquad,
     updateSquad,
     deleteSquad,
-    
-    // DPE operations
-    createDPE,
+    addDPE,
     updateDPE,
     deleteDPE,
     
-    // Dashboard operations
+    // Dashboard
     getDashboardData,
-    
-    // Performance operations
     addPerformanceMetrics,
     getPerformanceHistory,
     
-    // Migration and sample data
-    migrateLegacyData,
-    regenerateSampleData,
-    clearAllData,
-    
-    // Debug and utilities
-    debugDatabaseContents: () => entityService.debugDatabaseContents(),
-    
-    // Get entities with database IDs for management
-    getTeamsWithIds: () => entityService.getTeamsWithIds(),
-    getSquadsWithIds: () => entityService.getSquadsWithIds(),
-    getDPEsWithIds: () => entityService.getDPEsWithIds()
+    // Utilities
+    validateDatabase,
+    validateEntityRelationships,
+    exportData,
+    importData,
+    debug
   };
 };
-
-export default useMongoEntityDatabase;

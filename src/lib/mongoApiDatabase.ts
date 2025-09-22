@@ -85,41 +85,41 @@ class MongoAPIDatabase {
 
   // Team operations
   async getTeams(): Promise<TeamData[]> {
-    const response = await this.request<TeamData[]>('/api/teams');
+    const response = await this.request<TeamData[]>('/api/team');
     return response.data || [];
   }
 
   async createTeam(name: string, description?: string): Promise<TeamData | null> {
-    const response = await this.request<TeamData>('/api/teams', {
+    const response = await this.request<TeamData>('/api/team', {
       method: 'POST',
       body: JSON.stringify({ name, description })
     });
     return response.data || null;
   }
 
-  async updateTeam(id: string, updates: Partial<TeamData>): Promise<TeamData | null> {
-    const response = await this.request<TeamData>(`/api/teams/${id}`, {
+  async updateTeam(id: string, name: string, description?: string): Promise<TeamData | null> {
+    const response = await this.request<TeamData>(`/api/team/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(updates)
+      body: JSON.stringify({ name, description })
     });
     return response.data || null;
   }
 
   async deleteTeam(id: string): Promise<boolean> {
-    const response = await this.request(`/api/teams/${id}`, {
+    const response = await this.request(`/api/team/${id}`, {
       method: 'DELETE'
     });
-    return response.success;
+    return response.success || false;
   }
 
   // Squad operations
   async getSquads(): Promise<SquadData[]> {
-    const response = await this.request<SquadData[]>('/api/squads');
+    const response = await this.request<SquadData[]>('/api/squad');
     return response.data || [];
   }
 
   async createSquad(name: string, teamId: string, description?: string): Promise<SquadData | null> {
-    const response = await this.request<SquadData>('/api/squads', {
+    const response = await this.request<SquadData>('/api/squad', {
       method: 'POST',
       body: JSON.stringify({ name, team_id: teamId, description })
     });
@@ -127,7 +127,7 @@ class MongoAPIDatabase {
   }
 
   async updateSquad(id: string, updates: Partial<SquadData>): Promise<SquadData | null> {
-    const response = await this.request<SquadData>(`/api/squads/${id}`, {
+    const response = await this.request<SquadData>(`/api/squad/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
     });
@@ -135,7 +135,7 @@ class MongoAPIDatabase {
   }
 
   async deleteSquad(id: string): Promise<boolean> {
-    const response = await this.request(`/api/squads/${id}`, {
+    const response = await this.request(`/api/squad/${id}`, {
       method: 'DELETE'
     });
     return response.success;
@@ -143,12 +143,12 @@ class MongoAPIDatabase {
 
   // DPE operations
   async getDPEs(): Promise<DPEData[]> {
-    const response = await this.request<DPEData[]>('/api/dpes');
+    const response = await this.request<DPEData[]>('/api/dpe');
     return response.data || [];
   }
 
   async createDPE(name: string, squadId: string, description?: string): Promise<DPEData | null> {
-    const response = await this.request<DPEData>('/api/dpes', {
+    const response = await this.request<DPEData>('/api/dpe', {
       method: 'POST',
       body: JSON.stringify({ name, squad_id: squadId, description })
     });
@@ -156,7 +156,7 @@ class MongoAPIDatabase {
   }
 
   async updateDPE(id: string, updates: Partial<DPEData>): Promise<DPEData | null> {
-    const response = await this.request<DPEData>(`/api/dpes/${id}`, {
+    const response = await this.request<DPEData>(`/api/dpe/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
     });
@@ -164,7 +164,7 @@ class MongoAPIDatabase {
   }
 
   async deleteDPE(id: string): Promise<boolean> {
-    const response = await this.request(`/api/dpes/${id}`, {
+    const response = await this.request(`/api/dpe/${id}`, {
       method: 'DELETE'
     });
     return response.success;

@@ -15,9 +15,9 @@ const MongoDBStatusTest = () => {
           
           // Test MongoDB operations
           try {
-            const testResponse = await fetch('http://localhost:3001/api/teams');
+            const testResponse = await fetch('http://localhost:3001/api/team');
             if (testResponse.ok) {
-              setConnectionStatus('✅ MongoDB Connection Verified - Data successfully migrated from IndexedDB!');
+              setConnectionStatus('✅ MongoDB Connection Verified!');
             } else {
               setConnectionStatus('⚠️ Backend connected but MongoDB query failed');
             }
@@ -58,7 +58,7 @@ const MongoDBStatusTest = () => {
                 <li>✅ Node.js Express backend API server on port 3001</li>
                 <li>✅ Mongoose ODM for MongoDB operations</li>
                 <li>✅ Full CRUD operations for Teams, Squads, DPEs, and Metrics</li>
-                <li>✅ Data now persists to MongoDB instead of IndexedDB</li>
+                <li>✅ Data now persists to MongoDB</li>
                 <li>✅ Connection string: mongodb://root:novirus@localhost:27017/devops-insight-engine</li>
               </ul>
             </div>

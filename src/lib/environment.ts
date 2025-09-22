@@ -18,9 +18,9 @@ export const environment = {
     timeout: 10000, // 10 seconds
     endpoints: {
       health: '/health',
-      teams: '/api/teams',
-      squads: '/api/squads',
-      dpes: '/api/dpes'
+      teams: '/api/team',
+      squads: '/api/squad',
+      dpes: '/api/dpe'
     }
   },
 

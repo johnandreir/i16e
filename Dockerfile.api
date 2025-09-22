@@ -1,0 +1,31 @@
+# Simple build for MongoDB API server
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Install dependencies directly
+RUN npm install express@^4.19.2 mongodb@^6.10.0 cors@^2.8.5
+
+# Copy application files
+COPY mongodb-api-server.cjs ./
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Change ownership of the app directory
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3001/api/health || exit 1
+
+# Start the application
+CMD ["node", "mongodb-api-server.cjs"]

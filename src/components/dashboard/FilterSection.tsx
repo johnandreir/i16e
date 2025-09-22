@@ -69,7 +69,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               options={getCurrentEntityOptions()}
               value={selectedEntityValue}
               onValueChange={onEntityValueChange}
-              placeholder={`Choose ${selectedEntity}`}
+              placeholder={selectedEntity === 'dpe' ? 'Choose DPE' : selectedEntity === 'squad' ? 'Choose Squad' : 'Choose Team'}
               searchPlaceholder={`Search ${selectedEntity}s...`}
               emptyText={`No ${selectedEntity} found.`}
               className="bg-card border-border w-full h-10"

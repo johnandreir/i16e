@@ -17,8 +17,8 @@ import BackendStatus from '@/components/dashboard/BackendStatus';
 import { useEntityDatabase } from '@/hooks/useEntityDatabase';
 import { DashboardData } from '@/lib/entityService';
 
-const Index = () => {
-  console.log('Index component rendering...');
+const IndexNew = () => {
+  console.log('IndexNew component rendering...');
   
   // Database operations
   const { 
@@ -41,8 +41,8 @@ const Index = () => {
   } = useEntityDatabase();
 
   // State management
-  const [selectedEntity, setSelectedEntity] = useState<string>('');
-  const [selectedEntityType, setSelectedEntityType] = useState<string>('');
+  const [selectedEntity, setSelectedEntity] = useState<string>('dpe');
+  const [selectedEntityType, setSelectedEntityType] = useState<string>('dpe');
   const [selectedEntityValue, setSelectedEntityValue] = useState<string>('');
   const [selectedTimeRange, setSelectedTimeRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
     const to = new Date();
@@ -71,177 +71,27 @@ const Index = () => {
   const [modalTitle, setModalTitle] = useState<string>('');
   const [sctAnalysisResults, setSctAnalysisResults] = useState<any>(null);
   const [cxInsightResults, setCxInsightResults] = useState<any>(null);
-  const [dummyDataActive, setDummyDataActive] = useState<boolean>(false);
 
-  // Dummy data generation function
-  const generateDummyData = () => {
-    const dummyData = {
-      entityData: {
-        dpes: ['john.smith', 'jane.doe', 'mike.wilson', 'sarah.connor'],
-        squads: ['Alpha Squad', 'Beta Squad', 'Gamma Squad', 'Delta Squad'],
-        teams: ['Europe Enterprise']
-      },
-      performanceData: [
-        { name: 'Alpha Squad', sct: 12, cases: 45, satisfaction: 92 },
-        { name: 'Beta Squad', sct: 8, cases: 67, satisfaction: 88 },
-        { name: 'Gamma Squad', sct: 15, cases: 34, satisfaction: 85 },
-        { name: 'Delta Squad', sct: 10, cases: 52, satisfaction: 90 }
-      ],
-      entityMappings: {
-        squadToTeam: {
-          'Alpha Squad': 'Europe Enterprise',
-          'Beta Squad': 'Europe Enterprise',
-          'Gamma Squad': 'Europe Enterprise',
-          'Delta Squad': 'Europe Enterprise'
-        },
-        dpeToSquad: {
-          'john.smith': 'Alpha Squad',
-          'jane.doe': 'Alpha Squad',
-          'mike.wilson': 'Beta Squad',
-          'sarah.connor': 'Beta Squad',
-          'alex.turner': 'Gamma Squad',
-          'emma.watson': 'Gamma Squad',
-          'david.brown': 'Delta Squad',
-          'lisa.garcia': 'Delta Squad'
-        }
+  // Auto-select first DPE when no entity value is selected and data is available
+  useEffect(() => {
+    if (!selectedEntityValue && !reportGenerated && entityData && entityData.dpes && entityData.dpes.length > 0) {
+      const availableDPEs = entityData.dpes.filter(dpe => !dpe.includes('Add New'));
+
+      if (availableDPEs.length > 0) {
+        const firstDPE = availableDPEs[0];
+        console.log('Auto-selecting first DPE:', firstDPE);
+
+        // Ensure we're using DPE as entity type and set the value
+        setSelectedEntity('dpe');
+        setSelectedEntityValue(firstDPE);
+
+        // Trigger report generation for the auto-selected DPE
+        setTimeout(() => {
+          handleGenerateReport();
+        }, 100); // Small delay to ensure state is updated
       }
-    };
-
-    // Set dummy data as report data
-    setReportDashboardData(dummyData);
-    
-    // Create static snapshot for report data (to prevent reactive updates)
-    const reportData = {
-      sct: 11.25,
-      cases: 198,
-      satisfaction: 89,
-      dsatPercentage: 8,
-      responseRate: 75,
-      surveyData: [
-        { name: 'CSAT (4-5)', percentage: 80, count: 320, value: 320, color: '#22c55e' },
-        { name: 'Neutral (3)', percentage: 12, count: 48, value: 48, color: '#f59e0b' },
-        { name: 'DSAT (1-2)', percentage: 8, count: 32, value: 32, color: '#ef4444' }
-      ],
-      totalSurveys: 400,
-      reportGeneration: new Date().toISOString()
-    };
-    
-    setReportCurrentData(reportData);
-    setReportGenerated(true);
-    setGeneratedEntity('team');
-    setGeneratedEntityValue('Europe Enterprise');
-    setDummyDataActive(true);
-    setIsAnalysisEnabled(true);
-    
-    // Generate dummy insights for both SCT and CX analysis
-    setSctAnalyzed(true);
-    setCxAnalyzed(true);
-    
-    // Generate dummy SCT insights
-    const dummySctInsights = {
-      insights: [
-        {
-          id: 'sct-1',
-          type: 'improvement',
-          category: 'Solution Cycle Time',
-          title: 'Beta Squad Optimization Opportunity',
-          description: 'Beta Squad shows exceptional SCT performance at 8 days, significantly below team average of 11.25 days.',
-          recommendation: 'Analyze Beta Squad\'s workflow practices and implement their efficient processes across other squads to reduce overall cycle time.',
-          member: 'Beta Squad'
-        },
-        {
-          id: 'sct-2',
-          type: 'warning',
-          category: 'Solution Cycle Time',
-          title: 'Gamma Squad Performance Gap',
-          description: 'Gamma Squad has the highest SCT at 15 days, 33% above team average, indicating potential bottlenecks.',
-          recommendation: 'Conduct detailed workflow analysis for Gamma Squad, identify blockers, and provide additional support or training.',
-          member: 'Gamma Squad'
-        },
-        {
-          id: 'sct-3',
-          type: 'success',
-          category: 'Solution Cycle Time',
-          title: 'Overall Team Performance',
-          description: 'Europe Enterprise maintains competitive SCT average of 11.25 days with strong case volume of 198 completed cases.',
-          recommendation: 'Continue monitoring performance trends and share best practices from high-performing squads.',
-          member: 'Europe Enterprise'
-        }
-      ]
-    };
-    
-    // Generate dummy CX insights
-    const dummyCxInsights = {
-      insights: [
-        {
-          id: 'cx-1',
-          type: 'success',
-          category: 'Customer Satisfaction',
-          title: 'Excellent Customer Satisfaction',
-          description: 'Europe Enterprise achieves 89% overall satisfaction with 80% of customers rating as satisfied or very satisfied.',
-          recommendation: 'Maintain current service standards and leverage satisfied customer feedback to enhance service delivery.',
-          member: 'Europe Enterprise'
-        },
-        {
-          id: 'cx-2',
-          type: 'improvement',
-          category: 'Customer Satisfaction',
-          title: 'Delta Squad Excellence',
-          description: 'Delta Squad leads with 90% satisfaction rate, demonstrating superior customer interaction quality.',
-          recommendation: 'Document and share Delta Squad\'s customer engagement practices with other squads to elevate overall satisfaction.',
-          member: 'Delta Squad'
-        },
-        {
-          id: 'cx-3',
-          type: 'info',
-          category: 'Customer Satisfaction',
-          title: 'Survey Volume Analysis',
-          description: 'Strong survey participation with 400 responses provides reliable satisfaction metrics across all service areas.',
-          recommendation: 'Continue current survey methodology and consider implementing real-time feedback collection for faster issue resolution.',
-          member: 'Europe Enterprise'
-        },
-        {
-          id: 'cx-4',
-          type: 'improvement',
-          category: 'Customer Satisfaction',
-          title: 'Dissatisfaction Mitigation',
-          description: 'Only 8% dissatisfaction rate (dissatisfied + very dissatisfied) indicates effective service recovery processes.',
-          recommendation: 'Analyze dissatisfied customer cases to identify common issues and implement proactive prevention measures.',
-          member: 'Europe Enterprise'
-        }
-      ]
-    };
-    
-    setSctAnalysisResults(dummySctInsights);
-    setCxInsightResults(dummyCxInsights);
-    
-    // Also update cached data for consistency
-    setCachedDashboardData(dummyData);
-    
-    console.log('Dummy data generated for Europe Enterprise team with insights');
-  };
-
-  // Clear dummy data when generating real report or refreshing
-  const clearDummyData = () => {
-    if (dummyDataActive) {
-      setDummyDataActive(false);
-      setReportDashboardData(null);
-      setReportCurrentData(null);
-      setReportGenerated(false);
-      setGeneratedEntity('');
-      setGeneratedEntityValue('');
-      setCachedDashboardData(null);
-      setIsAnalysisEnabled(false);
-      
-      // Clear analysis states and insights
-      setSctAnalyzed(false);
-      setCxAnalyzed(false);
-      setSctAnalysisResults(null);
-      setCxInsightResults(null);
-      
-      console.log('Dummy data and insights cleared');
     }
-  };
+  }, [entityData, selectedEntityValue, reportGenerated]);
 
   // Handler functions
   const handleEntityChange = (entity: string) => {
@@ -312,9 +162,6 @@ const Index = () => {
   };
 
   const handleGenerateReport = async () => {
-    // Clear dummy data when generating real report
-    clearDummyData();
-    
     // Comprehensive validation before generating report
     if (!selectedEntity) {
       console.error('No entity type selected');
@@ -1280,6 +1127,9 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="container mx-auto p-4 space-y-4">
+        {/* Backend Status - Always visible at the top */}
+        <BackendStatus />
+        
         {/* Performance Analysis Tools - First Panel */}
         <Card className="glass-card p-4">
           <CardHeader className="p-0 mb-3">
@@ -1339,16 +1189,6 @@ const Index = () => {
               <ThumbsUp className="h-4 w-4" />
               CX Insight
             </Button>
-            <Button 
-              onClick={generateDummyData}
-              disabled={isLoading}
-              variant={dummyDataActive ? "default" : "outline"}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Database className="h-4 w-4" />
-              {dummyDataActive ? "Dummy Data Active" : "Dummy Data"}
-            </Button>
           </div>
         </Card>
 
@@ -1373,12 +1213,6 @@ const Index = () => {
           const getGeneratedEntityMappingWarning = () => {
             console.log('Checking mapping warning for:', { generatedEntity, generatedEntityValue });
             console.log('Available entityMappings:', entityMappings);
-            
-            // Skip mapping warnings when dummy data is active
-            if (dummyDataActive) {
-              console.log('Dummy data active, skipping mapping validation');
-              return null;
-            }
             
             if (!generatedEntity || !generatedEntityValue) {
               console.log('No generated entity/value, returning null');
@@ -1636,9 +1470,6 @@ const Index = () => {
                 </Card>
               </div>
 
-              {/* Backend Status Panel */}
-              <BackendStatus className="mt-6" />
-              
               {/* Insights Panel */}
               <InsightsPanel 
                 insights={getAllInsights()}
@@ -2025,4 +1856,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default IndexNew;

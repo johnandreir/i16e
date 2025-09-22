@@ -1,34 +1,8 @@
 import { useState, useEffect } from 'react';
-import EntityService, { EntityData, EntityMappings, DashboardData } from '@/lib/entityService';
+import { mongoEntityService, EntityData, EntityMappings, DashboardData } from '@/lib/mongoEntityService';
 
-interface UseEntityDatabaseReturn {
-  entityData: EntityData;
-  entityMappings: EntityMappings;
-  isLoading: boolean;
-  error: string | null;
-  refreshData: () => Promise<void>;
-  getDashboardData: (entityType: string, entityValue: string, startDate?: string, endDate?: string) => Promise<DashboardData | null>;
-  migrateLegacyData: (entityData: EntityData, entityMappings: EntityMappings) => Promise<boolean>;
-  clearAllData: () => Promise<boolean>;
-  createTeam: (name: string) => Promise<boolean>;
-  updateTeam: (id: number, name: string) => Promise<boolean>;
-  deleteTeam: (id: number) => Promise<boolean>;
-  createSquad: (name: string, teamName: string, description?: string) => Promise<boolean>;
-  updateSquad: (id: number, name: string, teamName: string, description?: string) => Promise<boolean>;
-  deleteSquad: (id: number) => Promise<boolean>;
-  createDPE: (name: string, squadName: string, email?: string) => Promise<boolean>;
-  updateDPE: (id: number, name: string, squadName: string, email?: string) => Promise<boolean>;
-  deleteDPE: (id: number) => Promise<boolean>;
-  addPerformanceMetrics: (dpeName: string, sct: number, cases: number, satisfaction: number, startDate: string, endDate: string) => Promise<boolean>;
-  getPerformanceHistory: (entityName: string, entityType: string, timeRange?: string) => Promise<any[]>;
-  debugDatabaseContents: () => void;
-  getTeamsWithIds: () => Promise<any[]>;
-  getSquadsWithIds: () => Promise<any[]>;
-  getDPEsWithIds: () => Promise<any[]>;
-}
-
-export const useEntityDatabase = (): UseEntityDatabaseReturn => {
-  const [entityService] = useState(() => new EntityService());
+export const useMongoEntityDatabase = () => {
+  const [entityService] = useState(() => mongoEntityService);
   const [entityData, setEntityData] = useState<EntityData>({
     teams: ['Add New Team...'],
     squads: ['Add New Squad...'],
@@ -52,8 +26,22 @@ export const useEntityDatabase = (): UseEntityDatabaseReturn => {
         
         setEntityData(data);
         setEntityMappings(mappings);
+        console.log('✅ Successfully loaded entity data from MongoDB');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load entity data');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to connect to MongoDB';
+        setError(`MongoDB Connection Error: ${errorMessage}`);
+        console.error('❌ Failed to load entity data:', err);
+        
+        // Reset entity data to show no data available instead of fallback data
+        setEntityData({
+          teams: [],
+          squads: [],
+          dpes: []
+        });
+        setEntityMappings({
+          dpeToSquad: {},
+          squadToTeam: {}
+        });
       } finally {
         setIsLoading(false);
       }
@@ -69,39 +57,59 @@ export const useEntityDatabase = (): UseEntityDatabaseReturn => {
       const mappings = await entityService.getEntityMappings();
       setEntityData(data);
       setEntityMappings(mappings);
+      console.log('✅ Successfully reloaded entity data from MongoDB');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reload entity data');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect to MongoDB';
+      setError(`MongoDB Connection Error: ${errorMessage}`);
+      console.error('❌ Failed to reload entity data:', err);
+      
+      // Reset entity data on error
+      setEntityData({
+        teams: [],
+        squads: [],
+        dpes: []
+      });
+      setEntityMappings({
+        dpeToSquad: {},
+        squadToTeam: {}
+      });
     }
   };
 
+  // Team operations
   const createTeam = async (name: string, description?: string) => {
     try {
       setError(null);
-      await entityService.createTeam(name);
-      await loadEntityData();
-      return true;
+      const result = await entityService.createTeam();
+      if (result) {
+        await loadEntityData();
+        return true;
+      }
+      return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create team');
       return false;
     }
   };
 
-  const updateTeam = async (id: number, name: string, description?: string) => {
+  const updateTeam = async (oldName: string, newName: string, description?: string) => {
     try {
       setError(null);
-      await entityService.updateTeam(id, name);
-      await loadEntityData();
-      return true;
+      const success = await entityService.updateTeam();
+      if (success) {
+        await loadEntityData();
+      }
+      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update team');
       return false;
     }
   };
 
-  const deleteTeam = async (id: number) => {
+  const deleteTeam = async (name: string) => {
     try {
       setError(null);
-      const success = await entityService.deleteTeam(id);
+      const success = await entityService.deleteTeam();
       if (success) {
         await loadEntityData();
       }
@@ -112,34 +120,40 @@ export const useEntityDatabase = (): UseEntityDatabaseReturn => {
     }
   };
 
+  // Squad operations
   const createSquad = async (name: string, teamName: string, description?: string) => {
     try {
       setError(null);
-      await entityService.createSquad(name, teamName);
-      await loadEntityData();
-      return true;
+      const result = await entityService.createSquad();
+      if (result) {
+        await loadEntityData();
+        return true;
+      }
+      return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create squad');
       return false;
     }
   };
 
-  const updateSquad = async (id: number, name: string, teamName: string, description?: string) => {
+  const updateSquad = async (oldName: string, newName: string, teamName: string, description?: string) => {
     try {
       setError(null);
-      await entityService.updateSquad(id, name, teamName);
-      await loadEntityData();
-      return true;
+      const success = await entityService.updateSquad();
+      if (success) {
+        await loadEntityData();
+      }
+      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update squad');
       return false;
     }
   };
 
-  const deleteSquad = async (id: number) => {
+  const deleteSquad = async (name: string) => {
     try {
       setError(null);
-      const success = await entityService.deleteSquad(id);
+      const success = await entityService.deleteSquad();
       if (success) {
         await loadEntityData();
       }
@@ -150,34 +164,40 @@ export const useEntityDatabase = (): UseEntityDatabaseReturn => {
     }
   };
 
+  // DPE operations
   const createDPE = async (name: string, squadName: string, email?: string) => {
     try {
       setError(null);
-      await entityService.createDPE(name, squadName);
-      await loadEntityData();
-      return true;
+      const result = await entityService.createDPE();
+      if (result) {
+        await loadEntityData();
+        return true;
+      }
+      return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create DPE');
       return false;
     }
   };
 
-  const updateDPE = async (id: number, name: string, squadName: string, email?: string) => {
+  const updateDPE = async (oldName: string, newName: string, squadName: string, email?: string) => {
     try {
       setError(null);
-      await entityService.updateDPE(id, name, squadName);
-      await loadEntityData();
-      return true;
+      const success = await entityService.updateDPE();
+      if (success) {
+        await loadEntityData();
+      }
+      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update DPE');
       return false;
     }
   };
 
-  const deleteDPE = async (id: number) => {
+  const deleteDPE = async (name: string) => {
     try {
       setError(null);
-      const success = await entityService.deleteDPE(id);
+      const success = await entityService.deleteDPE();
       if (success) {
         await loadEntityData();
       }
@@ -188,45 +208,66 @@ export const useEntityDatabase = (): UseEntityDatabaseReturn => {
     }
   };
 
-  const getDashboardData = async (entityType: string, entityValue: string, startDate?: string, endDate?: string): Promise<DashboardData | null> => {
+  // Dashboard operations
+  const getDashboardData = async (entityType: string, entityValue: string): Promise<DashboardData | null> => {
     try {
       setError(null);
-      return await entityService.getDashboardData(entityType, entityValue, startDate, endDate);
+      return await entityService.getDashboardData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get dashboard data');
       return null;
     }
   };
 
-  const addPerformanceMetrics = async (dpeName: string, sct: number, cases: number, satisfaction: number, startDate: string, endDate: string) => {
+  // Performance operations
+  const addPerformanceMetrics = async (
+    dpeName: string, 
+    sct: number, 
+    cases: number, 
+    satisfaction: number, 
+    periodStart: string, 
+    periodEnd: string
+  ) => {
     try {
       setError(null);
-      await entityService.addPerformanceMetrics(dpeName, sct, cases, satisfaction, startDate, endDate);
-      return true;
+      const success = await entityService.addPerformanceMetrics();
+      return success;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add performance metrics');
       return false;
     }
   };
 
-  const getPerformanceHistory = async (dpeName: string, startDate?: string, endDate?: string) => {
+  const getPerformanceHistory = async (dpeName: string, days: number = 30) => {
     try {
       setError(null);
-      return await entityService.getPerformanceHistory(dpeName, startDate, endDate);
+      return await entityService.getPerformanceHistory();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get performance history');
       return [];
     }
   };
 
-  const migrateLegacyData = async (entityData: EntityData, entityMappings: EntityMappings) => {
+  // Migration placeholder (not needed for MongoDB)
+  const migrateLegacyData = async () => {
     try {
       setError(null);
-      await entityService.migrateLegacyData(entityData, entityMappings);
+      console.log('Migration not needed for MongoDB implementation');
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Migration failed');
+      return false;
+    }
+  };
+
+  const regenerateSampleData = async () => {
+    try {
+      setError(null);
+      await entityService.regenerateSampleData();
       await loadEntityData();
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to migrate legacy data');
+      setError(err instanceof Error ? err.message : 'Failed to regenerate sample data');
       return false;
     }
   };
@@ -277,6 +318,7 @@ export const useEntityDatabase = (): UseEntityDatabaseReturn => {
     
     // Migration and sample data
     migrateLegacyData,
+    regenerateSampleData,
     clearAllData,
     
     // Debug and utilities
@@ -289,4 +331,4 @@ export const useEntityDatabase = (): UseEntityDatabaseReturn => {
   };
 };
 
-export default useEntityDatabase;
+export default useMongoEntityDatabase;

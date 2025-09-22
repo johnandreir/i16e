@@ -1,7 +1,40 @@
-import BrowserEntityDatabase, { Team, Squad, DPE, PerformanceMetric } from './browserDatabase';
-import { generateAMEASMBSampleData, flattenSampleData, getCurrentPeriod } from './sampleDataGenerator';
+// MongoDB-backed Entity Service
+// This service provides CRUD operations for entities using the MongoDB API
 
-// API response types
+export interface Team {
+  id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Squad {
+  id: number;
+  name: string;
+  teamID: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DPE {
+  id: number;
+  name: string;
+  squadID: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PerformanceMetric {
+  id: number;
+  dpeId: number;
+  sct: number;
+  cases: number;
+  satisfaction: number;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+}
+
 export interface EntityData {
   teams: string[];
   squads: string[];
@@ -24,142 +57,519 @@ export interface DashboardData {
   }>;
 }
 
+interface ServiceResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+interface MongoTeam {
+  _id?: string;
+  id?: string; // API returns id instead of _id
+  name: string;
+  created_at?: Date | string; // API returns dates as strings
+  updated_at?: Date | string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+interface MongoSquad {
+  _id?: string;
+  id?: string; // API returns id instead of _id
+  name: string;
+  teamID?: string;
+  teamId?: string;
+  team_id?: string;
+  created_at?: Date | string; // API returns dates as strings
+  updated_at?: Date | string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+interface MongoDPE {
+  _id?: string;
+  id?: string; // API returns id instead of _id
+  name: string;
+  squadID?: string;
+  squadId?: string;
+  squad_id?: string;
+  created_at?: Date | string; // API returns dates as strings
+  updated_at?: Date | string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
 class EntityService {
-  private db: BrowserEntityDatabase;
-  private initPromise: Promise<void>;
+  private baseUrl = 'http://localhost:3001/api';
 
-  constructor() {
-    this.db = new BrowserEntityDatabase();
-    this.initPromise = this.db.init(); // Store the initialization promise
+  private async request<T>(endpoint: string, options?: RequestInit): Promise<ServiceResponse<T>> {
+    try {
+      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+        ...options,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+        };
+      }
+
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error'
+      };
+    }
   }
 
-  // Ensure database is initialized before any operation
-  private async ensureInitialized(): Promise<void> {
-    await this.initPromise;
-  }
-
-  // Get all entities formatted for the UI
-  async getEntityData(): Promise<EntityData> {
-    await this.ensureInitialized();
+  // CRUD operations for Teams
+  async createTeam(name: string): Promise<Team> {
+    const result = await this.request<MongoTeam>('/team', {
+      method: 'POST',
+      body: JSON.stringify({ name: name.trim() })
+    });
     
-    const teams = await this.db.getTeams();
-    const squads = await this.db.getSquads();
-    const dpes = await this.db.getDPEs();
-
+    if (!result.success) {
+      // Handle duplicate team error specifically
+      if (result.error?.includes('already exists') || result.error?.includes('duplicate') || result.error?.includes('Team name already exists')) {
+        throw new Error(`Team "${name.trim()}" already exists. Please choose a different name.`);
+      }
+      throw new Error(result.error || 'Failed to create team');
+    }
+    
+    if (!result.data) {
+      throw new Error('Failed to create team - no data returned');
+    }
+    
     return {
-      teams: [...teams.map(t => t.name), 'Add New Team...'],
-      squads: [...squads.map(s => s.name), 'Add New Squad...'],
-      dpes: [...dpes.map(d => d.name), 'Add New DPE...']
+      id: this.mongoIdToNumber(result.data.id || result.data._id!),
+      name: result.data.name,
+      created_at: this.toISOStringSafe(result.data.created_at || result.data.createdAt),
+      updated_at: this.toISOStringSafe(result.data.updated_at || result.data.updatedAt)
     };
   }
 
-  // Get entity mappings for the UI
-  async getEntityMappings(): Promise<EntityMappings> {
-    await this.ensureInitialized();
+  async getTeamsWithIds(): Promise<Team[]> {
+    const result = await this.request<MongoTeam[]>('/team');
+    if (!result.success || !result.data) {
+      return [];
+    }
     
-    const hierarchy = await this.db.getEntityHierarchy();
-    
-    const dpeToSquad: Record<string, string> = {};
-    const squadToTeam: Record<string, string> = {};
-
-    hierarchy.forEach((row: any) => {
-      if (row.dpe_name && row.squad_name) {
-        dpeToSquad[row.dpe_name] = row.squad_name;
-      }
-      if (row.squad_name && row.team_name) {
-        squadToTeam[row.squad_name] = row.team_name;
-      }
-    });
-
-    return { dpeToSquad, squadToTeam };
+    return result.data.map(team => ({
+      id: this.mongoIdToNumber(team.id || team._id!),
+      name: team.name,
+      created_at: this.toISOStringSafe(team.created_at || team.createdAt),
+      updated_at: this.toISOStringSafe(team.updated_at || team.updatedAt)
+    }));
   }
 
-  // Get raw entities with database IDs for management UI
-  async getTeamsWithIds(): Promise<Team[]> {
-    await this.ensureInitialized();
-    return this.db.getTeams();
+  async updateTeam(id: number, name: string): Promise<Team> {
+    // Since we can't convert back from number to MongoDB ID easily,
+    // we'll need to get all teams and find the matching one
+    const teams = await this.request<MongoTeam[]>('/team');
+    if (!teams.success || !teams.data) {
+      throw new Error('Failed to get teams for update');
+    }
+    
+    const team = teams.data.find(t => this.mongoIdToNumber(t.id || t._id!) === id);
+    if (!team) {
+      throw new Error('Team not found');
+    }
+    
+    const teamId = team.id || team._id;
+    if (!teamId) {
+      throw new Error('Team ID not available');
+    }
+    
+    const result = await this.request<MongoTeam>(`/team/${teamId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name: name.trim() })
+    });
+    
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to update team');
+    }
+    
+    return {
+      id: this.mongoIdToNumber(result.data.id || result.data._id!),
+      name: result.data.name,
+      created_at: this.toISOStringSafe(result.data.created_at),
+      updated_at: this.toISOStringSafe(result.data.updated_at)
+    };
+  }
+
+  async deleteTeam(id: number): Promise<boolean> {
+    try {
+      const teams = await this.request<MongoTeam[]>('/team');
+      if (!teams.success || !teams.data) {
+        throw new Error('Failed to get teams for deletion');
+      }
+      
+      const team = teams.data.find(t => this.mongoIdToNumber(t.id || t._id!) === id);
+      if (!team) {
+        throw new Error('Team not found');
+      }
+      
+      const teamId = team.id || team._id;
+      if (!teamId) {
+        throw new Error('Team ID not available');
+      }
+      
+      const result = await this.request<void>(`/team/${teamId}`, { method: 'DELETE' });
+      return result.success;
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      return false;
+    }
+  }
+
+  // CRUD operations for Squads
+  async createSquad(name: string, teamName: string): Promise<Squad> {
+    // First find the team by name to get its ID
+    const teams = await this.request<MongoTeam[]>('/team');
+    if (!teams.success || !teams.data) {
+      throw new Error('Failed to get teams');
+    }
+    
+    const team = teams.data.find(t => t.name === teamName);
+    if (!team) {
+      throw new Error(`Team '${teamName}' not found`);
+    }
+
+    const teamId = team.id || team._id;
+    if (!teamId) {
+      throw new Error('Team ID not available');
+    }
+
+    const result = await this.request<MongoSquad>('/squad', {
+      method: 'POST',
+      body: JSON.stringify({ name: name.trim(), teamID: teamId })
+    });
+    
+    if (!result.success) {
+      // Handle duplicate squad error specifically
+      if (result.error?.includes('already exists') || result.error?.includes('duplicate') || result.error?.includes('Squad name already exists')) {
+        throw new Error(`Squad "${name.trim()}" already exists. Please choose a different name.`);
+      }
+      throw new Error(result.error || 'Failed to create squad');
+    }
+    
+    if (!result.data) {
+      throw new Error('Failed to create squad - no data returned');
+    }
+    
+    return {
+      id: this.mongoIdToNumber(result.data.id || result.data._id!),
+      name: result.data.name,
+      teamID: this.mongoIdToNumber(result.data.teamID || result.data.teamId || result.data.team_id!),
+      created_at: this.toISOStringSafe(result.data.created_at || result.data.createdAt),
+      updated_at: this.toISOStringSafe(result.data.updated_at || result.data.updatedAt)
+    };
   }
 
   async getSquadsWithIds(): Promise<Squad[]> {
-    await this.ensureInitialized();
-    return this.db.getSquads();
+    const result = await this.request<MongoSquad[]>('/squad');
+    if (!result.success || !result.data) {
+      return [];
+    }
+    
+    return result.data.map(squad => ({
+      id: this.mongoIdToNumber(squad.id || squad._id!),
+      name: squad.name,
+      teamID: this.mongoIdToNumber(squad.teamID || squad.teamId || squad.team_id!),
+      created_at: this.toISOStringSafe(squad.created_at || squad.createdAt),
+      updated_at: this.toISOStringSafe(squad.updated_at || squad.updatedAt)
+    }));
+  }
+
+  async updateSquad(id: number, name: string, teamName: string): Promise<Squad> {
+    // Find the team first
+    const teams = await this.request<MongoTeam[]>('/team');
+    if (!teams.success || !teams.data) {
+      throw new Error('Failed to get teams');
+    }
+    
+    const team = teams.data.find(t => t.name === teamName);
+    if (!team) {
+      throw new Error(`Team '${teamName}' not found`);
+    }
+
+    const teamId = team.id || team._id;
+    if (!teamId) {
+      throw new Error('Team ID not available');
+    }
+
+    // Find the squad to update
+    const squads = await this.request<MongoSquad[]>('/squad');
+    if (!squads.success || !squads.data) {
+      throw new Error('Failed to get squads for update');
+    }
+    
+    const squad = squads.data.find(s => this.mongoIdToNumber(s.id || s._id!) === id);
+    if (!squad) {
+      throw new Error('Squad not found');
+    }
+    
+    const squadId = squad.id || squad._id;
+    if (!squadId) {
+      throw new Error('Squad ID not available');
+    }
+    
+    const result = await this.request<MongoSquad>(`/squad/${squadId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ 
+        name: name.trim(), 
+        teamID: teamId,
+        updated_at: new Date()
+      })
+    });
+    
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to update squad');
+    }
+    
+    return {
+      id: this.mongoIdToNumber(result.data.id || result.data._id!),
+      name: result.data.name,
+      teamID: this.mongoIdToNumber(result.data.teamID || result.data.teamId || result.data.team_id!),
+      created_at: this.toISOStringSafe(result.data.created_at || result.data.createdAt),
+      updated_at: this.toISOStringSafe(result.data.updated_at || result.data.updatedAt)
+    };
+  }
+
+  async deleteSquad(id: number): Promise<boolean> {
+    try {
+      const squads = await this.request<MongoSquad[]>('/squad');
+      if (!squads.success || !squads.data) {
+        throw new Error('Failed to get squads for deletion');
+      }
+      
+      const squad = squads.data.find(s => this.mongoIdToNumber(s.id || s._id!) === id);
+      if (!squad) {
+        throw new Error('Squad not found');
+      }
+      
+      const squadId = squad.id || squad._id;
+      if (!squadId) {
+        throw new Error('Squad ID not available');
+      }
+      
+      const result = await this.request<void>(`/squad/${squadId}`, { method: 'DELETE' });
+      return result.success;
+    } catch (error) {
+      console.error('Error deleting squad:', error);
+      return false;
+    }
+  }
+
+  // CRUD operations for DPEs
+  async createDPE(name: string, squadName: string): Promise<DPE> {
+    // First find the squad by name to get its ID
+    const squads = await this.request<MongoSquad[]>('/squad');
+    if (!squads.success || !squads.data) {
+      throw new Error('Failed to get squads');
+    }
+    
+    const squad = squads.data.find(s => s.name === squadName);
+    if (!squad) {
+      throw new Error(`Squad '${squadName}' not found`);
+    }
+
+    const squadId = squad.id || squad._id;
+    if (!squadId) {
+      throw new Error('Squad ID not available');
+    }
+
+    const result = await this.request<MongoDPE>('/dpe', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        name: name.trim(), 
+        squadID: squadId,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
+    });
+    
+    if (!result.success) {
+      // Handle duplicate DPE error specifically
+      if (result.error?.includes('already exists') || result.error?.includes('duplicate') || result.error?.includes('DPE name already exists')) {
+        throw new Error(`DPE "${name.trim()}" already exists. Please choose a different name.`);
+      }
+      throw new Error(result.error || 'Failed to create DPE');
+    }
+    
+    if (!result.data) {
+      throw new Error('Failed to create DPE - no data returned');
+    }
+    
+    return {
+      id: this.mongoIdToNumber(result.data.id || result.data._id!),
+      name: result.data.name,
+      squadID: this.mongoIdToNumber(result.data.squadID || result.data.squadId || result.data.squad_id!),
+      created_at: this.toISOStringSafe(result.data.created_at || result.data.createdAt),
+      updated_at: this.toISOStringSafe(result.data.updated_at || result.data.updatedAt)
+    };
   }
 
   async getDPEsWithIds(): Promise<DPE[]> {
-    await this.ensureInitialized();
-    return this.db.getDPEs();
+    const result = await this.request<MongoDPE[]>('/dpe');
+    if (!result.success || !result.data) {
+      return [];
+    }
+    
+    return result.data.map(dpe => ({
+      id: this.mongoIdToNumber(dpe.id || dpe._id!),
+      name: dpe.name,
+      squadID: this.mongoIdToNumber(dpe.squadID || dpe.squadId || dpe.squad_id!),
+      created_at: this.toISOStringSafe(dpe.created_at || dpe.createdAt),
+      updated_at: this.toISOStringSafe(dpe.updated_at || dpe.updatedAt)
+    }));
   }
 
-  // Get dashboard data for a specific entity
+  async updateDPE(id: number, name: string, squadName: string): Promise<DPE> {
+    // Find the squad first
+    const squads = await this.request<MongoSquad[]>('/squad');
+    if (!squads.success || !squads.data) {
+      throw new Error('Failed to get squads');
+    }
+    
+    const squad = squads.data.find(s => s.name === squadName);
+    if (!squad) {
+      throw new Error(`Squad '${squadName}' not found`);
+    }
+
+    const squadId = squad.id || squad._id;
+    if (!squadId) {
+      throw new Error('Squad ID not available');
+    }
+
+    // Find the DPE to update
+    const dpes = await this.request<MongoDPE[]>('/dpe');
+    if (!dpes.success || !dpes.data) {
+      throw new Error('Failed to get DPEs for update');
+    }
+    
+    const dpe = dpes.data.find(d => this.mongoIdToNumber(d.id || d._id!) === id);
+    if (!dpe) {
+      throw new Error('DPE not found');
+    }
+    
+    const dpeId = dpe.id || dpe._id;
+    if (!dpeId) {
+      throw new Error('DPE ID not available');
+    }
+    
+    const result = await this.request<MongoDPE>(`/dpe/${dpeId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ 
+        name: name.trim(), 
+        squadID: squadId,
+        updated_at: new Date()
+      })
+    });
+    
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Failed to update DPE');
+    }
+    
+    return {
+      id: this.mongoIdToNumber(result.data.id || result.data._id!),
+      name: result.data.name,
+      squadID: this.mongoIdToNumber(result.data.squadID || result.data.squadId || result.data.squad_id!),
+      created_at: this.toISOStringSafe(result.data.created_at || result.data.createdAt),
+      updated_at: this.toISOStringSafe(result.data.updated_at || result.data.updatedAt)
+    };
+  }
+
+  async deleteDPE(id: number): Promise<boolean> {
+    try {
+      const dpes = await this.request<MongoDPE[]>('/dpe');
+      if (!dpes.success || !dpes.data) {
+        throw new Error('Failed to get DPEs for deletion');
+      }
+      
+      const dpe = dpes.data.find(d => this.mongoIdToNumber(d.id || d._id!) === id);
+      if (!dpe) {
+        throw new Error('DPE not found');
+      }
+      
+      const dpeId = dpe.id || dpe._id;
+      if (!dpeId) {
+        throw new Error('DPE ID not available');
+      }
+      
+      const result = await this.request<void>(`/dpe/${dpeId}`, { method: 'DELETE' });
+      return result.success;
+    } catch (error) {
+      console.error('Error deleting DPE:', error);
+      return false;
+    }
+  }
+
+  // Data retrieval methods for UI
+  async getEntityData(): Promise<EntityData> {
+    const [teams, squads, dpes] = await Promise.all([
+      this.getTeamsWithIds(),
+      this.getSquadsWithIds(),
+      this.getDPEsWithIds()
+    ]);
+    
+    return {
+      teams: teams.map(t => t.name),
+      squads: squads.map(s => s.name),
+      dpes: dpes.map(d => d.name)
+    };
+  }
+
+  async getEntityMappings(): Promise<EntityMappings> {
+    const [teams, squads, dpes] = await Promise.all([
+      this.getTeamsWithIds(),
+      this.getSquadsWithIds(),
+      this.getDPEsWithIds()
+    ]);
+    
+    const squadToTeam: Record<string, string> = {};
+    const dpeToSquad: Record<string, string> = {};
+    
+    // Create mappings
+    squads.forEach(squad => {
+      const team = teams.find(t => t.id === squad.teamID);
+      if (team) {
+        squadToTeam[squad.name] = team.name;
+      }
+    });
+    
+    dpes.forEach(dpe => {
+      const squad = squads.find(s => s.id === dpe.squadID);
+      if (squad) {
+        dpeToSquad[dpe.name] = squad.name;
+      }
+    });
+    
+    return { dpeToSquad, squadToTeam };
+  }
+
   async getDashboardData(entityType: string, entityValue: string, startDate?: string, endDate?: string): Promise<DashboardData> {
-    await this.ensureInitialized();
     const entityData = await this.getEntityData();
     const entityMappings = await this.getEntityMappings();
     
-    let performanceData: Array<{ name: string; sct: number; cases: number; satisfaction: number; }> = [];
-
-    if (entityType === 'dpe') {
-      const dpes = await this.db.getDPEs();
-      const dpe = dpes.find(d => d.name === entityValue);
-      if (dpe) {
-        const metrics = await this.db.getPerformanceMetrics(dpe.id, startDate, endDate);
-        if (metrics.length > 0) {
-          const latest = metrics[0]; // Get latest metrics
-          performanceData = [{
-            name: dpe.name,
-            sct: latest.sct,
-            cases: latest.cases,
-            satisfaction: latest.satisfaction
-          }];
-        }
-      }
-    } else if (entityType === 'squad') {
-      const squads = await this.db.getSquads();
-      const squad = squads.find(s => s.name === entityValue);
-      if (squad) {
-        const dpes = await this.db.getDPEs(squad.id);
-        performanceData = await Promise.all(dpes.map(async dpe => {
-          const metrics = await this.db.getPerformanceMetrics(dpe.id, startDate, endDate);
-          const latest = metrics[0] || { sct: 0, cases: 0, satisfaction: 0 };
-          return {
-            name: dpe.name,
-            sct: latest.sct,
-            cases: latest.cases,
-            satisfaction: latest.satisfaction
-          };
-        }));
-      }
-    } else if (entityType === 'team') {
-      const teams = await this.db.getTeams();
-      const team = teams.find(t => t.name === entityValue);
-      if (team) {
-        const squads = await this.db.getSquads(team.id);
-        performanceData = await Promise.all(squads.map(async squad => {
-          const dpes = await this.db.getDPEs(squad.id);
-          const squadMetrics = await Promise.all(dpes.map(async dpe => {
-            const metrics = await this.db.getPerformanceMetrics(dpe.id, startDate, endDate);
-            return metrics[0] || { sct: 0, cases: 0, satisfaction: 0 };
-          }));
-
-          // Calculate squad averages
-          const avgSct = squadMetrics.length > 0 
-            ? squadMetrics.reduce((sum, m) => sum + m.sct, 0) / squadMetrics.length 
-            : 0;
-          const totalCases = squadMetrics.reduce((sum, m) => sum + m.cases, 0);
-          const avgSatisfaction = squadMetrics.length > 0 
-            ? squadMetrics.reduce((sum, m) => sum + m.satisfaction, 0) / squadMetrics.length 
-            : 0;
-
-          return {
-            name: squad.name,
-            sct: Math.round(avgSct),
-            cases: totalCases,
-            satisfaction: Math.round(avgSatisfaction)
-          };
-        }));
-      }
-    }
-
+    // For now, return empty performance data
+    // This would need to be implemented with actual performance metrics
+    const performanceData: Array<{
+      name: string;
+      sct: number;
+      cases: number;
+      satisfaction: number;
+    }> = [];
+    
     return {
       entityData,
       entityMappings,
@@ -167,210 +577,128 @@ class EntityService {
     };
   }
 
-  // CRUD operations for Teams
-  async createTeam(name: string, description?: string): Promise<Team> {
-    await this.ensureInitialized();
-    return this.db.createTeam(name, description);
-  }
-
-  async updateTeam(id: number, name: string, description?: string): Promise<Team> {
-    await this.ensureInitialized();
-    return this.db.updateTeam(id, name, description);
-  }
-
-  async deleteTeam(id: number): Promise<boolean> {
-    await this.ensureInitialized();
-    return this.db.deleteTeam(id);
-  }
-
-  // CRUD operations for Squads
-  async createSquad(name: string, teamName: string, description?: string): Promise<Squad> {
-    await this.ensureInitialized();
-    const teams = await this.db.getTeams();
-    const team = teams.find(t => t.name === teamName);
-    if (!team) {
-      throw new Error(`Team '${teamName}' not found`);
-    }
-    return this.db.createSquad(name, team.id, description);
-  }
-
-  async updateSquad(id: number, name: string, teamName: string, description?: string): Promise<Squad> {
-    await this.ensureInitialized();
-    const teams = await this.db.getTeams();
-    const team = teams.find(t => t.name === teamName);
-    if (!team) {
-      throw new Error(`Team '${teamName}' not found`);
-    }
-    return this.db.updateSquad(id, name, team.id, description);
-  }
-
-  async deleteSquad(id: number): Promise<boolean> {
-    await this.ensureInitialized();
-    return this.db.deleteSquad(id);
-  }
-
-  // CRUD operations for DPEs
-  async createDPE(name: string, squadName: string, email?: string): Promise<DPE> {
-    await this.ensureInitialized();
-    const squads = await this.db.getSquads();
-    const squad = squads.find(s => s.name === squadName);
-    if (!squad) {
-      throw new Error(`Squad '${squadName}' not found`);
-    }
-    return this.db.createDPE(name, squad.id, email);
-  }
-
-  async updateDPE(id: number, name: string, squadName: string, email?: string): Promise<DPE> {
-    await this.ensureInitialized();
-    const squads = await this.db.getSquads();
-    const squad = squads.find(s => s.name === squadName);
-    if (!squad) {
-      throw new Error(`Squad '${squadName}' not found`);
-    }
-    return this.db.updateDPE(id, name, squad.id, email);
-  }
-
-  async deleteDPE(id: number): Promise<boolean> {
-    await this.ensureInitialized();
-    return this.db.deleteDPE(id);
-  }
-
-  // Performance metrics operations
+  // Placeholder for performance metrics (not implemented in MongoDB API yet)
   async addPerformanceMetrics(dpeName: string, sct: number, cases: number, satisfaction: number, startDate: string, endDate: string): Promise<PerformanceMetric> {
-    await this.ensureInitialized();
-    const dpes = await this.db.getDPEs();
-    const dpe = dpes.find(d => d.name === dpeName);
-    if (!dpe) {
-      throw new Error(`DPE '${dpeName}' not found`);
-    }
-    return this.db.createPerformanceMetric(dpe.id, sct, cases, satisfaction, startDate, endDate);
+    throw new Error('Performance metrics not implemented yet');
   }
 
   async getPerformanceHistory(dpeName: string, startDate?: string, endDate?: string): Promise<PerformanceMetric[]> {
-    const dpes = await this.db.getDPEs();
-    const dpe = dpes.find(d => d.name === dpeName);
-    if (!dpe) {
-      throw new Error(`DPE '${dpeName}' not found`);
+    return []; // Not implemented yet
+  }
+
+  // Clear all data functionality
+  async clearAllData(): Promise<void> {
+    try {
+      // Delete all DPEs first (due to foreign key constraints)
+      const dpesResult = await this.request<MongoDPE[]>('/dpe');
+      if (dpesResult.success && dpesResult.data) {
+        for (const dpe of dpesResult.data) {
+          if (dpe._id) {
+            await this.request<void>(`/dpe/${dpe._id}`, { method: 'DELETE' });
+          }
+        }
+      }
+
+      // Delete all squads
+      const squadsResult = await this.request<MongoSquad[]>('/squad');
+      if (squadsResult.success && squadsResult.data) {
+        for (const squad of squadsResult.data) {
+          if (squad._id) {
+            await this.request<void>(`/squad/${squad._id}`, { method: 'DELETE' });
+          }
+        }
+      }
+
+      // Delete all teams
+      const teamsResult = await this.request<MongoTeam[]>('/team');
+      if (teamsResult.success && teamsResult.data) {
+        for (const team of teamsResult.data) {
+          if (team._id) {
+            await this.request<void>(`/team/${team._id}`, { method: 'DELETE' });
+          }
+        }
+      }
+
+      console.log('All entity data cleared from MongoDB');
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Failed to clear data');
     }
-    return this.db.getPerformanceMetrics(dpe.id, startDate, endDate);
   }
 
   // Utility methods
   async migrateLegacyData(entityData: EntityData, entityMappings: EntityMappings): Promise<void> {
-    await this.ensureInitialized();
-    // This method can be used to migrate existing in-memory data to the database
-    console.log('Migrating legacy data to database...');
-    
-    // Create teams that don't exist
-    for (const teamName of entityData.teams) {
-      if (teamName !== 'Add New Team...') {
-        const teams = await this.db.getTeams();
-        const existingTeam = teams.find(t => t.name === teamName);
-        if (!existingTeam) {
-          await this.createTeam(teamName);
-        }
-      }
-    }
-
-    // Create squads and map them to teams
-    for (const squadName of entityData.squads) {
-      if (squadName !== 'Add New Squad...') {
-        const squads = await this.db.getSquads();
-        const existingSquad = squads.find(s => s.name === squadName);
-        if (!existingSquad) {
-          const teamName = entityMappings.squadToTeam[squadName];
-          if (teamName) {
-            await this.createSquad(squadName, teamName);
-          }
-        }
-      }
-    }
-
-    // Create DPEs and map them to squads
-    for (const dpeName of entityData.dpes) {
-      if (dpeName !== 'Add New DPE...') {
-        const dpes = await this.db.getDPEs();
-        const existingDPE = dpes.find(d => d.name === dpeName);
-        if (!existingDPE) {
-          const squadName = entityMappings.dpeToSquad[dpeName];
-          if (squadName) {
-            await this.createDPE(dpeName, squadName);
-          }
-        }
-      }
-    }
-
-    console.log('Legacy data migration completed successfully');
+    // Migration logic would go here
+    console.log('Legacy data migration not implemented yet');
   }
 
-  // Debug function to check database contents
   async debugDatabaseContents(): Promise<void> {
-    await this.ensureInitialized();
-    return this.db.debugDatabaseContents();
-  }
-
-  // Function to regenerate sample data (useful for testing or resetting)
-  async regenerateSampleData(): Promise<void> {
-    await this.ensureInitialized();
-    
-    console.log('Regenerating AMEA SMB sample data...');
-    
-    // Clear existing data
-    const teams = await this.db.getTeams();
-    const squads = await this.db.getSquads();
-    const dpes = await this.db.getDPEs();
-    
-    // Delete in reverse order due to foreign key constraints
-    for (const dpe of dpes) {
-      await this.db.deleteDPE(dpe.id);
-    }
-    for (const squad of squads) {
-      await this.db.deleteSquad(squad.id);
-    }
-    for (const team of teams) {
-      await this.db.deleteTeam(team.id);
-    }
-    
-    // Generate new sample data
-    const sampleTeams = generateAMEASMBSampleData();
-    const flatData = flattenSampleData(sampleTeams);
-    const currentPeriod = getCurrentPeriod();
-
-    // Insert teams
-    for (const team of flatData.teams) {
-      await this.createTeam(team.name, team.description);
-    }
-
-    // Insert squads
-    for (const squad of flatData.squads) {
-      await this.createSquad(squad.name, squad.teamName, squad.description);
-    }
-
-    // Insert DPEs and their performance data
-    for (const dpe of flatData.dpes) {
-      const createdDPE = await this.createDPE(dpe.name, dpe.squadName, dpe.email);
+    try {
+      const [teams, squads, dpes] = await Promise.all([
+        this.getTeamsWithIds(),
+        this.getSquadsWithIds(),
+        this.getDPEsWithIds()
+      ]);
       
-      // Add performance data if available
-      if (dpe.performance && createdDPE.id) {
-        await this.addPerformanceMetrics(
-          dpe.name,
-          dpe.performance.sct,
-          dpe.performance.cases,
-          dpe.performance.satisfaction,
-          currentPeriod.start,
-          currentPeriod.end
-        );
-      }
+      console.log('=== MongoDB Database Contents ===');
+      console.log('Teams:', teams);
+      console.log('Squads:', squads);
+      console.log('DPEs:', dpes);
+    } catch (error) {
+      console.error('Failed to debug database contents:', error);
     }
-
-    console.log('AMEA SMB sample data regeneration completed successfully');
   }
 
-  // Close database connection
-  close(): void {
-    if (this.db) {
-      this.db.close();
+  // Helper method for date conversion
+  private toISOStringSafe(date: Date | string | undefined): string {
+    if (!date) return new Date().toISOString();
+    if (typeof date === 'string') return date;
+    return date.toISOString();
+  }
+
+  // Helper method for ID conversion
+  private mongoIdToNumber(mongoId: string): number {
+    // Handle undefined or null mongoId
+    if (!mongoId) {
+      return Math.floor(Math.random() * 1000000); // Fallback random number
     }
+    
+    // Create a simple hash of the MongoDB ObjectId for compatibility
+    let hash = 0;
+    for (let i = 0; i < mongoId.length; i++) {
+      const char = mongoId.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  }
+
+  // Clear collections endpoint
+  async clearCollections(collections: string[]): Promise<{ success: boolean; totalDeleted?: number; error?: string }> {
+    const result = await this.request<{
+      success: boolean;
+      totalDeleted: number;
+      collections: Record<string, { success: boolean; deletedCount?: number; error?: string }>;
+    }>('/collections/clear', {
+      method: 'DELETE',
+      body: JSON.stringify({ collections })
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to clear collections'
+      };
+    }
+
+    return {
+      success: result.data!.success,
+      totalDeleted: result.data!.totalDeleted,
+      error: result.data!.success ? undefined : 'Some collections failed to clear'
+    };
+  }
+
+  close(): void {
+    // No persistent connection to close in this implementation
   }
 }
 

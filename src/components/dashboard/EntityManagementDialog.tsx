@@ -92,33 +92,38 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
       try {
         if (getTeamsWithIds && getSquadsWithIds && getDPEsWithIds) {
           const [teams, squads, dpes] = await Promise.all([
-            getTeamsWithIds(),
-            getSquadsWithIds(),
-            getDPEsWithIds()
+            getTeamsWithIds().catch(() => []),
+            getSquadsWithIds().catch(() => []),
+            getDPEsWithIds().catch(() => [])
           ]);
 
+          // Ensure we have arrays before calling map
+          const safeTeams = Array.isArray(teams) ? teams : [];
+          const safeSquads = Array.isArray(squads) ? squads : [];
+          const safeDpes = Array.isArray(dpes) ? dpes : [];
+
           // Convert database entities to EntityData format
-          const teamData = teams.map(team => ({
+          const teamData = safeTeams.map(team => ({
             id: team.id.toString(),
             name: team.name,
             status: 'active' as const,
             description: team.description
           }));
 
-          const squadData = squads.map(squad => ({
+          const squadData = safeSquads.map(squad => ({
             id: squad.id.toString(),
             name: squad.name,
             status: 'active' as const,
             description: squad.description,
-            mappedTo: teams.find(t => t.id === squad.team_id)?.name
+            mappedTo: safeTeams.find(t => t.id === squad.teamID)?.name
           }));
 
-          const dpeData = dpes.map(dpe => ({
+          const dpeData = safeDpes.map(dpe => ({
             id: dpe.id.toString(),
             name: dpe.name,
             status: 'active' as const,
             email: dpe.email,
-            mappedTo: squads.find(s => s.id === dpe.squad_id)?.name
+            mappedTo: safeSquads.find(s => s.id === dpe.squadID)?.name
           }));
 
           setTeamData(teamData);

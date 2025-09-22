@@ -1,0 +1,526 @@
+{
+  "name": "GET CASES",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb5210fa-51f6-4dd1-a15d-904d8f548a57",
+              "name": "owner_full_name",
+              "value": "={{ $json.owner_full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "94c92f61-6090-453b-9d6c-54d77e08f378",
+              "name": "case_id",
+              "value": "={{ $json.case_id }}",
+              "type": "string"
+            },
+            {
+              "id": "2568e5c6-c8b6-4f00-8e67-3f7c75b0c6dc",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "0ac33fb5-85e5-423c-a27d-e09b9b92b20b",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "72efbc20-b9e9-418f-99c2-1e3fe37ca71f",
+              "name": "products",
+              "value": "={{ $json.products }}",
+              "type": "string"
+            },
+            {
+              "id": "41af6b86-74d6-4c73-a76f-bf6c25a60e48",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "6b0b92a4-c9a2-4e5c-a93e-c4d1f1e2b3a4",
+              "name": "created_date",
+              "value": "={{ $json.created_date }}",
+              "type": "string"
+            },
+            {
+              "id": "8d4c6e1f-5a7b-4f9d-b2e8-a9c7e6f4d2b1",
+              "name": "closed_date",
+              "value": "={{ $json.closed_date }}",
+              "type": "string"
+            },
+            {
+              "id": "9e5f7a2c-6b8d-4c1e-a3f9-d7e5c2b4f1a8",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -416
+      ],
+      "id": "67ca8afd-a8f2-4d37-a0b4-322b42b31533",
+      "name": "onlyDocs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connectone-stg.trendmicro.com:8443/api/eurekasearch/EurekaSearch",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "693e96c64b6b4358be879c161f8e4cf4"
+            },
+            {
+              "name": "Content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -640,
+        -80
+      ],
+      "id": "de7cfe13-453a-4c45-9fb8-9d225e081e7b",
+      "name": "eurekaAPI",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "VThbDp9oNKjKorHJ",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data.results[0].docs",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        64,
+        -416
+      ],
+      "id": "6d64b95b-5382-47ff-b20d-77854ea4dfb0",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -304,
+        -416
+      ],
+      "id": "7b84848c-e62c-48da-b8e4-869c51e49fb3",
+      "name": "Merge",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// For n8n Code Node - Remove HTML content and PII from API response\nconst inputData = $input.all();\n\nfunction cleanHtmlContent(text) {\n  if (!text || typeof text !== 'string') return text;\n\n  // Remove HTML tags and decode HTML entities\n  return text\n    .replace(/<[^>]*>/g, '') // Remove HTML tags\n    .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces\n    .replace(/&amp;/g, '&') // Replace encoded ampersands\n    .replace(/&lt;/g, '<') // Replace encoded less than\n    .replace(/&gt;/g, '>') // Replace encoded greater than\n    .replace(/&quot;/g, '\"') // Replace encoded quotes\n    .replace(/&#39;/g, \"'\") // Replace encoded apostrophes\n    .replace(/\\s+/g, ' ') // Replace multiple whitespace with single space\n    .trim(); // Remove leading/trailing whitespace\n}\n\nfunction removePII(text) {\n  if (!text || typeof text !== 'string') return text;\n\n  return text\n    // Remove email addresses\n    .replace(/\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b/g, '[EMAIL_REMOVED]')\n    // Remove US phone numbers with specific formatting\n    .replace(/\\b(\\+?1[-.\\s]?)?\\(?([0-9]{3})\\)?[-.\\s]?([0-9]{3})[-.\\s]?([0-9]{4})\\b/g, '[PHONE_REMOVED]')\n    // Remove international phone numbers with separators\n    .replace(/\\b\\+[1-9]\\d{0,3}[-.\\s][0-9]{1,4}[-.\\s]?[0-9]{1,4}[-.\\s]?[0-9]{1,9}\\b/g, '[PHONE_REMOVED]')\n    // Remove international phone numbers without separators (total 8-15 digits including country code)\n    .replace(/\\+\\d{8,15}\\b/g, '[PHONE_REMOVED]')\n    // Remove standalone 10-11 digit numbers that are likely phone numbers (not part of timestamps or other data)\n    .replace(/\\b(?<![0-9T-])\\d{10,11}(?![0-9T:-])\\b/g, '[PHONE_REMOVED]')\n    // Remove system generated email disclaimers (including line breaks)\n    .replace(/\\*\\*\\s*This is a system generated email from our case tracking system\\*\\*\\*.*?message\\.\\s*/gis, '')\n    .replace(/This message was sent from outside of Trend Micro\\.\\s*/gi, '')\n    .replace(/Please do not click links or open attachments unless you recognise the source of this email and know the content is safe\\.\\s*/gi, '')\n    .replace(/This email has been received from an external source\\. Do not click links or open attachments unless you can confirm the sender and know the content is safe\\.\\s*/gi, '')\n    // Remove additional resources section\n    .replace(/Additional Resources.*?Vulnerabilities\\s*/gis, '');\n}\n\nfunction processText(text) {\n  if (!text || typeof text !== 'string') return text;\n\n  // First clean HTML, then remove PII\n  let cleaned = cleanHtmlContent(text);\n  cleaned = removePII(cleaned);\n\n  return cleaned;\n}\n\nfunction processObject(obj) {\n  if (typeof obj === 'string') {\n    return processText(obj);\n  } else if (Array.isArray(obj)) {\n    return obj.map(function(item) { return processObject(item); });\n  } else if (obj && typeof obj === 'object') {\n    const cleaned = {};\n    for (const key in obj) {\n      if (obj.hasOwnProperty(key)) {\n        cleaned[key] = processObject(obj[key]);\n      }\n    }\n    return cleaned;\n  }\n  return obj;\n}\n\n// Process all input items\nconst outputData = inputData.map(function(item) {\n  return {\n    json: processObject(item.json)\n  };\n});\n\nreturn outputData;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -416
+      ],
+      "id": "621952a3-363c-4c10-b2b3-f042fd7cedb1",
+      "name": "cleanHTML&PII"
+    },
+    {
+      "parameters": {
+        "jsCode": "    function cleanEmailThread(rawContent) {\n        if (!rawContent) return '';\n\n        // Step 1: Simple string replacements instead of regex\n        let cleaned = rawContent;\n\n        // Remove CSS by finding and removing blocks\n        while (cleaned.indexOf('@font-face') !== -1) {\n            const start = cleaned.indexOf('@font-face');\n            const end = cleaned.indexOf('}', start);\n            if (end !== -1) {\n                cleaned = cleaned.substring(0, start) + cleaned.substring(end + 1);\n            } else {\n                break;\n            }\n        }\n\n        // Remove remaining CSS blocks\n        while (cleaned.indexOf('{') !== -1 && cleaned.indexOf('}') !== -1) {\n            const start = cleaned.indexOf('{');\n            const end = cleaned.indexOf('}', start);\n            if (end !== -1) {\n                cleaned = cleaned.substring(0, start) + cleaned.substring(end + 1);\n            } else {\n                break;\n            }\n        }\n\n        // Simple replacements\n        cleaned = cleaned.replace(/&nbsp;/g, ' ');\n        cleaned = cleaned.replace(/&amp;/g, '&');\n        cleaned = cleaned.replace(/&lt;/g, '<');\n        cleaned = cleaned.replace(/&gt;/g, '>');\n\n        // Step 2: Find timestamps manually\n        const entries = [];\n        const patterns = ['Portal Post', 'Email', 'Case Resolution', 'Support File Upload'];\n\n        for (let i = 0; i < patterns.length; i++) {\n            let searchIndex = 0;\n            while (true) {\n                const patternIndex = cleaned.indexOf(patterns[i], searchIndex);\n                if (patternIndex === -1) break;\n\n                // Look for timestamp after pattern\n                const timestampStart = patternIndex + patterns[i].length;\n                const timestampMatch = cleaned.substring(timestampStart, timestampStart + 50);\n\n                // Simple timestamp check (YYYY-MM-DDTHH:MM:SSZ)\n                if (timestampMatch.indexOf('T') !== -1 && timestampMatch.indexOf('Z') !== -1) {\n                    const spaceIndex = timestampStart + timestampMatch.indexOf(' ');\n                    const zIndex = timestampStart + timestampMatch.indexOf('Z');\n\n                    if (spaceIndex > patternIndex && zIndex > spaceIndex) {\n                        const timestamp = cleaned.substring(spaceIndex + 1, zIndex + 1);\n\n                        entries.push({\n                            type: patterns[i],\n                            timestamp: timestamp,\n                            startIndex: patternIndex,\n                            endIndex: zIndex + 1\n                        });\n                    }\n                }\n\n                searchIndex = patternIndex + 1;\n            }\n        }\n\n        // Sort entries by position\n        entries.sort(function(a, b) {\n            return a.startIndex - b.startIndex;\n        });\n\n        // Step 3: Extract content between entries\n        const emailEntries = [];\n\n        for (let i = 0; i < entries.length; i++) {\n            const current = entries[i];\n            const next = entries[i + 1];\n\n            const contentStart = current.endIndex;\n            const contentEnd = next ? next.startIndex : cleaned.length;\n            const content = cleaned.substring(contentStart, contentEnd).trim();\n\n            if (content.length > 10) {\n                emailEntries.push({\n                    type: current.type,\n                    timestamp: current.timestamp,\n                    content: lightCleanContent(content),\n                    title: extractTitle(content)\n                });\n            }\n        }\n\n        // Step 4: Extract case ID\n        let caseId = '';\n        const tmIndex = cleaned.indexOf('TM-');\n        if (tmIndex !== -1) {\n            const tmEnd = tmIndex + 3;\n            let numEnd = tmEnd;\n            while (numEnd < cleaned.length && cleaned.charAt(numEnd) >= '0' && cleaned.charAt(numEnd) <= '9') {\n                numEnd++;\n            }\n            caseId = cleaned.substring(tmIndex, numEnd);\n        }\n\n        // Step 5: Format output\n        let emailThread = 'EMAIL THREAD - Case ' + caseId + '\\n\\n';\n\n        for (let i = 0; i < emailEntries.length; i++) {\n            const entry = emailEntries[i];\n            emailThread += '[' + (i + 1) + '] ' + entry.timestamp + ' | ' + entry.type + '\\n';\n            emailThread += 'Title: ' + entry.title + '\\n';\n            emailThread += 'Description: ' + entry.content + '\\n';\n            emailThread += '----------------------------------------------------------------\\n\\n';\n        }\n\n        return {\n            case_id: caseId,\n            content: cleaned.replace(/  +/g, ' ').trim(),\n            structured_thread: emailThread,\n            timestamp: new Date().toISOString()\n        };\n    }\n\n    function lightCleanContent(content) {\n        if (!content) return '';\n\n        let cleaned = content;\n\n        // Simple string replacements\n        cleaned = cleaned.replace(/# CorpIS-D365-CustomerService/g, '');\n        cleaned = cleaned.replace(/# Portals-Business Success Portal/g, '');\n\n        // Remove common footers\n        if (cleaned.indexOf('Additional Resources') !== -1) {\n            cleaned = cleaned.substring(0, cleaned.indexOf('Additional Resources'));\n        }\n\n        if (cleaned.indexOf('Copyright') !== -1) {\n            cleaned = cleaned.substring(0, cleaned.indexOf('Copyright'));\n        }\n\n        // Replace URLs\n        let urlStart = cleaned.indexOf('http');\n        while (urlStart !== -1) {\n            let urlEnd = urlStart;\n            while (urlEnd < cleaned.length && cleaned.charAt(urlEnd) !== ' ' && cleaned.charAt(urlEnd) !== '\\n') {\n                urlEnd++;\n            }\n            cleaned = cleaned.substring(0, urlStart) + '[Link]' + cleaned.substring(urlEnd);\n            urlStart = cleaned.indexOf('http');\n        }\n\n        // Clean whitespace\n        cleaned = cleaned.replace(/  +/g, ' ').trim();\n\n        return cleaned;\n    }\n\n    function extractTitle(content) {\n        if (!content) return 'Email Activity';\n\n        if (content.indexOf('Case Created') !== -1) return 'Case Created';\n        if (content.indexOf('Recommend Solutions') !== -1) return 'Recommended Solutions';\n        if (content.indexOf('Technical Support Case') !== -1) return 'Technical Support Case Response';\n        if (content.indexOf('This is Chris') !== -1) return 'Technical Support Response - CVE Assistance';\n        if (content.indexOf('CVE-2024') !== -1) return 'CVE Security Response';\n        if (content.indexOf('File Name') !== -1) return 'File Upload';\n        if (content.indexOf('PowerBox') !== -1) return 'File Upload';\n        if (content.indexOf('RE:') !== -1) return 'Follow-up Email';\n        if (content.indexOf('have not heard') !== -1) return 'Follow-up Check-in';\n        if (content.indexOf('attention is needed') !== -1) return 'Attention Required';\n        if (content.indexOf('awaiting your response') !== -1) return 'Response Required';\n        if (content.indexOf('on hold') !== -1) return 'Case On Hold Reminder';\n        if (content.indexOf('Closure') !== -1) return 'Case Closure Warning';\n        if (content.indexOf('closed due to no response') !== -1) return 'Case Closed - No Response';\n        if (content.indexOf('has been closed') !== -1) return 'Case Closed';\n        if (content.indexOf('Auto closed') !== -1) return 'Auto Closed by System';\n\n        return 'Email Activity';\n    }\n\n    // Main execution for n8n\n    const items = $input.all();\n    const results = [];\n\n    for (let i = 0; i < items.length; i++) {\n        const item = items[i];\n        const emailContent = item.json.content || item.json.description || item.json.body || '';\n\n        if (emailContent) {\n            const cleanedEmail = cleanEmailThread(emailContent);\n\n              results.push({\n              json: {\n              case_id: item.json.case_id,\n              priority: item.json.priority,\n              structured_email_thread: cleanedEmail.structured_thread,\n              owner_full_name: item.json.owner_full_name,\n              title: item.json.title,\n              products: Array.isArray(item.json.products) ? item.json.products[0] : item.json.products,\n              status: item.json.status,\n              created_date: item.json.created_date,\n              closed_date: item.json.closed_date\n                  }\n          });\n        }\n    }\n\n    return results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        -416
+      ],
+      "id": "2936c057-f803-417c-8d46-7de3887da28b",
+      "name": "structurizeEmail"
+    },
+    {
+      "parameters": {
+        "jsCode": "function calculateCaseAge(jsonData) {\n  return jsonData.map(caseItem => {\n    const createdDate = new Date(caseItem.created_date);\n    const closedDate = new Date(caseItem.closed_date);\n    const caseAgeInDays = Math.ceil((closedDate - createdDate) / (1000 * 60 * 60 * 24));\n\n    return {\n      ...caseItem,\n      case_age_days: caseAgeInDays\n    };\n  });\n}\n\n// For n8n usage - process the input items\nconst items = $input.all();\nconst processedData = items.map(item => item.json);\nconst result = calculateCaseAge(processedData);\n\n// Return the processed cases with Case Age field\nreturn result.map(caseData => ({ json: caseData }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        -416
+      ],
+      "id": "3551b3ac-3019-4e23-8edc-ab252b1647a7",
+      "name": "calcCaseAgeDay"
+    },
+    {
+      "parameters": {
+        "content": "## Clean API Response (HTML and PII), then Populate MongoDB",
+        "height": 224,
+        "width": 1184
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -352,
+        -480
+      ],
+      "typeVersion": 1,
+      "id": "22c6058f-4021-4f90-a4bf-1d273c06c357",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "cases",
+        "fields": " case_id, priority, owner_full_name, title, products, status, created_date, closed_date, case_age_days, structured_email_thread",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        656,
+        -416
+      ],
+      "id": "3de05012-371f-4d61-81aa-26f19c574458",
+      "name": "populateDB",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "tOaY9uUbWbjJyidX",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "collection": "cases"
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        -864,
+        -400
+      ],
+      "id": "8dcff089-0749-4e60-8d1e-044981a98e42",
+      "name": "deleteDB",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "tOaY9uUbWbjJyidX",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Loop\nIterate through queried cases (Eureka API limit is 30 cases per query)",
+        "height": 288,
+        "width": 560,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -704,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "09de1217-3abc-4cfb-ae1f-12c7b36a70e8",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pagination - Access original query from Edit Fields_declareStart node\ntry {\n  const inputData = $input.first().json;\n  \n  console.log('=== PAGINATION: ACCESSING ORIGINAL QUERY ===');\n  console.log('Current input data:', JSON.stringify(inputData, null, 2));\n  \n  // Extract current start value from the input\n  let currentStart = 1;\n  if (inputData.data && typeof inputData.data.start === 'number') {\n    currentStart = inputData.data.start;\n  } else if (typeof inputData.start === 'number') {\n    currentStart = inputData.start;\n  }\n  \n  console.log('Current start value:', currentStart);\n  \n  // Access the original query from the Edit Fields_declareStart node\n  let originalQuery = null;\n  \n  try {\n    // Use the correct n8n syntax to access previous node data\n    const declareStartData = $node['Edit Fields_declareStart'].json;\n    console.log('Edit Fields_declareStart data:', JSON.stringify(declareStartData, null, 2));\n    \n    if (declareStartData && declareStartData.action) {\n      originalQuery = declareStartData;\n      console.log('Successfully retrieved original query from Edit Fields_declareStart');\n    }\n  } catch (nodeAccessError) {\n    console.log('Could not access Edit Fields_declareStart node:', nodeAccessError.message);\n  }\n  \n  // If we still don't have the original query, try to access ProcessWebhookData\n  if (!originalQuery) {\n    try {\n      const webhookData = $node['ProcessWebhookData'].json;\n      console.log('ProcessWebhookData:', JSON.stringify(webhookData, null, 2));\n      \n      if (webhookData && webhookData.webhookData) {\n        const wd = webhookData.webhookData;\n        originalQuery = {\n          action: \"query\",\n          q: \"*\",\n          source: \"corp_cases_en\",\n          lang: \"en-us\",\n          search_type: \"text_text\",\n          filter: {\n            owner_full_name: wd.ownerNames || [],\n            status: [\"Resolved\", \"Cancelled\"],\n            closed_date: [wd.eurekaDateRange] || []\n          },\n          field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\"],\n          num: 30\n        };\n        console.log('Reconstructed query from webhook data');\n      }\n    } catch (webhookError) {\n      console.log('Could not access ProcessWebhookData node:', webhookError.message);\n    }\n  }\n  \n  if (!originalQuery) {\n    return [{ json: { \n      error: 'Cannot access original query from any node',\n      currentInput: inputData,\n      startValue: currentStart,\n      nodeAccessAttempts: [\n        'Edit Fields_declareStart: failed',\n        'ProcessWebhookData: failed'\n      ]\n    }}];\n  }\n  \n  // Calculate new start value\n  const newStart = currentStart + 30;\n  \n  // Create the pagination payload\n  const paginationPayload = {\n    ...originalQuery, // Use all original query parameters\n    start: newStart   // Update only the start value\n  };\n  \n  console.log('=== PAGINATION: SUCCESS ===');\n  console.log('Original start:', currentStart, '-> New start:', newStart);\n  console.log('Pagination payload:', JSON.stringify(paginationPayload, null, 2));\n  \n  return [{ json: paginationPayload }];\n  \n} catch (error) {\n  console.error('Error in pagination Edit Fields:', error);\n  return [{ json: { \n    error: 'Pagination failed: ' + error.message, \n    stack: error.stack,\n    input: $input.first().json\n  }}];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -80
+      ],
+      "id": "c79397e8-69c5-46b9-9380-b5a51f42b244",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "63bec52c-801f-45e9-8616-af1fc55bbecc",
+              "leftValue": "={{ $json.data.start }}",
+              "rightValue": "={{ $json.data.results[0].total }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -480,
+        -80
+      ],
+      "id": "ec54c9c4-f571-430f-b1d9-c515bf2d6659",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "content": "## Main Workflow - Dynamic Entity and Date Processing",
+        "height": 720,
+        "width": 2208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1328,
+        -560
+      ],
+      "typeVersion": 1,
+      "id": "626fd4bd-fa0d-43dc-b0c3-e880fb5e2b74",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "get-cases",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1136,
+        -208
+      ],
+      "id": "1c2068e8-f38b-4f29-92dc-6cec1613e048",
+      "name": "Webhook",
+      "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process webhook data - simplified working version\nconst inputData = $input.first();\nconsole.log('=== PROCESSING WEBHOOK DATA ===');\n\n// Get the actual webhook data from the correct location\nconst webhookJson = $input.first().json;\nlet actualData = null;\n\nif (webhookJson && webhookJson.body) {\n  actualData = webhookJson.body;\n} else if (webhookJson) {\n  actualData = webhookJson;\n} else {\n  actualData = inputData;\n}\n\nif (actualData) {\n  const entityType = actualData.entityType || '';\n  const entityName = actualData.entityName || '';\n  const ownerNamesRaw = actualData.ownerNames;\n  const eurekaDateRange = actualData.eurekaDateRange || '';\n  const dateRange = actualData.dateRange;\n  \n  // Convert ownerNames\n  let ownerNames = [];\n  if (ownerNamesRaw && typeof ownerNamesRaw === 'object') {\n    ownerNames = Object.values(ownerNamesRaw);\n  }\n  \n  const result = {\n    webhookData: {\n      entityType: entityType,\n      entityName: entityName,\n      ownerNames: ownerNames,\n      eurekaDateRange: eurekaDateRange,\n      dateRange: dateRange\n    }\n  };\n  \n  console.log('ProcessWebhookData SUCCESS:', JSON.stringify(result, null, 2));\n  return [{ json: result }];\n} else {\n  console.log('ERROR - No data found');\n  return [{ json: { error: 'No data found' } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1008,
+        -208
+      ],
+      "id": "4c55d94a-2931-48b5-a109-d0bc0825e6fa",
+      "name": "ProcessWebhookData"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create complete Eureka API request payload from ProcessWebhookData\ntry {\n  // Get webhook data from ProcessWebhookData node instead of current input\n  const webhookData = $node['ProcessWebhookData'].json.webhookData;\n  \n  console.log('=== CREATING COMPLETE EUREKA API PAYLOAD ===');\n  console.log('Webhook data from ProcessWebhookData:', JSON.stringify(webhookData, null, 2));\n  \n  if (!webhookData) {\n    console.error('ERROR: No webhookData from ProcessWebhookData node');\n    return [{ json: { error: 'No webhookData from ProcessWebhookData node' } }];\n  }\n  \n  // Validate required fields\n  if (!webhookData.ownerNames || !Array.isArray(webhookData.ownerNames) || webhookData.ownerNames.length === 0) {\n    console.error('ERROR: Invalid ownerNames:', webhookData.ownerNames);\n    return [{ json: { error: 'Invalid ownerNames', ownerNames: webhookData.ownerNames } }];\n  }\n  \n  if (!webhookData.eurekaDateRange || typeof webhookData.eurekaDateRange !== 'string') {\n    console.error('ERROR: Invalid eurekaDateRange:', webhookData.eurekaDateRange);\n    return [{ json: { error: 'Invalid eurekaDateRange', eurekaDateRange: webhookData.eurekaDateRange } }];\n  }\n  \n  // Create the complete JSON payload for Eureka API\n  const eurekaPayload = {\n    action: \"query\",\n    q: \"*\",\n    source: \"corp_cases_en\",\n    lang: \"en-us\",\n    search_type: \"text_text\",\n    filter: {\n      owner_full_name: webhookData.ownerNames,\n      status: [\"Resolved\", \"Cancelled\"],\n      closed_date: [webhookData.eurekaDateRange]\n    },\n    field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\"],\n    start: 1,\n    num: 30\n  };\n  \n  console.log('=== SUCCESS: CREATED COMPLETE EUREKA PAYLOAD ===');\n  console.log('Complete payload:', JSON.stringify(eurekaPayload, null, 2));\n  console.log('Payload string length:', JSON.stringify(eurekaPayload).length);\n  console.log('owner_full_name array:', eurekaPayload.filter.owner_full_name);\n  console.log('closed_date array:', eurekaPayload.filter.closed_date);\n  \n  return [{ json: eurekaPayload }];\n  \n} catch (error) {\n  console.error('Error in Edit Fields_declareStart:', error);\n  return [{ json: { error: error.message, stack: error.stack } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        -208
+      ],
+      "id": "51cbd945-7593-4f8d-a2b9-316d89a8a696",
+      "name": "Edit Fields_declareStart"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "onlyDocs": {
+      "main": [
+        [
+          {
+            "node": "structurizeEmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eurekaAPI": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "onlyDocs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "cleanHTML&PII",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cleanHTML&PII": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "structurizeEmail": {
+      "main": [
+        [
+          {
+            "node": "calcCaseAgeDay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "calcCaseAgeDay": {
+      "main": [
+        [
+          {
+            "node": "populateDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deleteDB": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields_declareStart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields_declareStart": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ProcessWebhookData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessWebhookData": {
+      "main": [
+        [
+          {
+            "node": "deleteDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "populateDB": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "45614bad-dddf-4292-8059-e336bc815e7a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "91ea575691e96319b81c444c73b27637c88eef71c15d6b90e29f2d14f0fc4b63"
+  },
+  "id": "K7xl4zp8iHZAdTC6",
+  "tags": []
+}
