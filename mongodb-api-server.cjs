@@ -1434,10 +1434,14 @@ app.get('/api/performance-data', async (req, res) => {
       return res.json([]);
     }
 
-    const { entityType, entityId, startDate, endDate } = req.query;
+    const { entityType, entityId, entity_name, startDate, endDate } = req.query;
 
     let filter = {};
-    if (entityType && entityId) {
+    
+    // Support filtering by entity_name (string) or entityType/entityId (legacy)
+    if (entity_name) {
+      filter.entity_name = entity_name;
+    } else if (entityType && entityId) {
       const { ObjectId } = require('mongodb');
       filter.entity_type = entityType;
       filter.entity_id = new ObjectId(entityId);
@@ -1446,10 +1450,10 @@ app.get('/api/performance-data', async (req, res) => {
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) {
-        filter.date.$gte = new Date(startDate);
+        filter.date.$gte = startDate;
       }
       if (endDate) {
-        filter.date.$lte = new Date(endDate);
+        filter.date.$lte = endDate;
       }
     }
 
@@ -1466,11 +1470,14 @@ app.get('/api/performance-data', async (req, res) => {
 
     const formattedData = result.data.map(item => ({
       id: item._id.toString(),
-      entity_id: item.entity_id.toString(),
+      ...(item.entity_id && { entity_id: item.entity_id.toString() }),
+      ...(item.entity_name && { entity_name: item.entity_name }),
       entity_type: item.entity_type,
-      date: item.date.toISOString(),
+      date: typeof item.date === 'string' ? item.date : item.date.toISOString(),
       metrics: item.metrics,
-      created_at: item.created_at.toISOString()
+      created_at: typeof item.created_at === 'string' ? item.created_at : item.created_at.toISOString(),
+      ...(item.cases_count && { cases_count: item.cases_count }),
+      ...(item.sample_cases && { sample_cases: item.sample_cases })
     }));
 
     res.json(formattedData);
@@ -1486,10 +1493,11 @@ app.post('/api/performance-data', async (req, res) => {
       return res.status(503).json({ error: 'Database not available' });
     }
 
-    const { entity_id, entity_type, date, metrics } = req.body;
+    const { entity_id, entity_name, entity_type, date, metrics } = req.body;
 
-    if (!entity_id || !entity_type || !date || !metrics) {
-      return res.status(400).json({ error: 'Missing required fields: entity_id, entity_type, date, metrics' });
+    // Require either entity_id OR entity_name, plus entity_type, date, and metrics
+    if ((!entity_id && !entity_name) || !entity_type || !date || !metrics) {
+      return res.status(400).json({ error: 'Missing required fields: (entity_id OR entity_name), entity_type, date, metrics' });
     }
 
     if (!['team', 'squad', 'dpe'].includes(entity_type)) {
@@ -1498,12 +1506,25 @@ app.post('/api/performance-data', async (req, res) => {
 
     const { ObjectId } = require('mongodb');
     const performanceData = {
-      entity_id: new ObjectId(entity_id),
       entity_type,
-      date: new Date(date),
+      date: typeof date === 'string' ? date : new Date(date), // Allow string dates
       metrics,
       created_at: new Date()
     };
+
+    // Add entity_id if provided and valid
+    if (entity_id) {
+      try {
+        performanceData.entity_id = new ObjectId(entity_id);
+      } catch (error) {
+        return res.status(400).json({ error: 'Invalid entity_id format' });
+      }
+    }
+
+    // Add entity_name if provided
+    if (entity_name) {
+      performanceData.entity_name = entity_name;
+    }
 
     const insertOperation = async (collection) => {
       return await collection.insertOne(performanceData);
@@ -1517,9 +1538,10 @@ app.post('/api/performance-data', async (req, res) => {
 
     res.json({
       id: result.data.insertedId.toString(),
-      entity_id: performanceData.entity_id.toString(),
+      ...(performanceData.entity_id && { entity_id: performanceData.entity_id.toString() }),
+      ...(performanceData.entity_name && { entity_name: performanceData.entity_name }),
       entity_type: performanceData.entity_type,
-      date: performanceData.date.toISOString(),
+      date: typeof performanceData.date === 'string' ? performanceData.date : performanceData.date.toISOString(),
       metrics: performanceData.metrics,
       created_at: performanceData.created_at.toISOString()
     });

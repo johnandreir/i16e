@@ -73,6 +73,10 @@ const IndexNew = () => {
   const [modalTitle, setModalTitle] = useState<string>('');
   const [sctAnalysisResults, setSctAnalysisResults] = useState<any>(null);
   const [cxInsightResults, setCxInsightResults] = useState<any>(null);
+  
+  // Calculate metrics workflow results state
+  const [calculateMetricsData, setCalculateMetricsData] = useState<any>(null);
+  const [detailedCasesData, setDetailedCasesData] = useState<any[]>([]);
 
   // Removed auto-selection to allow user to manually choose entities
 
@@ -439,6 +443,176 @@ const IndexNew = () => {
     }
   };
 
+  // Function to fetch Calculate metrics results from database
+  const fetchCalculateMetricsResults = async () => {
+    try {
+      console.log('🔍 Fetching Calculate metrics results...');
+      
+      // Check if we have the entity and time range data needed
+      if (!generatedEntity || !generatedEntityValue) {
+        console.log('❌ No generated entity data available for metrics fetch');
+        return;
+      }
+
+      // First try to get performance data from the performance_data collection
+      const startDate = selectedTimeRange.from?.toISOString().split('T')[0];
+      const endDate = selectedTimeRange.to?.toISOString().split('T')[0];
+
+      // Query using entity_name instead of entity since we're storing the name directly
+      let performanceResponse = await fetch(`http://localhost:3001/api/performance-data?entity_name=${generatedEntityValue}&startDate=${startDate}&endDate=${endDate}`);
+      
+      if (performanceResponse.ok) {
+        const performanceResult = await performanceResponse.json();
+        console.log('✅ Performance data found:', performanceResult);
+        
+        if (performanceResult && performanceResult.length > 0) {
+          const latestMetrics = performanceResult[0];
+          setCalculateMetricsData({
+            sct: latestMetrics.metrics?.sct,
+            closedCases: latestMetrics.metrics?.closedCases,
+            satisfaction: latestMetrics.metrics?.satisfaction
+          });
+          
+          if (latestMetrics.sample_cases) {
+            // Map the real case data to the format expected by the UI
+            const mappedCasesData = latestMetrics.sample_cases.map(caseItem => ({
+              case_id: caseItem.case_id,
+              title: caseItem.title,
+              status: caseItem.status,
+              case_age_days: caseItem.case_age_days,
+              sct: caseItem.case_age_days, // Map case_age_days to sct for compatibility
+              sctTime: caseItem.case_age_days, // Also map to sctTime
+              owner_full_name: caseItem.owner_full_name,
+              created_date: caseItem.created_date,
+              closed_date: caseItem.closed_date,
+              priority: 'Medium', // Default priority since not in our data
+              products: [] // Default empty products array
+            }));
+            setDetailedCasesData(mappedCasesData);
+          }
+          
+          // Update reportCurrentData with the actual calculated metrics
+          setReportCurrentData(prev => ({
+            ...prev,
+            sct: latestMetrics.metrics?.sct,
+            closedCases: latestMetrics.metrics?.closedCases,
+            cases: latestMetrics.metrics?.closedCases,
+            satisfaction: latestMetrics.metrics?.satisfaction,
+            hasMetricsData: true
+          }));
+          
+          toast({
+            title: "Metrics Updated",
+            description: "Calculate metrics data loaded from database.",
+          });
+          return;
+        }
+      }
+
+      // Fallback: Calculate metrics from cases data directly
+      console.log('📊 No performance data found, calculating from cases...');
+      const casesResponse = await fetch(`http://localhost:3001/api/cases?owner_full_name=${generatedEntityValue}&status=Resolved&startDate=${startDate}&endDate=${endDate}`);
+      
+      if (casesResponse.ok) {
+        const casesResult = await casesResponse.json();
+        console.log('✅ Cases data fetched for calculation:', casesResult);
+        
+        if (casesResult.data && casesResult.data.length > 0) {
+          const cases = casesResult.data;
+          
+          // Calculate metrics from cases
+          let totalSct = 0;
+          let validSctCases = 0;
+          
+          cases.forEach(caseItem => {
+            if (caseItem.case_age_days && !isNaN(caseItem.case_age_days)) {
+              totalSct += caseItem.case_age_days;
+              validSctCases++;
+            }
+          });
+          
+          const avgSct = validSctCases > 0 ? Math.round((totalSct / validSctCases) * 10) / 10 : 0;
+          const closedCases = cases.length;
+          
+          // Store calculated metrics
+          setCalculateMetricsData({
+            sct: avgSct,
+            closedCases: closedCases,
+            satisfaction: 85 // Default value
+          });
+          
+          // Store detailed cases
+          setDetailedCasesData(cases.map(caseItem => ({
+            case_id: caseItem.case_id,
+            title: caseItem.title,
+            status: caseItem.status,
+            case_age_days: caseItem.case_age_days,
+            owner_full_name: caseItem.owner_full_name,
+            created_date: caseItem.created_date,
+            closed_date: caseItem.closed_date
+          })));
+          
+          // Update reportCurrentData with calculated values
+          setReportCurrentData(prev => ({
+            ...prev,
+            sct: avgSct,
+            closedCases: closedCases,
+            cases: closedCases,
+            satisfaction: 85,
+            hasMetricsData: true
+          }));
+          
+          toast({
+            title: "Metrics Calculated",
+            description: `Calculated metrics from ${closedCases} resolved cases.`,
+          });
+          
+          console.log('✅ Metrics calculated successfully:', { avgSct, closedCases });
+        } else {
+          console.log('⚠️ No cases data available for metrics calculation');
+        }
+      } else {
+        console.log('⚠️ Failed to fetch cases data');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Calculate metrics results:', error);
+    }
+  };
+
+  // Effect to poll for Calculate metrics results after report generation
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+    
+    if (reportGenerated && generatedEntity && generatedEntityValue && isLoading === false) {
+      console.log('🔄 Starting polling for Calculate metrics results...');
+      
+      // Poll every 5 seconds for up to 2 minutes
+      let pollCount = 0;
+      const maxPolls = 24; // 2 minutes with 5-second intervals
+      
+      pollInterval = setInterval(async () => {
+        pollCount++;
+        console.log(`📊 Polling attempt ${pollCount}/${maxPolls} for Calculate metrics results...`);
+        
+        await fetchCalculateMetricsResults();
+        
+        if (pollCount >= maxPolls) {
+          console.log('⏰ Stopping polling - max attempts reached');
+          clearInterval(pollInterval);
+        }
+      }, 5000);
+      
+      // Initial fetch
+      fetchCalculateMetricsResults();
+    }
+    
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [reportGenerated, generatedEntity, generatedEntityValue, isLoading]);
+
   const handleEntityDataChange = (entityType: string, data: string[]) => {
     setEntityRefreshKey(prev => prev + 1);
     refreshData();
@@ -520,8 +694,21 @@ const IndexNew = () => {
   const handleIndividualBarClick = (data: any, metric: 'sct' | 'cases') => {
     console.log('Bar clicked:', data, metric);
     
-    // Generate detailed breakdown data for the modal
-    const detailsData = generateDetailedData(data, metric);
+    // Use detailed cases data from the clicked member's data if available
+    let detailsData;
+    const memberDetailedCases = data.detailedCases || detailedCasesData || [];
+    
+    if (memberDetailedCases && memberDetailedCases.length > 0) {
+      // Filter cases based on metric type and show actual workflow data
+      if (metric === 'sct') {
+        detailsData = memberDetailedCases.filter(caseItem => caseItem.sct || caseItem.sctTime || caseItem.case_age_days);
+      } else if (metric === 'cases') {
+        detailsData = memberDetailedCases; // Show all closed cases
+      }
+    } else {
+      // Fallback to generated data if no workflow results available
+      detailsData = generateDetailedData(data, metric);
+    }
     
     setModalData({
       member: data,
@@ -586,76 +773,117 @@ const IndexNew = () => {
     const entityType = generatedEntity || selectedEntity;
     const entityName = generatedEntityValue || selectedEntityValue;
     const entityLabel = entityType === 'dpe' ? 'DPE' : entityType === 'squad' ? 'Squad' : 'Team';
-    const entityContext = entityType === 'dpe' ? 'individual developer' : entityType === 'squad' ? 'squad-level' : 'team-level';
-    const peerGroup = entityType === 'dpe' ? 'other DPEs' : entityType === 'squad' ? 'other squads' : 'other teams';
     
-    // Generate comprehensive SCT analysis results with entity-specific insights and recommendations
+    // Use real case data if available
+    const realCaseData = detailedCasesData || [];
+    const currentSCT = calculateMetricsData?.sct || reportCurrentData?.sct || 0;
+    
+    if (realCaseData.length === 0) {
+      // Fallback to dummy data only if no real data available
+      const sctAnalysis = {
+        insights: [
+          {
+            id: '1',
+            title: 'No Case Data Available',
+            description: 'No resolved cases found for the selected time period to analyze SCT performance.',
+            impact: 'Low',
+            category: 'data',
+            type: 'info',
+            recommendation: 'Generate a report for a period with resolved cases to see detailed SCT analysis.'
+          }
+        ],
+        metrics: {
+          averageSCT: currentSCT,
+          targetSCT: 15,
+          improvement: 'N/A',
+          bottleneck: 'N/A',
+          efficiency: 'N/A',
+          trend: 'Insufficient Data'
+        },
+        cases: []
+      };
+      setSctAnalysisResults(sctAnalysis);
+      return;
+    }
+    
+    // Analyze real case data
+    const insights = [];
+    const caseList = realCaseData.map(caseItem => ({
+      case_id: caseItem.case_id,
+      title: caseItem.title,
+      sct_days: caseItem.case_age_days,
+      status: caseItem.status,
+      created_date: caseItem.created_date,
+      closed_date: caseItem.closed_date
+    }));
+    
+    // Calculate actual metrics from real data
+    const sctValues = realCaseData.map(c => c.case_age_days).filter(sct => sct > 0);
+    const avgSCT = sctValues.length > 0 ? Math.round(sctValues.reduce((a, b) => a + b, 0) / sctValues.length * 10) / 10 : currentSCT;
+    const minSCT = sctValues.length > 0 ? Math.min(...sctValues) : 0;
+    const maxSCT = sctValues.length > 0 ? Math.max(...sctValues) : 0;
+    const targetSCT = 15;
+    
+    // Performance analysis
+    if (avgSCT <= targetSCT) {
+      insights.push({
+        id: '1',
+        title: `${entityLabel} SCT Performance Above Target`,
+        description: `${entityName} achieves ${avgSCT} days average SCT, meeting the ≤${targetSCT} days target. Best case: ${minSCT} days, Longest case: ${maxSCT} days.`,
+        impact: 'High',
+        category: 'performance',
+        type: 'success',
+        recommendation: `Continue current practices. Share successful techniques with team members.`
+      });
+    } else {
+      insights.push({
+        id: '1',
+        title: `${entityLabel} SCT Performance Below Target`,
+        description: `${entityName} averages ${avgSCT} days SCT, ${Math.round((avgSCT - targetSCT) * 10) / 10} days above the ${targetSCT} days target. Improvement needed.`,
+        impact: 'High',
+        category: 'performance',
+        type: 'warning',
+        recommendation: `Focus on reducing case resolution time. Analyze longest cases (${maxSCT} days) for process improvements.`
+      });
+    }
+    
+    // Case complexity analysis
+    const complexCases = realCaseData.filter(c => c.case_age_days > 30);
+    if (complexCases.length > 0) {
+      insights.push({
+        id: '2',
+        title: `Complex Cases Identified`,
+        description: `${complexCases.length} of ${realCaseData.length} cases took over 30 days to resolve. These include: ${complexCases.map(c => c.case_id).join(', ')}.`,
+        impact: 'Medium',
+        category: 'process',
+        type: 'warning',
+        recommendation: `Review complex cases for common patterns. Consider breaking down large cases or improving estimation.`
+      });
+    }
+    
+    // Case variety analysis
+    const uniqueTitles = [...new Set(realCaseData.map(c => c.title.toLowerCase()))];
+    insights.push({
+      id: '3',
+      title: `Case Variety Analysis`,
+      description: `${realCaseData.length} cases resolved with ${uniqueTitles.length} unique case types. Most common areas: ${realCaseData.map(c => c.title).slice(0, 3).join(', ')}.`,
+      impact: 'Medium',
+      category: 'process',
+      type: 'info',
+      recommendation: `Consider creating templates or knowledge base articles for recurring case types to improve resolution speed.`
+    });
+    
     const sctAnalysis = {
-      insights: [
-        {
-          id: '1',
-          title: `${entityLabel} Development Phase Efficiency Above Target`,
-          description: `${entityName} shows excellent performance in development phase with 60% faster completion than industry average. Development phase accounts for only 45% of total SCT vs. 65% industry standard for ${entityContext} performance.`,
-          impact: 'High',
-          category: 'performance',
-          type: 'success',
-          recommendation: entityType === 'dpe' 
-            ? `Continue current development practices. Consider mentoring junior DPEs and sharing your efficient coding techniques with the squad.`
-            : `Continue current development practices. Document and share best practices with ${peerGroup} to replicate this success across the organization.`
-        },
-        {
-          id: '2', 
-          title: `${entityLabel} Testing Phase Bottleneck Identified`,
-          description: `Testing phase accounts for 35% of total SCT, significantly above the 20% target. This represents the primary bottleneck in ${entityName}'s solution delivery pipeline.`,
-          impact: 'Medium',
-          category: 'process',
-          type: 'warning',
-          recommendation: entityType === 'dpe'
-            ? `Focus on test-driven development and increase unit test coverage. Consider pairing with QA engineers to improve testing efficiency. Target: Reduce testing dependency to 25% of total SCT.`
-            : `Implement automated testing frameworks at ${entityContext} level, increase test coverage to 85%, and establish parallel testing processes. Target: Reduce testing phase to 25% of total SCT within 2 sprints.`
-        },
-        {
-          id: '3',
-          title: `${entityLabel} Consistent Quarter-over-Quarter Improvement`,
-          description: `Average SCT for ${entityName} has improved by 15% over the last quarter, consistently trending towards the ≤15 days target. Current trajectory suggests target achievement within next quarter.`,
-          impact: 'High',
-          category: 'trending',
-          type: 'improvement',
-          recommendation: entityType === 'dpe'
-            ? `Maintain current improvement velocity. Continue learning and applying new development techniques. Consider contributing to knowledge sharing sessions.`
-            : `Maintain current improvement velocity. Focus on process standardization across ${entityType} members and continue knowledge sharing to sustain improvements.`
-        },
-        {
-          id: '4',
-          title: `${entityLabel} Analysis Phase Optimization Opportunity`,
-          description: `Analysis phase averages 4.2 days (28% of SCT) for ${entityName}, with high variance between simple and complex cases. Opportunity for 1-2 day reduction through better requirement gathering.`,
-          impact: 'Medium',
-          category: 'process',
-          type: 'info',
-          recommendation: entityType === 'dpe'
-            ? `Improve requirement analysis skills through training. Use structured analysis templates and establish regular check-ins with stakeholders to clarify requirements early.`
-            : `Implement structured requirement templates for ${entityType} use, establish analysis phase checkpoints, and create complexity-based analysis workflows.`
-        },
-        {
-          id: '5',
-          title: `${entityLabel} Resource Allocation Effectiveness`,
-          description: `Peak productivity observed during mid-sprint periods for ${entityName}. 23% faster resolution when proper resource allocation is maintained.`,
-          impact: 'Medium',
-          category: 'resource',
-          type: 'info',
-          recommendation: entityType === 'dpe'
-            ? `Optimize personal task management and communicate workload effectively during sprint planning. Avoid taking on too many complex tasks simultaneously.`
-            : `Optimize sprint planning at ${entityContext} level to maintain consistent resource allocation. Avoid task overloading during sprint start/end periods.`
-        }
-      ],
+      insights,
       metrics: {
-        averageSCT: reportCurrentData?.sct || 15,
-        targetSCT: 15,
-        improvement: '+15%',
-        bottleneck: 'Testing Phase',
-        efficiency: '78%',
-        trend: 'Improving'
-      }
+        averageSCT: avgSCT,
+        targetSCT: targetSCT,
+        improvement: avgSCT <= targetSCT ? 'Target Met' : `${Math.round((avgSCT - targetSCT) * 10) / 10} days over target`,
+        bottleneck: maxSCT > 60 ? 'Complex Cases' : 'Standard Process',
+        efficiency: Math.round((targetSCT / avgSCT) * 100) + '%',
+        trend: avgSCT <= targetSCT ? 'On Target' : 'Needs Improvement'
+      },
+      cases: caseList
     };
     
     setSctAnalysisResults(sctAnalysis);
@@ -1472,15 +1700,15 @@ const IndexNew = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KPICard
                   title="SCT Score"
-                  value={reportCurrentData?.sct}
-                  target={reportCurrentData?.sct !== undefined ? 15 : null}
+                  value={calculateMetricsData?.sct || reportCurrentData?.sct}
+                  target={calculateMetricsData?.sct !== undefined || reportCurrentData?.sct !== undefined ? 15 : null}
                   unit="days"
                   icon={<Clock className="h-4 w-4" />}
                   description=""
                 />
                 <KPICard
                   title="Closed Cases"
-                  value={reportCurrentData?.cases}
+                  value={calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases}
                   target={null}
                   unit=""
                   icon={<CheckCircle className="h-4 w-4" />}
@@ -1488,16 +1716,16 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="CSAT Score"
-                  value={reportCurrentData?.satisfaction}
-                  target={reportCurrentData?.satisfaction !== undefined ? 85 : null}
+                  value={calculateMetricsData?.satisfaction || reportCurrentData?.satisfaction}
+                  target={calculateMetricsData?.satisfaction !== undefined || reportCurrentData?.satisfaction !== undefined ? 85 : null}
                   unit="%"
                   icon={<ThumbsUp className="h-4 w-4" />}
                   description=""
                 />
                 <KPICard
                   title="DSAT Score"
-                  value={reportCurrentData?.dsatPercentage}
-                  target={reportCurrentData?.dsatPercentage !== undefined ? 5 : null}
+                  value={calculateMetricsData?.dsatPercentage || reportCurrentData?.dsatPercentage}
+                  target={calculateMetricsData?.dsatPercentage !== undefined || reportCurrentData?.dsatPercentage !== undefined ? 5 : null}
                   unit="%"
                   icon={<ThumbsDown className="h-4 w-4" />}
                   description=""
@@ -1523,19 +1751,26 @@ const IndexNew = () => {
                   <CardContent className="pt-2">
                     <TeamPerformanceChart
                       data={(() => {
-                        if (!reportDashboardData && !reportCurrentData) {
+                        if (!reportDashboardData && !reportCurrentData && !calculateMetricsData) {
                           return []; // No report generated yet
                         }
                         
                         return reportDashboardData?.performanceData && reportDashboardData.performanceData.length > 0
-                          ? reportDashboardData.performanceData
+                          ? reportDashboardData.performanceData.map(item => ({
+                              name: item.name,
+                              sct: calculateMetricsData?.sct || item.sct,
+                              cases: calculateMetricsData?.closedCases || item.closedCases || item.cases,
+                              satisfaction: calculateMetricsData?.satisfaction || item.satisfaction,
+                              detailedCases: detailedCasesData || item.cases || [] // Real case data for modal
+                            }))
                           : generatedEntity === 'dpe' ? [
                               // For DPE, always create entry even if no data
                               {
-                                name: generatedEntityValue || 'Selected DPE', 
-                                sct: reportCurrentData?.sct, 
-                                cases: reportCurrentData?.cases, 
-                                satisfaction: reportCurrentData?.satisfaction
+                                name: generatedEntityValue || 'Selected DPE',
+                                sct: calculateMetricsData?.sct || reportCurrentData?.sct || 0, 
+                                cases: calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases || 0,
+                                satisfaction: calculateMetricsData?.satisfaction || reportCurrentData?.satisfaction || 0,
+                                detailedCases: detailedCasesData || [] // Real case data for modal
                               }
                             ] : generatedEntity === 'squad' ? (() => {
                               // For squad members using entity mappings
@@ -1549,9 +1784,10 @@ const IndexNew = () => {
                                 const dpeData = reportDashboardData?.performanceData?.find(p => p.name === dpeName);
                                 return {
                                   name: dpeName,
-                                  sct: dpeData?.sct,
-                                  cases: dpeData?.cases,
-                                  satisfaction: dpeData?.satisfaction
+                                  sct: calculateMetricsData?.sct || dpeData?.sct || 0,
+                                  cases: calculateMetricsData?.closedCases || dpeData?.cases || 0,
+                                  satisfaction: calculateMetricsData?.satisfaction || dpeData?.satisfaction || 0,
+                                  detailedCases: detailedCasesData || [] // Real case data
                                 };
                               });
                             })() : generatedEntity === 'team' ? (() => {
@@ -1567,9 +1803,10 @@ const IndexNew = () => {
                                 const squadData = reportDashboardData?.performanceData?.find(p => p.name === squadName);
                                 return {
                                   name: squadName,
-                                  sct: squadData?.sct,
-                                  cases: squadData?.cases,
-                                  satisfaction: squadData?.satisfaction
+                                  sct: calculateMetricsData?.sct || squadData?.sct || 0,
+                                  cases: calculateMetricsData?.closedCases || squadData?.cases || 0,
+                                  satisfaction: calculateMetricsData?.satisfaction || squadData?.satisfaction || 0,
+                                  detailedCases: detailedCasesData || [] // Real case data
                                 };
                               });
                             })() : [];

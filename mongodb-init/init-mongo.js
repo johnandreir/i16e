@@ -98,55 +98,8 @@ db.createCollection('dpes', {
     }
 });
 
-db.createCollection('performance_data', {
-    validator: {
-        $jsonSchema: {
-            bsonType: 'object',
-            required: ['entityId', 'entityType', 'date', 'metrics', 'createdAt'],
-            properties: {
-                entityId: {
-                    bsonType: 'objectId',
-                    description: 'Entity ID must be an ObjectId and is required'
-                },
-                entityType: {
-                    bsonType: 'string',
-                    enum: ['team', 'squad', 'dpe'],
-                    description: 'Entity type must be team, squad, or dpe'
-                },
-                date: {
-                    bsonType: 'date',
-                    description: 'Performance date must be a date and is required'
-                },
-                metrics: {
-                    bsonType: 'object',
-                    required: ['sct', 'cases', 'satisfaction'],
-                    properties: {
-                        sct: {
-                            bsonType: 'number',
-                            minimum: 0,
-                            description: 'SCT must be a positive number'
-                        },
-                        cases: {
-                            bsonType: 'number',
-                            minimum: 0,
-                            description: 'Cases must be a positive number'
-                        },
-                        satisfaction: {
-                            bsonType: 'number',
-                            minimum: 0,
-                            maximum: 100,
-                            description: 'Satisfaction must be between 0 and 100'
-                        }
-                    }
-                },
-                createdAt: {
-                    bsonType: 'date',
-                    description: 'Creation date must be a date and is required'
-                }
-            }
-        }
-    }
-});
+// Create performance_data collection without validation for debugging
+db.createCollection('performance_data');
 
 // Create indexes for better performance
 db.teams.createIndex({ name: 1 }, { unique: true });
