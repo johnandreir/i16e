@@ -2,7 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface DetailedStatsModalProps {
@@ -11,6 +11,7 @@ interface DetailedStatsModalProps {
   data: any;
   type: 'team' | 'survey' | 'individual';
   title: string;
+  onAnalyzeSCT?: () => void;
 }
 
 const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
@@ -18,7 +19,8 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
   onClose,
   data,
   type,
-  title
+  title,
+  onAnalyzeSCT
 }) => {
   // Helper function to format dates to YYYY-MM-DD format
   const formatDate = (dateString: string | null) => {
@@ -45,22 +47,49 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
     const { member, metric, details } = data;
     
     if (metric === 'sct') {
+      const validSctValues = details
+        .map(d => d.sct || d.case_age_days)
+        .filter(val => val != null && !isNaN(val) && val > 0);
+      const fastestResolution = validSctValues.length > 0 ? Math.min(...validSctValues) : 'N/A';
+      const slowestResolution = validSctValues.length > 0 ? Math.max(...validSctValues) : 'N/A';
+      
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-2">{member.name} - Solution Cycle Time Analysis</h3>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Average SCT</p>
-                <p className="font-semibold text-lg">{member.sct} days</p>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-foreground text-lg">{member.name} - SCT Analysis - Detailed Analysis</h3>
+              {onAnalyzeSCT && (
+                <Button 
+                  onClick={onAnalyzeSCT}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  Analyze SCT
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+              <div className="text-center p-3 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Average SCT</p>
+                <p className="font-bold text-2xl text-blue-600">{member.sct}</p>
+                <p className="text-xs text-muted-foreground">days</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Cases Analyzed</p>
-                <p className="font-semibold text-lg">{details.length}</p>
+              <div className="text-center p-3 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Cases Analyzed</p>
+                <p className="font-bold text-2xl text-green-600">{details.length}</p>
+                <p className="text-xs text-muted-foreground">total cases</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Fastest Resolution</p>
-                <p className="font-semibold text-lg">{Math.min(...details.map(d => d.sct || d.case_age_days || 0))} days</p>
+              <div className="text-center p-3 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Fastest Resolution</p>
+                <p className="font-bold text-2xl text-emerald-600">{fastestResolution}</p>
+                <p className="text-xs text-muted-foreground">days</p>
+              </div>
+              <div className="text-center p-3 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Slowest Resolution</p>
+                <p className="font-bold text-2xl text-orange-600">{slowestResolution}</p>
+                <p className="text-xs text-muted-foreground">days</p>
               </div>
             </div>
           </div>
@@ -110,31 +139,47 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       const p2Cases = details.filter(d => d.priority === 'P2').length;
       const p3Cases = details.filter(d => d.priority === 'P3').length;
       const p4Cases = details.filter(d => d.priority === 'P4').length;
+      const closedCases = details.filter(d => d.status === 'Closed').length;
+      const openCases = details.length - closedCases;
       
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-2">{member.name} - Cases Close</h3>
-            <div className="grid grid-cols-5 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Total Cases</p>
-                <p className="font-semibold text-lg">{member.cases}</p>
+            <h3 className="font-semibold text-foreground mb-4 text-lg">{member.name} - Cases Analysis - Detailed Analysis</h3>
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 gap-4 mb-6">
+              <div className="text-center p-4 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Total Cases</p>
+                <p className="font-bold text-3xl text-blue-600">{member.cases}</p>
+                <p className="text-xs text-muted-foreground">all cases</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">P1</p>
-                <p className="font-semibold text-lg">{p1Cases}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">P2</p>
-                <p className="font-semibold text-lg">{p2Cases}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">P3</p>
-                <p className="font-semibold text-lg">{p3Cases}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">P4</p>
-                <p className="font-semibold text-lg">{p4Cases}</p>
+            </div>
+
+            {/* Priority Breakdown */}
+            <div>
+              <h4 className="font-semibold text-foreground mb-3">Priority Breakdown</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <p className="text-red-700 dark:text-red-300 font-medium mb-1">P1 - Critical</p>
+                  <p className="font-bold text-2xl text-red-600">{p1Cases}</p>
+                  <p className="text-xs text-red-600/70">urgent cases</p>
+                </div>
+                <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-orange-700 dark:text-orange-300 font-medium mb-1">P2 - High</p>
+                  <p className="font-bold text-2xl text-orange-600">{p2Cases}</p>
+                  <p className="text-xs text-orange-600/70">high priority</p>
+                </div>
+                <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-yellow-700 dark:text-yellow-300 font-medium mb-1">P3 - Medium</p>
+                  <p className="font-bold text-2xl text-yellow-600">{p3Cases}</p>
+                  <p className="text-xs text-yellow-600/70">medium priority</p>
+                </div>
+                <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-blue-700 dark:text-blue-300 font-medium mb-1">P4 - Low</p>
+                  <p className="font-bold text-2xl text-blue-600">{p4Cases}</p>
+                  <p className="text-xs text-blue-600/70">low priority</p>
+                </div>
               </div>
             </div>
           </div>
@@ -260,22 +305,49 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
     const { member, metric, details } = data;
     
     if (metric === 'sct') {
+      const validSctValues = details
+        .map(d => d.sct || d.case_age_days)
+        .filter(val => val != null && !isNaN(val) && val > 0);
+      const fastestResolution = validSctValues.length > 0 ? Math.min(...validSctValues) : 'N/A';
+      const slowestResolution = validSctValues.length > 0 ? Math.max(...validSctValues) : 'N/A';
+      
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-2">{member.name} - Solution Cycle Time Analysis</h3>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Average SCT</p>
-                <p className="font-semibold text-lg">{member.sct} days</p>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-foreground text-lg">{member.name} - SCT Analysis - Detailed Analysis</h3>
+              {onAnalyzeSCT && (
+                <Button 
+                  onClick={onAnalyzeSCT}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  Analyze SCT
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+              <div className="text-center p-3 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Average SCT</p>
+                <p className="font-bold text-2xl text-blue-600">{member.sct}</p>
+                <p className="text-xs text-muted-foreground">days</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Cases Analyzed</p>
-                <p className="font-semibold text-lg">{details.length}</p>
+              <div className="text-center p-3 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Cases Analyzed</p>
+                <p className="font-bold text-2xl text-green-600">{details.length}</p>
+                <p className="text-xs text-muted-foreground">total cases</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Fastest Resolution</p>
-                <p className="font-semibold text-lg">{Math.min(...details.map(d => d.sct))} days</p>
+              <div className="text-center p-3 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Fastest Resolution</p>
+                <p className="font-bold text-2xl text-emerald-600">{fastestResolution}</p>
+                <p className="text-xs text-muted-foreground">days</p>
+              </div>
+              <div className="text-center p-3 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Slowest Resolution</p>
+                <p className="font-bold text-2xl text-orange-600">{slowestResolution}</p>
+                <p className="text-xs text-muted-foreground">days</p>
               </div>
             </div>
           </div>
@@ -323,31 +395,47 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       const p2Cases = details.filter(d => d.priority === 'P2').length;
       const p3Cases = details.filter(d => d.priority === 'P3').length;
       const p4Cases = details.filter(d => d.priority === 'P4').length;
+      const closedCases = details.filter(d => d.status === 'Closed').length;
+      const openCases = details.length - closedCases;
       
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-2">{member.name} - Cases Close</h3>
-            <div className="grid grid-cols-5 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Total Cases</p>
-                <p className="font-semibold text-lg">{member.cases}</p>
+            <h3 className="font-semibold text-foreground mb-4 text-lg">{member.name} - Cases Analysis - Detailed Analysis</h3>
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 gap-4 mb-6">
+              <div className="text-center p-4 bg-background rounded-lg border">
+                <p className="text-muted-foreground font-medium mb-1">Total Cases</p>
+                <p className="font-bold text-3xl text-blue-600">{member.cases}</p>
+                <p className="text-xs text-muted-foreground">all cases</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">P1</p>
-                <p className="font-semibold text-lg">{p1Cases}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">P2</p>
-                <p className="font-semibold text-lg">{p2Cases}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">P3</p>
-                <p className="font-semibold text-lg">{p3Cases}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">P4</p>
-                <p className="font-semibold text-lg">{p4Cases}</p>
+            </div>
+
+            {/* Priority Breakdown */}
+            <div>
+              <h4 className="font-semibold text-foreground mb-3">Priority Breakdown</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <p className="text-red-700 dark:text-red-300 font-medium mb-1">P1 - Critical</p>
+                  <p className="font-bold text-2xl text-red-600">{p1Cases}</p>
+                  <p className="text-xs text-red-600/70">urgent cases</p>
+                </div>
+                <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-orange-700 dark:text-orange-300 font-medium mb-1">P2 - High</p>
+                  <p className="font-bold text-2xl text-orange-600">{p2Cases}</p>
+                  <p className="text-xs text-orange-600/70">high priority</p>
+                </div>
+                <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-yellow-700 dark:text-yellow-300 font-medium mb-1">P3 - Medium</p>
+                  <p className="font-bold text-2xl text-yellow-600">{p3Cases}</p>
+                  <p className="text-xs text-yellow-600/70">medium priority</p>
+                </div>
+                <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-blue-700 dark:text-blue-300 font-medium mb-1">P4 - Low</p>
+                  <p className="font-bold text-2xl text-blue-600">{p4Cases}</p>
+                  <p className="text-xs text-blue-600/70">low priority</p>
+                </div>
               </div>
             </div>
           </div>

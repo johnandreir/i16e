@@ -1760,16 +1760,6 @@ const IndexNew = () => {
           </CardHeader>
           <div className="flex flex-wrap gap-2 px-0 pb-0">
             <Button 
-              onClick={handleAnalyzeSCT}
-              disabled={isLoading || !isAnalysisEnabled}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Clock className="h-4 w-4" />
-              Analyze SCT
-            </Button>
-            <Button 
               onClick={handleCXInsight}
               disabled={isLoading || !isAnalysisEnabled}
               variant="outline"
@@ -2193,6 +2183,7 @@ const IndexNew = () => {
         data={modalData}
         type={modalType}
         title={modalTitle}
+        onAnalyzeSCT={handleAnalyzeSCT}
       />
     </div>
   );
