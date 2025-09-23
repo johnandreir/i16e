@@ -65,10 +65,7 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        96,
-        320
-      ],
+      "position": [96, 320],
       "id": "7dbd2759-ca30-47fd-b795-dd39b633a5ad",
       "name": "onlyDocs"
     },
@@ -98,10 +95,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        -800,
-        512
-      ],
+      "position": [-800, 512],
       "id": "327ffe90-8c46-45c4-adae-77bec9bbb726",
       "name": "eurekaAPI",
       "credentials": {
@@ -118,10 +112,7 @@
       },
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [
-        -128,
-        320
-      ],
+      "position": [-128, 320],
       "id": "0f71b3c0-faa1-43f9-ac01-56db62a00a01",
       "name": "Split Out"
     },
@@ -129,10 +120,7 @@
       "parameters": {},
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [
-        -576,
-        320
-      ],
+      "position": [-576, 320],
       "id": "b015a11d-ad35-4cae-bdb6-ba34fc45c939",
       "name": "Merge",
       "executeOnce": false
@@ -143,10 +131,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -352,
-        320
-      ],
+      "position": [-352, 320],
       "id": "797dd0cf-51ff-4258-a357-fd81e774ccae",
       "name": "cleanHTML&PII"
     },
@@ -156,10 +141,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        320,
-        320
-      ],
+      "position": [320, 320],
       "id": "d3df4908-68f4-43a8-906a-b2e6268d9bd5",
       "name": "structurizeEmail"
     },
@@ -169,10 +151,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        544,
-        320
-      ],
+      "position": [544, 320],
       "id": "2bf02b9b-317e-400e-892d-c63899031c9b",
       "name": "calcCaseAgeDay"
     },
@@ -183,10 +162,7 @@
         "width": 1616
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -672,
-        224
-      ],
+      "position": [-672, 224],
       "typeVersion": 1,
       "id": "7ff222f2-8690-492b-a1bf-1bb57b3029ad",
       "name": "Sticky Note"
@@ -200,10 +176,7 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [
-        768,
-        320
-      ],
+      "position": [768, 320],
       "id": "62020d46-ce18-4544-b9eb-860809873bf5",
       "name": "populateDB",
       "alwaysOutputData": true,
@@ -221,10 +194,7 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [
-        -1248,
-        512
-      ],
+      "position": [-1248, 512],
       "id": "8a5015ae-b42c-49bc-b101-d0e0a586ec8e",
       "name": "deleteDB",
       "alwaysOutputData": true,
@@ -243,10 +213,7 @@
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -864,
-        480
-      ],
+      "position": [-864, 480],
       "typeVersion": 1,
       "id": "c103f96d-9b53-47e6-93e6-138d304bd2b6",
       "name": "Sticky Note1"
@@ -257,10 +224,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -352,
-        656
-      ],
+      "position": [-352, 656],
       "id": "231203b0-e79c-4c7c-8b4e-41de4a9cfafe",
       "name": "Edit Fields"
     },
@@ -290,10 +254,7 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        -576,
-        512
-      ],
+      "position": [-576, 512],
       "id": "447fd022-9715-4c8f-be88-791f6a38b149",
       "name": "If"
     },
@@ -305,10 +266,7 @@
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -1792,
-        0
-      ],
+      "position": [-1792, 0],
       "typeVersion": 1,
       "id": "7c7245ae-8bb1-4c93-87de-5a8b8f2db3d2",
       "name": "Sticky Note3"
@@ -321,10 +279,7 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [
-        -1696,
-        416
-      ],
+      "position": [-1696, 416],
       "id": "4288d3c9-0e72-4840-8a0b-db422db43587",
       "name": "Webhook",
       "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
@@ -335,10 +290,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -1472,
-        416
-      ],
+      "position": [-1472, 416],
       "id": "95f982c9-355b-4e11-8b59-cd993226142e",
       "name": "ProcessWebhookData"
     },
@@ -348,25 +300,19 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -1024,
-        512
-      ],
+      "position": [-1024, 512],
       "id": "5a85f40d-eda4-4fea-a0f1-375124606ac6",
       "name": "Edit Fields_declareStart"
     },
     {
       "parameters": {
-        "jsCode": "// Prepare entity data directly from ProcessWebhookData for Execute Workflow\nconsole.log('=== PREPARE ENTITY DATA FOR EXECUTE WORKFLOW ===');\n\n// Get the original webhook data directly from ProcessWebhookData node\nconst processedData = $('ProcessWebhookData').first().json;\nconsole.log('Data from ProcessWebhookData node:', JSON.stringify(processedData, null, 2));\n\nif (!processedData || !processedData.webhookData) {\n  throw new Error('No webhook data found from ProcessWebhookData node');\n}\n\nconst webhookData = processedData.webhookData;\nconsole.log('Extracted webhookData:', JSON.stringify(webhookData, null, 2));\n\n// Extract entity value from webhook data\nlet entityValue = null;\n\n// Try different extraction strategies\nif (webhookData.ownerNames && Array.isArray(webhookData.ownerNames) && webhookData.ownerNames.length > 0) {\n  entityValue = webhookData.ownerNames[0];\n  console.log('✅ Found entityValue in ownerNames[0]:', entityValue);\n} else if (webhookData.entityValue) {\n  entityValue = webhookData.entityValue;\n  console.log('✅ Found entityValue in entityValue:', entityValue);\n} else if (webhookData.entityName) {\n  entityValue = webhookData.entityName;\n  console.log('✅ Found entityValue in entityName:', entityValue);\n}\n\n// FAIL if no entity value - no fallbacks\nif (!entityValue) {\n  console.error('❌ CRITICAL: No entityValue found in webhook data');\n  console.error('Available webhook data keys:', Object.keys(webhookData));\n  throw new Error('CRITICAL: No entityValue found - cannot execute Calculate Metrics workflow');\n}\n\n// Create simple data structure for Execute Workflow\nconst executeData = {\n  entityValue: entityValue,\n  owner_full_name: entityValue,\n  source: 'get-cases-workflow',\n  timestamp: new Date().toISOString()\n};\n\nconsole.log('✅ Entity data prepared for Execute Workflow:', JSON.stringify(executeData, null, 2));\n\nreturn [{ json: executeData }];"
+        "jsCode": "// Prepare entity data directly from ProcessWebhookData for Execute Workflow\nconsole.log('=== PREPARE ENTITY DATA FOR EXECUTE WORKFLOW ===');\n\n// Get the original webhook data directly from ProcessWebhookData node\nconst processedData = $('ProcessWebhookData').first().json;\nconsole.log('Data from ProcessWebhookData node:', JSON.stringify(processedData, null, 2));\n\nif (!processedData || !processedData.webhookData) {\n  throw new Error('No webhook data found from ProcessWebhookData node');\n}\n\nconst webhookData = processedData.webhookData;\nconsole.log('Extracted webhookData:', JSON.stringify(webhookData, null, 2));\n\n// Extract entity values from webhook data\nlet entityValues = [];\n\n// Try different extraction strategies\nif (webhookData.ownerNames && Array.isArray(webhookData.ownerNames) && webhookData.ownerNames.length > 0) {\n  entityValues = webhookData.ownerNames;\n  console.log('✅ Found entityValues in ownerNames:', entityValues);\n} else if (webhookData.entityValue) {\n  entityValues = [webhookData.entityValue];\n  console.log('✅ Found entityValue in entityValue:', webhookData.entityValue);\n} else if (webhookData.entityName) {\n  entityValues = [webhookData.entityName];\n  console.log('✅ Found entityValue in entityName:', webhookData.entityName);\n}\n\n// FAIL if no entity values - no fallbacks\nif (!entityValues || entityValues.length === 0) {\n  console.error('❌ CRITICAL: No entityValues found in webhook data');\n  console.error('Available webhook data keys:', Object.keys(webhookData));\n  throw new Error('CRITICAL: No entityValues found - cannot execute Calculate Metrics workflow');\n}\n\nconsole.log(`✅ Found ${entityValues.length} entities to process:`, entityValues);\n\n// Create data structure for each entity (multiple outputs for multiple Calculate Metrics executions)\nconst executeDataArray = entityValues.map((entityValue, index) => {\n  return {\n    entityValue: entityValue,\n    owner_full_name: entityValue,\n    source: 'get-cases-workflow',\n    timestamp: new Date().toISOString(),\n    entityIndex: index,\n    totalEntities: entityValues.length,\n    entityType: webhookData.entityType || 'unknown',\n    entityName: webhookData.entityName || 'unknown'\n  };\n});\n\nconsole.log('✅ Entity data prepared for Execute Workflow:', JSON.stringify(executeDataArray, null, 2));\nconsole.log(`✅ Will trigger ${executeDataArray.length} Calculate Metrics workflow executions`);\n\n// Return multiple items, one for each entity\nreturn executeDataArray.map(data => ({ json: data }));"
       },
       "id": "fb22ef56-6eec-4fed-8f53-d369d61c12cb",
       "name": "Prepare Entity Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        512,
-        480
-      ]
+      "position": [512, 480]
     },
     {
       "parameters": {
@@ -384,10 +330,7 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [
-        784,
-        608
-      ],
+      "position": [784, 608],
       "id": "ef900854-c963-45f6-b8c9-7efe09ad65db",
       "name": "Call 'Calculate metrics'"
     }

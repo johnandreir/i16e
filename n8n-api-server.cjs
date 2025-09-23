@@ -131,9 +131,11 @@ app.get('/api/n8n/health', async (req, res) => {
 
           webhookStatus = {
             getCases: {
-              reachable: getCasesCheck.status === 200 || getCasesCheck.status === 405,
+              reachable: getCasesCheck.status === 200,
               status: getCasesCheck.status,
-              message: getCasesCheck.status === 200 || getCasesCheck.status === 405 ? 'Webhook accessible' : 'Webhook error'
+              message: getCasesCheck.status === 200 ? 'Webhook active and listening' : 
+                      getCasesCheck.status === 405 ? 'Webhook endpoint exists but workflow may be inactive' : 
+                      'Webhook error'
             },
             calculateMetrics: {
               reachable: true,

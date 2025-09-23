@@ -74,8 +74,50 @@ export default class CasePerformanceService {
 
   static async getPerformanceOverview(): Promise<PerformanceData[]> {
     try {
-      console.log('Fetching performance overview data from MongoDB...');
+      console.log('Fetching performance overview data...');
       
+      // First try to get data from performance_data collection (pre-calculated metrics)
+      try {
+        console.log('Attempting to fetch from performance_data collection...');
+        const performanceResponse = await fetch(`${this.MONGODB_API_BASE_URL}/performance-data`);
+        
+        console.log('Performance API response status:', performanceResponse.status);
+        
+        if (performanceResponse.ok) {
+          const performanceRecords = await performanceResponse.json();
+          
+          console.log('Performance records received:', performanceRecords?.length || 0);
+          console.log('First record sample:', performanceRecords?.[0]);
+          
+          if (performanceRecords && performanceRecords.length > 0) {
+            console.log(`Found ${performanceRecords.length} performance records in performance_data collection`);
+            
+            // Convert performance_data format to PerformanceData format
+            const performanceData: PerformanceData[] = performanceRecords.map((record: any) => ({
+              owner: record.entity_name,
+              sct: record.metrics?.sct || 0,
+              totalCases: record.cases_count || 0,
+              closedCases: record.metrics?.closedCases || 0,
+              openCases: Math.max(0, (record.cases_count || 0) - (record.metrics?.closedCases || 0)),
+              cases: record.sample_cases || []
+            }));
+            
+            // Sort by SCT (ascending - better performance first)
+            const sortedData = performanceData
+              .filter(data => data.closedCases > 0) // Only show DPEs with closed cases
+              .sort((a, b) => a.sct - b.sct);
+            
+            console.log(`Generated performance overview for ${sortedData.length} DPEs from performance_data collection`);
+            console.log('Performance data sample:', sortedData.slice(0, 3)); // Log first 3 for debugging
+            return sortedData;
+          }
+        }
+      } catch (performanceError) {
+        console.warn('Could not fetch from performance_data collection, falling back to cases collection:', performanceError);
+      }
+      
+      // Fallback: Calculate from cases collection (existing logic)
+      console.log('Falling back to calculating from cases collection...');
       const allCases = await this.getAllCasesFromMongoDB();
       
       // Use last 30 days as default time range
@@ -159,8 +201,61 @@ export default class CasePerformanceService {
   
   static async getPerformanceOverviewByDateRange(startDate: Date, endDate: Date): Promise<PerformanceData[]> {
     try {
-      console.log('Fetching performance overview data for date range from MongoDB:', { startDate, endDate });
+      console.log('Fetching performance overview data for date range:', { startDate, endDate });
       
+      // First try to get data from performance_data collection (pre-calculated metrics)
+      try {
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const endDateStr = endDate.toISOString().split('T')[0];
+        
+        const performanceResponse = await fetch(
+          `${this.MONGODB_API_BASE_URL}/performance-data?startDate=${startDateStr}&endDate=${endDateStr}`
+        );
+        
+        if (performanceResponse.ok) {
+          const performanceRecords = await performanceResponse.json();
+          
+          if (performanceRecords && performanceRecords.length > 0) {
+            console.log(`Found ${performanceRecords.length} performance records for date range in performance_data collection`);
+            
+            // Group by entity_name to get latest record for each DPE
+            const groupedRecords = new Map<string, any>();
+            
+            performanceRecords.forEach((record: any) => {
+              const entityName = record.entity_name;
+              const recordDate = new Date(record.date);
+              
+              if (!groupedRecords.has(entityName) || 
+                  new Date(groupedRecords.get(entityName).date) < recordDate) {
+                groupedRecords.set(entityName, record);
+              }
+            });
+            
+            // Convert performance_data format to PerformanceData format
+            const performanceData: PerformanceData[] = Array.from(groupedRecords.values()).map((record: any) => ({
+              owner: record.entity_name,
+              sct: record.metrics?.sct || 0,
+              totalCases: record.cases_count || 0,
+              closedCases: record.metrics?.closedCases || 0,
+              openCases: Math.max(0, (record.cases_count || 0) - (record.metrics?.closedCases || 0)),
+              cases: record.sample_cases || []
+            }));
+            
+            // Sort by SCT (ascending - better performance first)
+            const sortedData = performanceData
+              .filter(data => data.closedCases > 0) // Only show DPEs with closed cases
+              .sort((a, b) => a.sct - b.sct);
+            
+            console.log(`Generated performance overview for ${sortedData.length} DPEs from performance_data collection for date range`);
+            return sortedData;
+          }
+        }
+      } catch (performanceError) {
+        console.warn('Could not fetch from performance_data collection for date range, falling back to cases collection:', performanceError);
+      }
+      
+      // Fallback: Calculate from cases collection (existing logic)
+      console.log('Falling back to calculating from cases collection for date range...');
       const allCases = await this.getAllCasesFromMongoDB();
       
       // Filter cases by time range - considering both created_date and closed_date for the range

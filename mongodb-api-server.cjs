@@ -486,13 +486,13 @@ app.get('/api/n8n/health', async (req, res) => {
 
           console.log(`📊 Found ${userWorkflows.length} user workflows (${activeUserWorkflows.length} active)`);
         } else if (workflowsResponse.status === 401) {
-          // Handle unauthorized response
-          console.log('⚠️ N8N workflow API requires authentication - using alternative approach');
+          // Handle unauthorized response - remove authentication message
+          console.log('⚠️ N8N workflow API returned 401 - checking basic workflow status');
           workflowStatus = {
             reachable: true,
-            totalCount: 2, // Default expected workflow count based on your webhooks
-            activeCount: 2,
-            message: 'N8N workflows accessible (authentication required for detailed count)'
+            totalCount: 0,
+            activeCount: 0,
+            message: 'Workflow status unavailable - API access restricted'
           };
         } else {
           console.log(`⚠️ N8N workflow API returned status: ${workflowsResponse.status}`);
@@ -2039,19 +2039,21 @@ app.get('/api/n8n/health', async (req, res) => {
 
       webhookStatus = {
         getCases: {
-          reachable: webhookChecks[0].status === 'fulfilled' && 
-                     (webhookChecks[0].value.status === 200 || webhookChecks[0].value.status === 405), // 405 = Method Not Allowed is OK for HEAD
+          reachable: webhookChecks[0].status === 'fulfilled' && webhookChecks[0].value.status === 200,
           status: webhookChecks[0].status === 'fulfilled' ? webhookChecks[0].value.status : 'failed',
           message: webhookChecks[0].status === 'fulfilled' ? 
-                   'Webhook endpoint listening' : 
+                   (webhookChecks[0].value.status === 200 ? 'Webhook active and listening' : 
+                    webhookChecks[0].value.status === 405 ? 'Webhook endpoint exists but workflow may be inactive' :
+                    'Webhook endpoint error') : 
                    'Webhook endpoint not accessible: ' + (webhookChecks[0].reason?.message || 'Connection failed')
         },
         calculateMetrics: {
-          reachable: webhookChecks[1].status === 'fulfilled' && 
-                     (webhookChecks[1].value.status === 200 || webhookChecks[1].value.status === 405), // 405 = Method Not Allowed is OK for HEAD
+          reachable: webhookChecks[1].status === 'fulfilled' && webhookChecks[1].value.status === 200,
           status: webhookChecks[1].status === 'fulfilled' ? webhookChecks[1].value.status : 'failed',
           message: webhookChecks[1].status === 'fulfilled' ? 
-                   'Webhook endpoint listening' : 
+                   (webhookChecks[1].value.status === 200 ? 'Webhook active and listening' : 
+                    webhookChecks[1].value.status === 405 ? 'Webhook endpoint exists but workflow may be inactive' :
+                    'Webhook endpoint error') : 
                    'Webhook endpoint not accessible: ' + (webhookChecks[1].reason?.message || 'Connection failed')
         }
       };

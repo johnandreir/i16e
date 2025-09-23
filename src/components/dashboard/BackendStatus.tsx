@@ -126,9 +126,12 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
       const workflowStatus = healthData.n8nHealth?.n8nWorkflowStatus;
 
       if (workflowStatus?.reachable) {
+        const activeCount = workflowStatus.activeCount || 0;
+        const totalCount = workflowStatus.totalCount || 0;
+        
         return {
-          status: 'healthy',
-          details: workflowStatus.message || 'Workflows accessible'
+          status: activeCount > 0 ? 'healthy' : 'unhealthy',
+          details: `${activeCount} active workflow(s) out of ${totalCount} total`
         };
       } else {
         return {
@@ -165,20 +168,25 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
       const getCasesHealthy = webhookStatus?.getCases?.reachable;
       const metricsHealthy = webhookStatus?.calculateMetrics?.reachable;
       
+      const getCasesMessage = webhookStatus?.getCases?.message || 'Unknown';
+      const metricsMessage = webhookStatus?.calculateMetrics?.message || 'Unknown';
+      
       if (getCasesHealthy && metricsHealthy) {
         return {
           status: 'healthy',
-          details: 'All webhook endpoints listening'
+          details: 'All webhook endpoints active and listening'
         };
       } else if (getCasesHealthy || metricsHealthy) {
+        const workingEndpoint = getCasesHealthy ? 'Get Cases' : 'Calculate Metrics';
+        const failedEndpoint = getCasesHealthy ? 'Calculate Metrics' : 'Get Cases';
         return {
           status: 'unhealthy',
-          details: 'Some webhook endpoints unavailable'
+          details: `${workingEndpoint} webhook active, ${failedEndpoint} webhook inactive`
         };
       } else {
         return {
           status: 'unhealthy',
-          details: 'All webhook endpoints unreachable'
+          details: 'No webhook endpoints active'
         };
       }
     } catch (error) {

@@ -31,58 +31,222 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
     }
   };
 
-  const renderTeamDetails = () => (
-    <div className="space-y-6">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>DPE Name</TableHead>
-            <TableHead>SCT (Days)</TableHead>
-            <TableHead>Cases Close</TableHead>
-            <TableHead>Avg Response Time</TableHead>
-            <TableHead>Status</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data?.map((member: any, index: number) => (
-            <TableRow key={index}>
-              <TableCell className="font-medium">{member.name}</TableCell>
-              <TableCell>
-                <Badge variant={member.sct > 18 ? "destructive" : member.sct < 14 ? "success" : "secondary"}>
-                  {member.sct}
-                </Badge>
-              </TableCell>
-              <TableCell>{member.cases}</TableCell>
-              <TableCell>{Math.floor(Math.random() * 3) + 2}h</TableCell>
-              <TableCell>
-                <Badge variant={member.satisfaction > 85 ? "success" : "warning"}>
-                  {member.satisfaction > 85 ? "Excellent" : "Needs Improvement"}
-                </Badge>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+  const renderTeamDetails = () => {
+    // When type='team', we're actually showing case details for a squad within a team
+    // The data structure is { member, metric, details } just like individual view
+    if (!data) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">No data available</p>
+        </div>
+      );
+    }
+
+    const { member, metric, details } = data;
+    
+    if (metric === 'sct') {
+      return (
+        <div className="space-y-6">
+          <div className="bg-card p-4 rounded-lg border">
+            <h3 className="font-semibold text-foreground mb-2">{member.name} - Solution Cycle Time Analysis</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Average SCT</p>
+                <p className="font-semibold text-lg">{member.sct} days</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Cases Analyzed</p>
+                <p className="font-semibold text-lg">{details.length}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Fastest Resolution</p>
+                <p className="font-semibold text-lg">{Math.min(...details.map(d => d.sct || d.case_age_days || 0))} days</p>
+              </div>
+            </div>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Case ID</TableHead>
+                <TableHead>Case Owner</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Closed</TableHead>
+                <TableHead>SCT (Days)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {details.map((detail: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{detail.owner_full_name || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
+                  <TableCell>{detail.title || 'N/A'}</TableCell>
+                  <TableCell>
+                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                    {detail.priority || 'Medium'}
+                  </Badge>
+                  </TableCell>
+                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
+                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
+                  <TableCell>
+                    <Badge variant={(detail.case_age_days || detail.sct) > 20 ? "destructive" : (detail.case_age_days || detail.sct) < 10 ? "success" : "secondary"}>
+                      {detail.case_age_days || detail.sct || 0}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      );
+    }
+    
+    if (metric === 'cases') {
+      const p1Cases = details.filter(d => d.priority === 'P1').length;
+      const p2Cases = details.filter(d => d.priority === 'P2').length;
+      const p3Cases = details.filter(d => d.priority === 'P3').length;
+      const p4Cases = details.filter(d => d.priority === 'P4').length;
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-        <div className="bg-card p-4 rounded-lg border">
-          <h4 className="font-semibold text-sm text-muted-foreground">Top Performer</h4>
-          <p className="text-lg font-bold text-foreground">Sofia Lopez</p>
-          <p className="text-sm text-muted-foreground">11-day SCT, 94% CSAT</p>
+      return (
+        <div className="space-y-6">
+          <div className="bg-card p-4 rounded-lg border">
+            <h3 className="font-semibold text-foreground mb-2">{member.name} - Cases Close</h3>
+            <div className="grid grid-cols-5 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Total Cases</p>
+                <p className="font-semibold text-lg">{member.cases}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">P1</p>
+                <p className="font-semibold text-lg">{p1Cases}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">P2</p>
+                <p className="font-semibold text-lg">{p2Cases}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">P3</p>
+                <p className="font-semibold text-lg">{p3Cases}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">P4</p>
+                <p className="font-semibold text-lg">{p4Cases}</p>
+              </div>
+            </div>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Case ID</TableHead>
+                <TableHead>Case Owner</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Closed</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {details.map((detail: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{detail.owner_full_name || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
+                  <TableCell>{detail.title || 'N/A'}</TableCell>
+                  <TableCell>
+                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                    {detail.priority || 'Medium'}
+                  </Badge>
+                  </TableCell>
+                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
+                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
+                  <TableCell>
+                    <Badge variant={detail.status === 'Closed' ? "success" : detail.status === 'In Progress' ? "warning" : "secondary"}>
+                      {detail.status || 'Unknown'}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-        <div className="bg-card p-4 rounded-lg border">
-          <h4 className="font-semibold text-sm text-muted-foreground">Needs Attention</h4>
-          <p className="text-lg font-bold text-foreground">Diego Martinez</p>
-          <p className="text-sm text-muted-foreground">22-day SCT, 76% CSAT</p>
+      );
+    }
+
+    if (metric === 'satisfaction') {
+      return (
+        <div className="space-y-6">
+          <div className="bg-card p-4 rounded-lg border">
+            <h3 className="font-semibold text-foreground mb-2">{member.name} - Customer Satisfaction Analysis</h3>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Average Satisfaction</p>
+                <p className="font-semibold text-lg">{member.satisfaction}%</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Total Responses</p>
+                <p className="font-semibold text-lg">{details.length}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Highest Rating</p>
+                <p className="font-semibold text-lg">{Math.max(...details.map(d => d.satisfaction || 0))}%</p>
+              </div>
+            </div>
+          </div>
+          
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Case ID</TableHead>
+                <TableHead>Case Owner</TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Closed</TableHead>
+                <TableHead>CSAT</TableHead>
+                <TableHead>Feedback</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {details.map((detail: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{detail.owner_full_name || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
+                  <TableCell>
+                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                    {detail.priority || 'Medium'}
+                  </Badge>
+                  </TableCell>
+                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
+                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
+                  <TableCell>
+                    <Badge variant={detail.satisfaction > 80 ? "success" : detail.satisfaction < 60 ? "destructive" : "warning"}>
+                      {detail.satisfaction || 0}%
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate">{detail.feedback || 'No feedback'}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-        <div className="bg-card p-4 rounded-lg border">
-          <h4 className="font-semibold text-sm text-muted-foreground">Team Average</h4>
-          <p className="text-lg font-bold text-foreground">15.2 days SCT</p>
-          <p className="text-sm text-muted-foreground">86% CSAT, 45 cases/month</p>
-        </div>
+      );
+    }
+
+    // Default fallback
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No details available for this metric</p>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderIndividualDetails = () => {
     if (!data) {
@@ -155,18 +319,35 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
     }
     
     if (metric === 'cases') {
+      const p1Cases = details.filter(d => d.priority === 'P1').length;
+      const p2Cases = details.filter(d => d.priority === 'P2').length;
+      const p3Cases = details.filter(d => d.priority === 'P3').length;
+      const p4Cases = details.filter(d => d.priority === 'P4').length;
+      
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
             <h3 className="font-semibold text-foreground mb-2">{member.name} - Cases Close</h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-5 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Total Cases</p>
                 <p className="font-semibold text-lg">{member.cases}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Closed Cases</p>
-                <p className="font-semibold text-lg">{details.filter(d => d.status === 'Closed').length}</p>
+                <p className="text-muted-foreground">P1</p>
+                <p className="font-semibold text-lg">{p1Cases}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">P2</p>
+                <p className="font-semibold text-lg">{p2Cases}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">P3</p>
+                <p className="font-semibold text-lg">{p3Cases}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">P4</p>
+                <p className="font-semibold text-lg">{p4Cases}</p>
               </div>
             </div>
           </div>

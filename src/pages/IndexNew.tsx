@@ -22,6 +22,17 @@ import { useToast } from '@/hooks/use-toast';
 const IndexNew = () => {
   const { toast } = useToast();
   
+  // Helper function to format numbers to 2 decimal places if not integer
+  const formatKPIValue = (value: number | null | undefined): number | null => {
+    if (value === null || value === undefined) return null;
+    
+    // If it's already an integer, return as is
+    if (Number.isInteger(value)) return value;
+    
+    // Round to 2 decimal places
+    return Math.round(value * 100) / 100;
+  };
+  
   // Helper function to format dates
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -416,6 +427,229 @@ const IndexNew = () => {
       const startDate = selectedTimeRange.from?.toISOString().split('T')[0];
       const endDate = selectedTimeRange.to?.toISOString().split('T')[0];
 
+      // For squad selections, we need to fetch individual DPE performance data
+      if (generatedEntity === 'squad') {
+        // Get squad members
+        const squadMembers = getSquadMembers();
+        console.log('Squad members for performance data:', squadMembers);
+        
+        if (squadMembers.length > 0) {
+          // Fetch performance data for each DPE in the squad
+          const dpePerformancePromises = squadMembers.map(async (dpeName) => {
+            const dpeApiUrl = `http://localhost:3001/api/performance-data?entity_name=${dpeName}&startDate=${startDate}&endDate=${endDate}`;
+            try {
+              const response = await fetch(dpeApiUrl);
+              if (response.ok) {
+                const data = await response.json();
+                return data.length > 0 ? { dpeName, data: data[0] } : null;
+              }
+            } catch (error) {
+              console.error(`Error fetching performance data for DPE ${dpeName}:`, error);
+            }
+            return null;
+          });
+          
+          const dpePerformanceResults = await Promise.all(dpePerformancePromises);
+          const validResults = dpePerformanceResults.filter(result => result !== null);
+          
+          console.log('Individual DPE performance data:', validResults);
+          
+          if (validResults.length > 0) {
+            // Set the individual DPE performance data for the chart
+            const performanceData = validResults.map(result => {
+              // Map the case data for this specific DPE
+              const dpeDetailedCases = result.data.sample_cases ? result.data.sample_cases.map(caseItem => {
+                let parsedProducts = [];
+                try {
+                  if (caseItem.products) {
+                    if (typeof caseItem.products === 'string') {
+                      parsedProducts = JSON.parse(caseItem.products);
+                    } else if (Array.isArray(caseItem.products)) {
+                      parsedProducts = caseItem.products;
+                    }
+                  }
+                } catch (error) {
+                  console.warn('Error parsing products for case:', caseItem.case_id, error);
+                }
+
+                return {
+                  ...caseItem,
+                  products: parsedProducts,
+                  formattedProducts: parsedProducts.length > 0 ? parsedProducts.join(', ') : 'N/A'
+                };
+              }) : [];
+
+              return {
+                name: result.dpeName,
+                sct: result.data.metrics?.sct || 0,
+                cases: result.data.metrics?.closedCases || 0,
+                satisfaction: result.data.metrics?.satisfaction || 0,
+                detailedCases: dpeDetailedCases // Store individual DPE case data
+              };
+            });
+
+            // Set reportDashboardData with individual DPE performance
+            setReportDashboardData(prev => ({
+              ...prev,
+              performanceData: performanceData
+            }));
+            
+            console.log('Set reportDashboardData for squad with individual DPE data:', performanceData);
+            
+            // Calculate aggregated squad metrics for KPI cards
+            const squadAggregatedMetrics = {
+              sct: Math.round((performanceData.reduce((sum, dpe) => sum + dpe.sct, 0) / performanceData.length) * 100) / 100, // Average SCT rounded to 2 decimal places
+              closedCases: performanceData.reduce((sum, dpe) => sum + dpe.cases, 0), // Total cases (always integer)
+              satisfaction: Math.round((performanceData.reduce((sum, dpe) => sum + dpe.satisfaction, 0) / performanceData.length) * 100) / 100, // Average satisfaction rounded to 2 decimal places
+              dsatPercentage: null // DSAT not available in performance_data collection yet
+            };
+            
+            // Aggregate all detailed cases for the squad
+            const allSquadCases = performanceData.reduce((allCases, dpe) => {
+              return allCases.concat(dpe.detailedCases || []);
+            }, []);
+            
+            console.log('Squad aggregated metrics for KPI cards:', squadAggregatedMetrics);
+            console.log('Total squad cases:', allSquadCases.length);
+            
+            setCalculateMetricsData(squadAggregatedMetrics);
+            setDetailedCasesData(allSquadCases); // Set aggregated cases for squad-level view
+            
+            setReportGenerated(true);
+            setGeneratedEntity(selectedEntity);
+            setGeneratedEntityValue(selectedEntityValue);
+            setWorkflowCompleted(true);
+            setIsLoading(false);
+            return; // Exit early for squad processing
+          }
+        }
+      }
+
+      // For team selections, we need to fetch DPE data for all squads in the team
+      if (generatedEntity === 'team') {
+        // Get team members (squads)
+        const teamSquads = getTeamMembers();
+        console.log('Team squads for performance data:', teamSquads);
+        
+        if (teamSquads.length > 0) {
+          // For each squad, get all DPEs and fetch their performance data
+          const allSquadPromises = teamSquads.map(async (squadName) => {
+            // Get DPEs for this squad
+            const squadDPEs = Object.entries(entityMappings.dpeToSquad || {})
+              .filter(([dpe, squad]) => squad === squadName)
+              .map(([dpe]) => dpe)
+              .filter(dpe => !dpe.includes('Add New'));
+            
+            if (squadDPEs.length === 0) return { squadName, dpeData: [], squadMetrics: null };
+            
+            // Fetch performance data for each DPE in this squad
+            const dpePromises = squadDPEs.map(async (dpeName) => {
+              const dpeApiUrl = `http://localhost:3001/api/performance-data?entity_name=${dpeName}&startDate=${startDate}&endDate=${endDate}`;
+              try {
+                const response = await fetch(dpeApiUrl);
+                if (response.ok) {
+                  const data = await response.json();
+                  return data.length > 0 ? { dpeName, data: data[0] } : null;
+                }
+              } catch (error) {
+                console.error(`Error fetching performance data for DPE ${dpeName}:`, error);
+              }
+              return null;
+            });
+            
+            const squadDPEResults = await Promise.all(dpePromises);
+            const validDPEResults = squadDPEResults.filter(result => result !== null);
+            
+            // Calculate squad metrics from its DPEs
+            if (validDPEResults.length > 0) {
+              const squadMetrics = {
+                sct: validDPEResults.reduce((sum, dpe) => sum + (dpe.data.metrics?.sct || 0), 0) / validDPEResults.length,
+                cases: validDPEResults.reduce((sum, dpe) => sum + (dpe.data.metrics?.closedCases || 0), 0),
+                satisfaction: validDPEResults.reduce((sum, dpe) => sum + (dpe.data.metrics?.satisfaction || 0), 0) / validDPEResults.length
+              };
+              
+              // Aggregate all detailed cases for this squad
+              const squadDetailedCases = validDPEResults.reduce((allCases, dpe) => {
+                const dpeCases = dpe.data.sample_cases ? dpe.data.sample_cases.map(caseItem => {
+                  let parsedProducts = [];
+                  try {
+                    if (caseItem.products) {
+                      if (typeof caseItem.products === 'string') {
+                        parsedProducts = JSON.parse(caseItem.products);
+                      } else if (Array.isArray(caseItem.products)) {
+                        parsedProducts = caseItem.products;
+                      }
+                    }
+                  } catch (error) {
+                    console.warn('Error parsing products for case:', caseItem.case_id, error);
+                  }
+                  return {
+                    ...caseItem,
+                    products: parsedProducts,
+                    formattedProducts: parsedProducts.length > 0 ? parsedProducts.join(', ') : 'N/A'
+                  };
+                }) : [];
+                return allCases.concat(dpeCases);
+              }, []);
+              
+              return { squadName, dpeData: validDPEResults, squadMetrics, squadDetailedCases };
+            }
+            
+            return { squadName, dpeData: [], squadMetrics: null, squadDetailedCases: [] };
+          });
+          
+          const teamSquadResults = await Promise.all(allSquadPromises);
+          const validSquadResults = teamSquadResults.filter(result => result.squadMetrics !== null);
+          
+          console.log('Team squad performance data:', validSquadResults);
+          
+          if (validSquadResults.length > 0) {
+            // Create performance data for chart (show squads as bars)
+            const performanceData = validSquadResults.map(result => ({
+              name: result.squadName,
+              sct: result.squadMetrics.sct,
+              cases: result.squadMetrics.cases,
+              satisfaction: result.squadMetrics.satisfaction,
+              detailedCases: result.squadDetailedCases || []
+            }));
+
+            // Set reportDashboardData with squad-level performance
+            setReportDashboardData(prev => ({
+              ...prev,
+              performanceData: performanceData
+            }));
+            
+            console.log('Set reportDashboardData for team with squad-level data:', performanceData);
+            
+            // Calculate aggregated team metrics for KPI cards
+            const teamAggregatedMetrics = {
+              sct: Math.round((validSquadResults.reduce((sum, squad) => sum + squad.squadMetrics.sct, 0) / validSquadResults.length) * 100) / 100, // Average SCT
+              closedCases: validSquadResults.reduce((sum, squad) => sum + squad.squadMetrics.cases, 0), // Total cases
+              satisfaction: Math.round((validSquadResults.reduce((sum, squad) => sum + squad.squadMetrics.satisfaction, 0) / validSquadResults.length) * 100) / 100, // Average satisfaction
+              dsatPercentage: null // DSAT not available in performance_data collection yet
+            };
+            
+            // Aggregate all detailed cases for the team
+            const allTeamCases = performanceData.reduce((allCases, squad) => {
+              return allCases.concat(squad.detailedCases || []);
+            }, []);
+            
+            console.log('Team aggregated metrics for KPI cards:', teamAggregatedMetrics);
+            console.log('Total team cases:', allTeamCases.length);
+            
+            setCalculateMetricsData(teamAggregatedMetrics);
+            setDetailedCasesData(allTeamCases); // Set aggregated cases for team-level view
+            
+            setReportGenerated(true);
+            setGeneratedEntity(selectedEntity);
+            setGeneratedEntityValue(selectedEntityValue);
+            setWorkflowCompleted(true);
+            setIsLoading(false);
+            return; // Exit early for team processing
+          }
+        }
+      }
+
       // Query using entity_name instead of entity since we're storing the name directly
       const apiUrl = `http://localhost:3001/api/performance-data?entity_name=${generatedEntityValue}&startDate=${startDate}&endDate=${endDate}`;
       
@@ -723,7 +957,14 @@ const IndexNew = () => {
       metric: metric,
       details: detailsData
     });
-    setModalType('individual');
+    
+    // Set modal type based on current entity selection
+    if (generatedEntity === 'team') {
+      setModalType('team');
+    } else {
+      setModalType('individual');
+    }
+    
     setModalTitle(`${data.name} - ${metric === 'sct' ? 'SCT Analysis' : 'Cases Analysis'}`);
     setModalOpen(true);
   };
@@ -1682,7 +1923,7 @@ const IndexNew = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KPICard
                   title="SCT Score"
-                  value={calculateMetricsData?.sct || reportCurrentData?.sct}
+                  value={formatKPIValue(calculateMetricsData?.sct || reportCurrentData?.sct)}
                   target={calculateMetricsData?.sct !== undefined || reportCurrentData?.sct !== undefined ? 15 : null}
                   unit="days"
                   icon={<Clock className="h-4 w-4" />}
@@ -1698,7 +1939,7 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="CSAT Score"
-                  value={calculateMetricsData?.satisfaction || reportCurrentData?.satisfaction}
+                  value={formatKPIValue(calculateMetricsData?.satisfaction || reportCurrentData?.satisfaction)}
                   target={calculateMetricsData?.satisfaction !== undefined || reportCurrentData?.satisfaction !== undefined ? 85 : null}
                   unit="%"
                   icon={<ThumbsUp className="h-4 w-4" />}
@@ -1706,7 +1947,7 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="DSAT Score"
-                  value={calculateMetricsData?.dsatPercentage || reportCurrentData?.dsatPercentage}
+                  value={formatKPIValue(calculateMetricsData?.dsatPercentage || reportCurrentData?.dsatPercentage)}
                   target={calculateMetricsData?.dsatPercentage !== undefined || reportCurrentData?.dsatPercentage !== undefined ? 5 : null}
                   unit="%"
                   icon={<ThumbsDown className="h-4 w-4" />}
@@ -1740,10 +1981,10 @@ const IndexNew = () => {
                         return reportDashboardData?.performanceData && reportDashboardData.performanceData.length > 0
                           ? reportDashboardData.performanceData.map(item => ({
                               name: item.name,
-                              sct: calculateMetricsData?.sct || item.sct,
-                              cases: calculateMetricsData?.closedCases || item.cases,
-                              satisfaction: calculateMetricsData?.satisfaction || item.satisfaction,
-                              detailedCases: detailedCasesData || item.cases || [] // Real case data for modal
+                              sct: item.sct, // Use individual data (for squad and team views)
+                              cases: item.cases, // Use individual data (for squad and team views)
+                              satisfaction: item.satisfaction, // Use individual data (for squad and team views)
+                              detailedCases: (item as any).detailedCases || [] // Use individual detailed cases
                             }))
                           : generatedEntity === 'dpe' ? [
                               // For DPE, always create entry even if no data
@@ -1766,10 +2007,10 @@ const IndexNew = () => {
                                 const dpeData = reportDashboardData?.performanceData?.find(p => p.name === dpeName);
                                 return {
                                   name: dpeName,
-                                  sct: calculateMetricsData?.sct || dpeData?.sct || 0,
-                                  cases: calculateMetricsData?.closedCases || dpeData?.cases || 0,
-                                  satisfaction: calculateMetricsData?.satisfaction || dpeData?.satisfaction || 0,
-                                  detailedCases: detailedCasesData || [] // Real case data
+                                  sct: dpeData?.sct || 0, // Use individual DPE data only
+                                  cases: dpeData?.cases || 0, // Use individual DPE data only
+                                  satisfaction: dpeData?.satisfaction || 0, // Use individual DPE data only
+                                  detailedCases: (dpeData as any)?.detailedCases || [] // Use individual DPE case data
                                 };
                               });
                             })() : generatedEntity === 'team' ? (() => {

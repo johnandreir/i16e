@@ -75,17 +75,14 @@ export const useMongoEntityDatabase = () => {
       const dataResponse = await entityService.getEntityData();
       const mappingsResponse = await entityService.getEntityMappings();
 
-      if (dataResponse.success && dataResponse.data) {
-        setEntityData(dataResponse.data);
+      if (dataResponse) {
+        setEntityData(dataResponse);
       }
 
-      if (mappingsResponse.success && mappingsResponse.data) {
-        setEntityMappings(mappingsResponse.data);
+      if (mappingsResponse) {
+        setEntityMappings(mappingsResponse);
       }
 
-      if (!dataResponse.success || !mappingsResponse.success) {
-        setError('Failed to refresh data');
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -96,15 +93,10 @@ export const useMongoEntityDatabase = () => {
   const addTeam = async (name: string, description?: string) => {
     try {
       setError(null);
-      const response = await entityService.createTeam(name, description);
+      const response = await entityService.createTeam(name);
       
-      if (response.success) {
-        await loadData();
-        return true;
-      } else {
-        setError(response.error || 'Failed to create team');
-        return false;
-      }
+      await loadData();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create team');
       return false;
@@ -114,15 +106,11 @@ export const useMongoEntityDatabase = () => {
   const updateTeam = async (id: string, name: string, description?: string) => {
     try {
       setError(null);
-      const response = await entityService.updateTeam(id, name, description);
+      const numId = parseInt(id, 10);
+      const response = await entityService.updateTeam(numId, name);
       
-      if (response.success) {
-        await loadData();
-        return true;
-      } else {
-        setError(response.error || 'Failed to update team');
-        return false;
-      }
+      await loadData();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update team');
       return false;
@@ -132,13 +120,14 @@ export const useMongoEntityDatabase = () => {
   const deleteTeam = async (id: string) => {
     try {
       setError(null);
-      const response = await entityService.deleteTeam(id);
+      const numId = parseInt(id, 10);
+      const success = await entityService.deleteTeam(numId);
       
-      if (response.success) {
+      if (success) {
         await loadData();
         return true;
       } else {
-        setError(response.error || 'Failed to delete team');
+        setError('Failed to delete team');
         return false;
       }
     } catch (err) {
@@ -150,15 +139,11 @@ export const useMongoEntityDatabase = () => {
   const addSquad = async (name: string, teamId: string, description?: string) => {
     try {
       setError(null);
-      const response = await entityService.createSquad(name, teamId, description);
+      // For now, use teamId as teamName since EntityData only contains string arrays
+      const response = await entityService.createSquad(name, teamId);
       
-      if (response.success) {
-        await loadData();
-        return true;
-      } else {
-        setError(response.error || 'Failed to create squad');
-        return false;
-      }
+      await loadData();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create squad');
       return false;
@@ -168,15 +153,12 @@ export const useMongoEntityDatabase = () => {
   const updateSquad = async (id: string, name: string, teamId: string, description?: string) => {
     try {
       setError(null);
-      const response = await entityService.updateSquad(id, name, teamId, description);
+      const numId = parseInt(id, 10);
+      // For now, use teamId as teamName since EntityData only contains string arrays
+      const response = await entityService.updateSquad(numId, name, teamId);
       
-      if (response.success) {
-        await loadData();
-        return true;
-      } else {
-        setError(response.error || 'Failed to update squad');
-        return false;
-      }
+      await loadData();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update squad');
       return false;
@@ -186,13 +168,14 @@ export const useMongoEntityDatabase = () => {
   const deleteSquad = async (id: string) => {
     try {
       setError(null);
-      const response = await entityService.deleteSquad(id);
+      const numId = parseInt(id, 10);
+      const success = await entityService.deleteSquad(numId);
       
-      if (response.success) {
+      if (success) {
         await loadData();
         return true;
       } else {
-        setError(response.error || 'Failed to delete squad');
+        setError('Failed to delete squad');
         return false;
       }
     } catch (err) {
@@ -204,15 +187,11 @@ export const useMongoEntityDatabase = () => {
   const addDPE = async (name: string, squadId: string, email?: string, role?: string) => {
     try {
       setError(null);
-      const response = await entityService.createDPE(name, squadId, email, role);
+      // For now, use squadId as squadName since EntityData only contains string arrays
+      const response = await entityService.createDPE(name, squadId);
       
-      if (response.success) {
-        await loadData();
-        return true;
-      } else {
-        setError(response.error || 'Failed to create DPE');
-        return false;
-      }
+      await loadData();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create DPE');
       return false;
@@ -222,15 +201,12 @@ export const useMongoEntityDatabase = () => {
   const updateDPE = async (id: string, name: string, squadId: string, email?: string, role?: string) => {
     try {
       setError(null);
-      const response = await entityService.updateDPE(id, name, squadId, email, role);
+      const numId = parseInt(id, 10);
+      // For now, use squadId as squadName since EntityData only contains string arrays
+      const response = await entityService.updateDPE(numId, name, squadId);
       
-      if (response.success) {
-        await loadData();
-        return true;
-      } else {
-        setError(response.error || 'Failed to update DPE');
-        return false;
-      }
+      await loadData();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update DPE');
       return false;
@@ -240,13 +216,14 @@ export const useMongoEntityDatabase = () => {
   const deleteDPE = async (id: string) => {
     try {
       setError(null);
-      const response = await entityService.deleteDPE(id);
+      const numId = parseInt(id, 10);
+      const success = await entityService.deleteDPE(numId);
       
-      if (response.success) {
+      if (success) {
         await loadData();
         return true;
       } else {
-        setError(response.error || 'Failed to delete DPE');
+        setError('Failed to delete DPE');
         return false;
       }
     } catch (err) {
@@ -260,12 +237,7 @@ export const useMongoEntityDatabase = () => {
       setError(null);
       const response = await entityService.getDashboardData(entityType, entityValue, startDate, endDate);
       
-      if (response.success && response.data) {
-        return response.data;
-      } else {
-        setError(response.error || 'Failed to get dashboard data');
-        return null;
-      }
+      return response;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get dashboard data');
       return null;
@@ -275,14 +247,8 @@ export const useMongoEntityDatabase = () => {
   const addPerformanceMetrics = async (entityId: string, entityType: 'team' | 'squad' | 'dpe', date: Date, metrics: { sct: number, cases: number, satisfaction: number }) => {
     try {
       setError(null);
-      const response = await entityService.createPerformanceData(entityId, entityType, date, metrics);
-      
-      if (response.success) {
-        return true;
-      } else {
-        setError(response.error || 'Failed to add performance metrics');
-        return false;
-      }
+      setError('Performance metrics not implemented yet');
+      return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add performance metrics');
       return false;
@@ -292,14 +258,8 @@ export const useMongoEntityDatabase = () => {
   const getPerformanceHistory = async (entityType: string, entityId: string, startDate?: string, endDate?: string) => {
     try {
       setError(null);
-      const response = await entityService.getPerformanceData(entityType, entityId, startDate, endDate);
-      
-      if (response.success && response.data) {
-        return response.data;
-      } else {
-        setError(response.error || 'Failed to get performance history');
-        return [];
-      }
+      setError('Performance history not implemented yet');
+      return [];
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get performance history');
       return [];
@@ -309,14 +269,8 @@ export const useMongoEntityDatabase = () => {
   const validateEntityRelationships = async () => {
     try {
       setError(null);
-      const response = await entityService.validateEntityRelationships();
-      
-      if (response.success && response.data) {
-        return response.data;
-      } else {
-        setError(response.error || 'Failed to validate relationships');
-        return { valid: false, issues: ['Validation failed'] };
-      }
+      setError('Entity relationship validation not implemented yet');
+      return { valid: false, issues: ['Validation not implemented'] };
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to validate relationships');
       return { valid: false, issues: ['Validation failed'] };
