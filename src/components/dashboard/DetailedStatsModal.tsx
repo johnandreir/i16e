@@ -33,6 +33,22 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
     }
   };
 
+  // Helper function to generate proper modal title
+  const getModalTitle = () => {
+    if (!data || !data.member || !data.metric) return `${title} - Detailed Analysis`;
+    
+    const { member, metric } = data;
+    const memberName = member.name || title;
+    
+    if (metric === 'sct') {
+      return `${memberName} - SCT Score Detailed Breakdown`;
+    } else if (metric === 'cases') {
+      return `${memberName} - Closed Cases Detailed Breakdown`;
+    }
+    
+    return `${memberName} - Detailed Analysis`;
+  };
+
   const renderTeamDetails = () => {
     // When type='team', we're actually showing case details for a squad within a team
     // The data structure is { member, metric, details } just like individual view
@@ -56,8 +72,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-foreground text-lg">{member.name} - SCT Analysis - Detailed Analysis</h3>
+            <div className="flex justify-end items-center mb-4">
               {onAnalyzeSCT && (
                 <Button 
                   onClick={onAnalyzeSCT}
@@ -73,7 +88,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
               <div className="text-center p-3 bg-background rounded-lg border">
                 <p className="text-muted-foreground font-medium mb-1">Average SCT</p>
-                <p className="font-bold text-2xl text-blue-600">{member.sct}</p>
+                <p className="font-bold text-2xl text-blue-600">{parseFloat(member.sct).toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">days</p>
               </div>
               <div className="text-center p-3 bg-background rounded-lg border">
@@ -145,7 +160,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-4 text-lg">{member.name} - Cases Analysis - Detailed Analysis</h3>
             
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 mb-6">
@@ -314,8 +328,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-foreground text-lg">{member.name} - SCT Analysis - Detailed Analysis</h3>
+            <div className="flex justify-end items-center mb-4">
               {onAnalyzeSCT && (
                 <Button 
                   onClick={onAnalyzeSCT}
@@ -331,7 +344,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
               <div className="text-center p-3 bg-background rounded-lg border">
                 <p className="text-muted-foreground font-medium mb-1">Average SCT</p>
-                <p className="font-bold text-2xl text-blue-600">{member.sct}</p>
+                <p className="font-bold text-2xl text-blue-600">{parseFloat(member.sct).toFixed(2)}</p>
                 <p className="text-xs text-muted-foreground">days</p>
               </div>
               <div className="text-center p-3 bg-background rounded-lg border">
@@ -401,7 +414,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-4 text-lg">{member.name} - Cases Analysis - Detailed Analysis</h3>
             
             {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 mb-6">
@@ -603,7 +615,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{title} - Detailed Analysis</DialogTitle>
+          <DialogTitle className="text-xl font-bold">{getModalTitle()}</DialogTitle>
         </DialogHeader>
         
         <div className="mt-6">

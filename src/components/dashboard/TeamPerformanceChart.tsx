@@ -30,7 +30,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
           <p className="font-medium text-foreground">{label}</p>
           <div className="space-y-1 mt-2">
             <p className="text-sm">
-              <span className="text-chart-primary">SCT Score:</span> {isNoPerformanceData ? 'N/A' : `${payload[0]?.value} days`}
+              <span className="text-chart-primary">SCT Score:</span> {isNoPerformanceData ? 'N/A' : `${Number(payload[0]?.value).toFixed(2)} days`}
             </p>
             <p className="text-sm">
               <span className="text-chart-secondary">Closed Cases:</span> {isNoPerformanceData ? 'N/A' : payload[1]?.value}

@@ -163,7 +163,7 @@ const DrillDownModal: React.FC<DrillDownModalProps> = ({ isOpen, onClose, owner,
                     </TableCell>
                     <TableCell className="text-xs">{formatDate(caseItem.created_date)}</TableCell>
                     <TableCell className="text-xs">{formatDate(caseItem.closed_date)}</TableCell>
-                    <TableCell className="font-bold text-xs">{caseItem.case_age_days || 0}</TableCell>
+                    <TableCell className="font-bold text-xs">{Number(caseItem.case_age_days || 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))
               ) : (
@@ -227,7 +227,7 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
         <div className="bg-background border rounded-lg p-3 shadow-lg">
           <p className="font-semibold">{label}</p>
           <p className="text-sm">
-            <span className="text-blue-500">● SCT: {data.sct} days</span>
+            <span className="text-blue-500">● SCT: {Number(data.sct).toFixed(2)} days</span>
           </p>
           <p className="text-sm">
             <span className="text-green-500">● Closed: {data.closed} cases</span>
@@ -248,7 +248,7 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
   // Calculate summary statistics
   const totalCases = data.reduce((sum, item) => sum + item.totalCases, 0);
   const totalClosed = data.reduce((sum, item) => sum + item.closedCases, 0);
-  const avgSCT = data.length > 0 ? Math.round(data.reduce((sum, item) => sum + item.sct, 0) / data.length) : 0;
+  const avgSCT = data.length > 0 ? Math.round((data.reduce((sum, item) => sum + item.sct, 0) / data.length) * 100) / 100 : 0;
   const closeRate = totalCases > 0 ? Math.round((totalClosed / totalCases) * 100) : 0;
 
   return (

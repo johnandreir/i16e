@@ -32,7 +32,7 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
           <p className="font-medium text-foreground">{data.name}</p>
           <div className="space-y-1 mt-2">
             <p className="text-sm">Count: {isNoData ? 'N/A' : data.value}</p>
-            <p className="text-sm">Percentage: {isNoData ? 'N/A' : `${data.percentage}%`}</p>
+            <p className="text-sm">Percentage: {isNoData ? 'N/A' : `${Number(data.percentage).toFixed(2)}%`}</p>
           </div>
         </div>
       );
@@ -61,7 +61,7 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
           fontWeight="600"
           className="drop-shadow-sm"
         >
-          <tspan x={x} dy="-0.4em">{`${(percent * 100).toFixed(0)}%`}</tspan>
+          <tspan x={x} dy="-0.4em">{`${(percent * 100).toFixed(2)}%`}</tspan>
           <tspan x={x} dy="1.2em">{`(${value})`}</tspan>
         </text>
         {/* Connection line */}
