@@ -64,12 +64,7 @@ const KPICard: React.FC<KPICardProps> = ({
           
           <div className="flex items-baseline gap-1">
             <span className="text-2xl font-bold text-foreground">
-              {(() => {
-                if (title === "DSAT Score") {
-                  console.log(`KPICard DSAT - value: ${value}, hasData: ${value !== null && value !== undefined}`);
-                }
-                return value === null || value === undefined ? 'N/A' : (typeof value === 'number' ? value.toLocaleString() : value);
-              })()}
+              {value === null || value === undefined ? 'N/A' : (typeof value === 'number' ? value.toLocaleString() : value)}
             </span>
             {unit && value !== null && value !== undefined && <span className="text-sm text-muted-foreground">{unit}</span>}
           </div>

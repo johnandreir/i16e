@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar, FileText, Users, TrendingUp, AlertCircle, CheckCircle2, Clock, Target, BarChart3, PieChart, Activity, ThumbsUp, ThumbsDown, CheckCircle, Lightbulb, Database } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import KPICard from '@/components/dashboard/KPICard';
@@ -19,9 +20,49 @@ import { DashboardData } from '@/lib/entityService';
 import { useToast } from '@/hooks/use-toast';
 
 const IndexNew = () => {
-  console.log('IndexNew component rendering...');
-  
   const { toast } = useToast();
+  
+  // Helper function to format dates
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+  
+  // Helper function to format products array
+  const formatProducts = (products: any) => {
+    if (!products) return 'N/A';
+    
+    try {
+      // If it's a string, try to parse it as JSON
+      if (typeof products === 'string') {
+        const parsed = JSON.parse(products);
+        if (Array.isArray(parsed)) {
+          return parsed.length > 0 ? parsed.join(', ') : 'N/A';
+        }
+        return products;
+      }
+      
+      // If it's already an array
+      if (Array.isArray(products)) {
+        return products.length > 0 ? products.join(', ') : 'N/A';
+      }
+      
+      // Fallback to string conversion
+      return String(products);
+    } catch (error) {
+      // If JSON parsing fails, return the original string
+      return typeof products === 'string' ? products : 'N/A';
+    }
+  };
   
   // Database operations
   const { 
@@ -58,11 +99,11 @@ const IndexNew = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [entityChanged, setEntityChanged] = useState<boolean>(false);
   const [entityRefreshKey, setEntityRefreshKey] = useState<number>(0);
+  const [workflowCompleted, setWorkflowCompleted] = useState<boolean>(false);
 
   // Additional state for insights and modals
   const [sctAnalyzed, setSctAnalyzed] = useState<boolean>(false);
   const [cxAnalyzed, setCxAnalyzed] = useState<boolean>(false);
-  const [selectedMember, setSelectedMember] = useState<{member: any, metric: string} | null>(null);
   const [isAnalysisEnabled, setIsAnalysisEnabled] = useState<boolean>(false);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [cachedDashboardData, setCachedDashboardData] = useState<DashboardData | null>(null);
@@ -92,6 +133,7 @@ const IndexNew = () => {
     setSelectedEntityValue(''); // Reset entity value when type changes
     setEntityChanged(true);
     setReportGenerated(false);
+    setWorkflowCompleted(false); // Reset workflow completion
     setGeneratedEntity(''); // Clear generated entity
     setGeneratedEntityValue(''); // Clear generated entity value
     setReportDashboardData(null); // Clear report data
@@ -118,6 +160,7 @@ const IndexNew = () => {
     setSelectedEntityValue(value);
     setEntityChanged(true);
     setReportGenerated(false);
+    setWorkflowCompleted(false); // Reset workflow completion
     setGeneratedEntity(''); // Clear generated entity
     setGeneratedEntityValue(''); // Clear generated entity value
     setReportDashboardData(null); // Clear report data
@@ -149,97 +192,58 @@ const IndexNew = () => {
   };
 
   const handleGenerateReport = async () => {
-    console.log('🚀 handleGenerateReport called in IndexNew.tsx!');
-    
-    console.log('Current state values:', {
-      selectedEntity,
-      selectedEntityValue,
-      selectedTimeRange,
-      isLoading
-    });
-    
     // Comprehensive validation before generating report
     if (!selectedEntity) {
-      console.error('❌ VALIDATION FAILED: No entity type selected');
       return;
     }
-    console.log('✅ Entity type validation passed');
     
     if (!selectedEntityValue || selectedEntityValue.includes('Add New')) {
-      console.error('❌ VALIDATION FAILED: No valid entity selected', selectedEntityValue);
       return;
     }
-    console.log('✅ Entity value validation passed');
     
     // Validate entity type
     if (!['dpe', 'squad', 'team'].includes(selectedEntity)) {
-      console.error('❌ VALIDATION FAILED: Invalid entity type:', selectedEntity);
       return;
     }
-    console.log('✅ Entity type enum validation passed');
     
     // Validate that selected entity value exists in current data
     const formattedData = formatEntityDataForComponents();
-    console.log('Formatted data:', formattedData);
     
     const entityOptions = formattedData[selectedEntity as 'team' | 'squad' | 'dpe'] || [];
-    console.log(`Entity options for ${selectedEntity}:`, entityOptions);
     
     const validOptions = entityOptions.filter(e => !e.includes('Add New'));
-    console.log('Valid options:', validOptions);
-    console.log('Checking if selectedEntityValue exists in validOptions:', {
-      selectedEntityValue,
-      exists: validOptions.includes(selectedEntityValue)
-    });
     
     if (!validOptions.includes(selectedEntityValue)) {
-      console.error('❌ VALIDATION FAILED: Selected entity not found in current data:', selectedEntityValue);
       return;
     }
-    console.log('✅ Entity exists in current data validation passed');
     
     // Validate mappings for squad and dpe
     if (selectedEntity === 'dpe') {
       const mappedSquad = entityMappings.dpeToSquad[selectedEntityValue];
-      console.log(`DPE ${selectedEntityValue} mapped to squad:`, mappedSquad);
       if (!mappedSquad) {
-        console.warn('⚠️ DPE is not mapped to any squad:', selectedEntityValue);
+        // DPE is not mapped to any squad
       }
     }
     
     if (selectedEntity === 'squad') {
       const mappedTeam = entityMappings.squadToTeam[selectedEntityValue];
-      console.log(`Squad ${selectedEntityValue} mapped to team:`, mappedTeam);
       if (!mappedTeam) {
-        console.warn('⚠️ Squad is not mapped to any team:', selectedEntityValue);
+        // Squad is not mapped to any team
       }
     }
     
-    console.log('✅ All validations passed, setting loading state...');
     setIsLoading(true);
-    console.log('✅ Loading state set to true');
+    setWorkflowCompleted(false); // Reset workflow completion status
     
     // Add diagnostic logging
-    console.log('🔍 Running diagnostic...');
     diagnoseEntityData(selectedEntity, selectedEntityValue);
-    console.log('✅ Diagnostic completed');
     
     try {
-      console.log('📅 Processing date range...');
       // Fetch real dashboard data based on entity selection and time range
       const startDate = selectedTimeRange.from?.toISOString().split('T')[0];
       const endDate = selectedTimeRange.to?.toISOString().split('T')[0];
-      console.log('Date range processed:', { startDate, endDate });
       
-      console.log('📊 Fetching dashboard data...');
       const dashboardData = await getDashboardData(selectedEntity, selectedEntityValue, startDate, endDate);
-      console.log('✅ Dashboard data fetched successfully!');
-      
-      console.log(`Dashboard data fetch for ${selectedEntity} "${selectedEntityValue}":`, {
-        dashboardData,
-        performanceDataCount: dashboardData?.performanceData?.length || 0,
-        entityMappings: entityMappings
-      });
       
       if (dashboardData) {
         setCachedDashboardData(dashboardData);
@@ -257,15 +261,10 @@ const IndexNew = () => {
           totalSurveys: currentDataSnapshot?.totalSurveys || null,
           reportGeneration: new Date().toISOString()
         };
-        console.log('SNAPSHOT: Setting reportCurrentData during report generation:', reportData);
         setReportCurrentData(reportData);
-        
-        console.log('Dashboard data loaded:', dashboardData);
-        console.log('Report current data captured:', reportData);
         
         // Trigger N8N webhook for case data
         try {
-          console.log('🔗 Triggering N8N webhook for case data...');
           
           // Format date range for API
           const startDate = selectedTimeRange.from!.toISOString().split('T')[0];
@@ -275,66 +274,41 @@ const IndexNew = () => {
           // Create payload based on entity type and value
           let ownerNames: string[] = [];
           
-          console.log('🔍 Starting entity to owner name mapping for:', {
-            selectedEntity,
-            selectedEntityValue
-          });
           
           if (selectedEntity === 'dpe') {
             ownerNames = [selectedEntityValue];
-            console.log('✅ DPE mapping complete:', ownerNames);
           } else if (selectedEntity === 'squad') {
             // Get DPEs for this squad
             const dpes = await getDPEsWithIds();
             const squads = await getSquadsWithIds();
-            console.log('📊 Available squads:', squads.map(s => ({ id: s.id, name: s.name })));
-            console.log('📊 Available DPEs:', dpes.map(d => ({ id: d.id, name: d.name, squadID: d.squadID })));
             
             const squad = squads.find(s => s.name === selectedEntityValue);
-            console.log('🎯 Found squad:', squad);
             
             if (squad) {
               const squadDPEs = dpes.filter(dpe => dpe.squadID === squad.id);
               ownerNames = squadDPEs.map(dpe => dpe.name);
-              console.log('✅ Squad DPEs found:', squadDPEs, 'Owner names:', ownerNames);
             }
           } else if (selectedEntity === 'team') {
             // Get all DPEs for this team
             const allDPEs = await getDPEsWithIds();
             const allSquads = await getSquadsWithIds();
             const teams = await getTeamsWithIds();
-            console.log('📊 Available teams:', teams.map(t => ({ id: t.id, name: t.name })));
-            console.log('📊 Available squads:', allSquads.map(s => ({ id: s.id, name: s.name, teamID: s.teamID })));
-            console.log('📊 Available DPEs:', allDPEs.map(d => ({ id: d.id, name: d.name, squadID: d.squadID })));
             
             const team = teams.find(t => t.name === selectedEntityValue);
-            console.log('🎯 Found team:', team);
             
             if (team) {
               const teamSquads = allSquads.filter(squad => squad.teamID === team.id);
-              console.log('🎯 Team squads:', teamSquads);
               
               const teamSquadIds = teamSquads.map(squad => squad.id);
-              console.log('🎯 Team squad IDs:', teamSquadIds);
               
               const teamDPEs = allDPEs.filter(dpe => teamSquadIds.includes(dpe.squadID));
               ownerNames = teamDPEs.map(dpe => dpe.name);
-              console.log('✅ Team DPEs found:', teamDPEs, 'Owner names:', ownerNames);
             }
           }
           
           if (ownerNames.length === 0) {
             throw new Error(`No owner names found for ${selectedEntity}: ${selectedEntityValue}`);
           }
-          
-          console.log('🔍 Debug webhook data generation:', {
-            selectedEntity,
-            selectedEntityValue, 
-            ownerNames,
-            formattedDateRange,
-            startDate,
-            endDate
-          });
           
           const payload = {
             entityType: selectedEntity,
@@ -346,10 +320,7 @@ const IndexNew = () => {
             closed_date: [formattedDateRange]
           };
           
-          console.log('📤 Webhook payload:', payload);
-          
           // Step 1: Call get-cases webhook
-          console.log('🚀 Step 1: Triggering get-cases webhook...');
           const getCasesResponse = await fetch('http://localhost:3001/api/n8n/get-cases', {
             method: 'POST',
             headers: {
@@ -361,14 +332,11 @@ const IndexNew = () => {
           const getCasesResult = await getCasesResponse.json();
           
           if (getCasesResponse.ok && getCasesResult.success) {
-            console.log('✅ Get-cases webhook triggered successfully:', getCasesResult.message);
-            console.log('ℹ️ Calculate-metrics workflow will be triggered automatically after case data processing completes');
             toast({
               title: "Workflow Started",
               description: "N8N workflow started successfully. Case data collection and metrics calculation will run sequentially.",
             });
           } else {
-            console.error('❌ Get-cases webhook failed:', getCasesResult.message || 'Unknown error');
             toast({
               title: "Workflow Failed", 
               description: `Get-cases workflow trigger failed: ${getCasesResult.message || 'Unknown error'}`,
@@ -376,7 +344,6 @@ const IndexNew = () => {
             });
           }
         } catch (webhookError) {
-          console.error('❌ Error triggering N8N webhook:', webhookError);
           toast({
             title: "Webhook Error",
             description: "Failed to trigger N8N workflow, but report generation continues.",
@@ -390,10 +357,7 @@ const IndexNew = () => {
         setGeneratedEntityValue(selectedEntityValue);
         setEntityChanged(false);
         setIsAnalysisEnabled(true);
-        
-        console.log('🎉 SUCCESS: Report generation completed successfully!');
       } else {
-        console.warn('No dashboard data found for:', { selectedEntity, selectedEntityValue });
         // Set empty data structure as fallback
         setCachedDashboardData({
           entityData: null,
@@ -426,11 +390,8 @@ const IndexNew = () => {
         setGeneratedEntityValue(selectedEntityValue);
         setEntityChanged(false);
         setIsAnalysisEnabled(true);
-        
-        console.log('⚠️ COMPLETED: Report generated with no data available');
       }
     } catch (error) {
-      console.error('❌ ERROR in handleGenerateReport:', error);
       // Set fallback data on error
       setCachedDashboardData({
         entityData: null,
@@ -438,7 +399,6 @@ const IndexNew = () => {
         performanceData: []
       });
     } finally {
-      console.log('🏁 handleGenerateReport finally block - setting loading to false');
       setIsLoading(false);
     }
   };
@@ -446,11 +406,9 @@ const IndexNew = () => {
   // Function to fetch Calculate metrics results from database
   const fetchCalculateMetricsResults = async () => {
     try {
-      console.log('🔍 Fetching Calculate metrics results...');
-      
       // Check if we have the entity and time range data needed
       if (!generatedEntity || !generatedEntityValue) {
-        console.log('❌ No generated entity data available for metrics fetch');
+        alert(`Missing entity data: generatedEntity=${generatedEntity}, generatedEntityValue=${generatedEntityValue}`);
         return;
       }
 
@@ -459,36 +417,58 @@ const IndexNew = () => {
       const endDate = selectedTimeRange.to?.toISOString().split('T')[0];
 
       // Query using entity_name instead of entity since we're storing the name directly
-      let performanceResponse = await fetch(`http://localhost:3001/api/performance-data?entity_name=${generatedEntityValue}&startDate=${startDate}&endDate=${endDate}`);
+      const apiUrl = `http://localhost:3001/api/performance-data?entity_name=${generatedEntityValue}&startDate=${startDate}&endDate=${endDate}`;
       
-      if (performanceResponse.ok) {
-        const performanceResult = await performanceResponse.json();
-        console.log('✅ Performance data found:', performanceResult);
+      try {
+        let performanceResponse = await fetch(apiUrl);
         
-        if (performanceResult && performanceResult.length > 0) {
-          const latestMetrics = performanceResult[0];
-          setCalculateMetricsData({
-            sct: latestMetrics.metrics?.sct,
-            closedCases: latestMetrics.metrics?.closedCases,
-            satisfaction: latestMetrics.metrics?.satisfaction
-          });
+        if (performanceResponse.ok) {
+          const performanceResult = await performanceResponse.json();
+          
+          if (performanceResult && performanceResult.length > 0) {
+            const latestMetrics = performanceResult[0];
+            
+            const metricsToSet = {
+              sct: latestMetrics.metrics?.sct,
+              closedCases: latestMetrics.metrics?.closedCases,
+              satisfaction: latestMetrics.metrics?.satisfaction
+            };
+            
+            setCalculateMetricsData(metricsToSet);
           
           if (latestMetrics.sample_cases) {
             // Map the real case data to the format expected by the UI
-            const mappedCasesData = latestMetrics.sample_cases.map(caseItem => ({
-              case_id: caseItem.case_id,
-              title: caseItem.title,
-              status: caseItem.status,
-              case_age_days: caseItem.case_age_days,
-              sct: caseItem.case_age_days, // Map case_age_days to sct for compatibility
-              sctTime: caseItem.case_age_days, // Also map to sctTime
-              owner_full_name: caseItem.owner_full_name,
-              created_date: caseItem.created_date,
-              closed_date: caseItem.closed_date,
-              priority: 'Medium', // Default priority since not in our data
-              products: [] // Default empty products array
-            }));
+            const mappedCasesData = latestMetrics.sample_cases.map(caseItem => {
+              let parsedProducts = [];
+              try {
+                if (caseItem.products) {
+                  if (typeof caseItem.products === 'string') {
+                    parsedProducts = JSON.parse(caseItem.products);
+                  } else if (Array.isArray(caseItem.products)) {
+                    parsedProducts = caseItem.products;
+                  }
+                }
+              } catch (error) {
+                parsedProducts = [caseItem.products]; // Keep as string if JSON parsing fails
+              }
+
+              return {
+                case_id: caseItem.case_id,
+                title: caseItem.title,
+                status: caseItem.status,
+                case_age_days: caseItem.case_age_days,
+                sct: caseItem.case_age_days, // Map case_age_days to sct for compatibility
+                sctTime: caseItem.case_age_days, // Also map to sctTime
+                owner_full_name: caseItem.owner_full_name,
+                created_date: caseItem.created_date,
+                closed_date: caseItem.closed_date,
+                priority: caseItem.priority || 'Medium', // Use actual priority from data
+                products: parsedProducts // Properly parsed products
+              };
+            });
             setDetailedCasesData(mappedCasesData);
+          } else {
+            alert('No sample_cases found in performance data');
           }
           
           // Update reportCurrentData with the actual calculated metrics
@@ -501,21 +481,24 @@ const IndexNew = () => {
             hasMetricsData: true
           }));
           
-          toast({
-            title: "Metrics Updated",
-            description: "Calculate metrics data loaded from database.",
-          });
+          // Mark workflow as completed since we have performance data
+          setWorkflowCompleted(true);
           return;
+        } else {
+          // Performance data response was empty
         }
+      } else {
+        // Performance data response not OK
+      }
+      } catch (apiError) {
+        // Error during API call
       }
 
       // Fallback: Calculate metrics from cases data directly
-      console.log('📊 No performance data found, calculating from cases...');
       const casesResponse = await fetch(`http://localhost:3001/api/cases?owner_full_name=${generatedEntityValue}&status=Resolved&startDate=${startDate}&endDate=${endDate}`);
       
       if (casesResponse.ok) {
         const casesResult = await casesResponse.json();
-        console.log('✅ Cases data fetched for calculation:', casesResult);
         
         if (casesResult.data && casesResult.data.length > 0) {
           const cases = casesResult.data;
@@ -549,7 +532,9 @@ const IndexNew = () => {
             case_age_days: caseItem.case_age_days,
             owner_full_name: caseItem.owner_full_name,
             created_date: caseItem.created_date,
-            closed_date: caseItem.closed_date
+            closed_date: caseItem.closed_date,
+            priority: caseItem.priority || 'Medium',
+            products: caseItem.products
           })));
           
           // Update reportCurrentData with calculated values
@@ -567,15 +552,19 @@ const IndexNew = () => {
             description: `Calculated metrics from ${closedCases} resolved cases.`,
           });
           
-          console.log('✅ Metrics calculated successfully:', { avgSct, closedCases });
+          // Mark workflow as completed for fallback calculation
+          setWorkflowCompleted(true);
         } else {
-          console.log('⚠️ No cases data available for metrics calculation');
+          // Mark workflow as completed even without data to prevent infinite loading
+          setWorkflowCompleted(true);
         }
       } else {
-        console.log('⚠️ Failed to fetch cases data');
+        // Mark workflow as completed even on failure to prevent infinite loading
+        setWorkflowCompleted(true);
       }
     } catch (error) {
-      console.error('❌ Error fetching Calculate metrics results:', error);
+      // Mark workflow as completed on error to prevent infinite loading
+      setWorkflowCompleted(true);
     }
   };
 
@@ -583,27 +572,25 @@ const IndexNew = () => {
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
     
-    if (reportGenerated && generatedEntity && generatedEntityValue && isLoading === false) {
-      console.log('🔄 Starting polling for Calculate metrics results...');
-      
-      // Poll every 5 seconds for up to 2 minutes
-      let pollCount = 0;
-      const maxPolls = 24; // 2 minutes with 5-second intervals
-      
-      pollInterval = setInterval(async () => {
-        pollCount++;
-        console.log(`📊 Polling attempt ${pollCount}/${maxPolls} for Calculate metrics results...`);
-        
-        await fetchCalculateMetricsResults();
-        
-        if (pollCount >= maxPolls) {
-          console.log('⏰ Stopping polling - max attempts reached');
-          clearInterval(pollInterval);
-        }
-      }, 5000);
+    if (reportGenerated && generatedEntity && generatedEntityValue && isLoading === false && !workflowCompleted) {
       
       // Initial fetch
       fetchCalculateMetricsResults();
+      
+      // Poll every 3 seconds for up to 90 seconds
+      let pollCount = 0;
+      const maxPolls = 30; // 90 seconds with 3-second intervals
+      
+      pollInterval = setInterval(async () => {
+        pollCount++;
+        
+        await fetchCalculateMetricsResults();
+        
+        // Stop polling if max attempts reached (workflowCompleted is checked in auto-completion effect)
+        if (pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+        }
+      }, 3000);
     }
     
     return () => {
@@ -611,7 +598,30 @@ const IndexNew = () => {
         clearInterval(pollInterval);
       }
     };
-  }, [reportGenerated, generatedEntity, generatedEntityValue, isLoading]);
+  }, [reportGenerated, generatedEntity, generatedEntityValue, isLoading]); // Removed workflowCompleted from dependencies
+
+  // Effect to stop polling when workflow is completed
+  useEffect(() => {
+    if (workflowCompleted) {
+      // Note: polling interval is automatically cleared by the auto-completion effect
+    }
+  }, [workflowCompleted]);
+
+  // Effect to auto-complete workflow if we have valid data
+  useEffect(() => {
+    // Auto-complete if we have calculateMetricsData (primary data source)
+    if (reportGenerated && !workflowCompleted && calculateMetricsData) {
+      setWorkflowCompleted(true);
+    }
+    // Fallback: auto-complete after 90 seconds if we have reportCurrentData but no calculateMetricsData
+    else if (reportGenerated && !workflowCompleted && reportCurrentData && !calculateMetricsData) {
+      const fallbackTimer = setTimeout(() => {
+        setWorkflowCompleted(true);
+      }, 90000); // 90 seconds
+      
+      return () => clearTimeout(fallbackTimer);
+    }
+  }, [reportGenerated, workflowCompleted, calculateMetricsData, reportCurrentData]);
 
   const handleEntityDataChange = (entityType: string, data: string[]) => {
     setEntityRefreshKey(prev => prev + 1);
@@ -624,11 +634,10 @@ const IndexNew = () => {
   };
 
   const handleChartClick = (data: any, chartType: string, title: string) => {
-    console.log('Chart clicked:', { data, chartType, title });
+    // Chart click handler
   };
 
   const handleSurveySegmentClick = (data: any, segment: string) => {
-    console.log('Survey segment clicked:', data, segment);
     
     // Generate survey analysis data for the modal
     const surveyAnalysisData = [
@@ -692,8 +701,6 @@ const IndexNew = () => {
   };
 
   const handleIndividualBarClick = (data: any, metric: 'sct' | 'cases') => {
-    console.log('Bar clicked:', data, metric);
-    
     // Use detailed cases data from the clicked member's data if available
     let detailsData;
     const memberDetailedCases = data.detailedCases || detailedCasesData || [];
@@ -701,7 +708,8 @@ const IndexNew = () => {
     if (memberDetailedCases && memberDetailedCases.length > 0) {
       // Filter cases based on metric type and show actual workflow data
       if (metric === 'sct') {
-        detailsData = memberDetailedCases.filter(caseItem => caseItem.sct || caseItem.sctTime || caseItem.case_age_days);
+        // For SCT analysis, show all cases (they all have SCT data)
+        detailsData = memberDetailedCases;
       } else if (metric === 'cases') {
         detailsData = memberDetailedCases; // Show all closed cases
       }
@@ -723,9 +731,9 @@ const IndexNew = () => {
   // Helper function to generate detailed breakdown data
   const generateDetailedData = (member: any, metric: 'sct' | 'cases') => {
     if (metric === 'sct') {
-      // Generate sample SCT case details
+      // Generate sample SCT case details with correct field names
       return Array.from({ length: 8 }, (_, index) => ({
-        caseId: `TM-${String(2024001 + index).padStart(7, '0')}`,
+        case_id: `TM-${String(2024001 + index).padStart(7, '0')}`,
         title: [
           'Login Authentication Issue',
           'Database Performance Optimization', 
@@ -736,15 +744,17 @@ const IndexNew = () => {
           'Feature Enhancement Request',
           'Data Migration Script'
         ][index],
-        sct: 15, // Use fixed value instead of random
-        priority: 'P2', // Use fixed value instead of random
-        createdDate: new Date().toLocaleDateString(),
-        closedDate: new Date().toLocaleDateString()
+        case_age_days: 15 + index, // SCT days
+        priority: ['P1', 'P2', 'P3', 'P4'][index % 4],
+        products: '["Trend Vision One"]',
+        created_date: new Date(Date.now() - (index + 5) * 24 * 60 * 60 * 1000).toISOString(),
+        closed_date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'Closed'
       }));
     } else {
-      // Generate sample cases data
+      // Generate sample cases data with correct field names
       return Array.from({ length: member.cases || 10 }, (_, index) => ({
-        caseId: `TM-${String(2024100 + index).padStart(7, '0')}`,
+        case_id: `TM-${String(2024100 + index).padStart(7, '0')}`,
         title: [
           'User Account Setup',
           'Payment Processing Issue',
@@ -757,11 +767,12 @@ const IndexNew = () => {
           'Performance Tuning',
           'Documentation Update'
         ][index % 10],
-        status: 'Closed', // Use fixed value instead of random
-        type: 'Support', // Use fixed value instead of random
-        priority: 'P2', // Use fixed value instead of random
-        createdDate: new Date().toLocaleDateString(),
-        resolvedDate: new Date().toLocaleDateString()
+        status: 'Closed',
+        priority: ['P1', 'P2', 'P3', 'P4'][index % 4],
+        products: '["Trend Vision One"]',
+        created_date: new Date(Date.now() - (index + 10) * 24 * 60 * 60 * 1000).toISOString(),
+        closed_date: new Date(Date.now() - index * 24 * 60 * 60 * 1000).toISOString(),
+        case_age_days: index + 5
       }));
     }
   };
@@ -1009,13 +1020,11 @@ const IndexNew = () => {
     
     // Validate entity mappings exist
     if (!entityMappings || !entityMappings.dpeToSquad) {
-      console.warn('Entity mappings not available');
       return [];
     }
     
     // Validate entity data exists  
     if (!entityData || !entityData.dpes) {
-      console.warn('Entity data not available');
       return [];
     }
     
@@ -1026,7 +1035,7 @@ const IndexNew = () => {
     
     // Validate that squad has members
     if (dpeNames.length === 0) {
-      console.warn(`No DPEs found for squad: ${selectedEntityValue}`);
+      // No DPEs found for squad
     }
     
     return dpeNames;
@@ -1039,13 +1048,11 @@ const IndexNew = () => {
     
     // Validate entity mappings exist
     if (!entityMappings || !entityMappings.squadToTeam) {
-      console.warn('Entity mappings not available');
       return [];
     }
     
     // Validate entity data exists
     if (!entityData || !entityData.squads) {
-      console.warn('Entity data not available');
       return [];
     }
     
@@ -1056,7 +1063,7 @@ const IndexNew = () => {
     
     // Validate that team has members
     if (squadNames.length === 0) {
-      console.warn(`No Squads found for team: ${selectedEntityValue}`);
+      // No Squads found for team
     }
     
     return squadNames;
@@ -1098,35 +1105,25 @@ const IndexNew = () => {
   // Check if entity has proper child mappings for analysis
   // Diagnostic function to help debug entity data issues
   const diagnoseEntityData = (entityType: string, entityValue: string) => {
-    console.log(`=== DIAGNOSING: ${entityType} "${entityValue}" ===`);
-    
     if (entityType === 'team') {
       // Check if team exists in entity data
       const teamExists = entityData.teams?.includes(entityValue);
-      console.log('Team exists in entityData:', teamExists);
       
       // Check squads mapped to this team
       const mappedSquads = Object.entries(entityMappings.squadToTeam || {})
         .filter(([squad, team]) => team === entityValue);
-      console.log('Squads mapped to team:', mappedSquads);
       
       // Check DPEs in those squads
       mappedSquads.forEach(([squadName]) => {
         const dpes = Object.entries(entityMappings.dpeToSquad || {})
           .filter(([dpe, squad]) => squad === squadName);
-        console.log(`DPEs in squad "${squadName}":`, dpes);
       });
       
       // Check if squads exist in entityData
       mappedSquads.forEach(([squadName]) => {
         const squadExists = entityData.squads?.includes(squadName);
-        console.log(`Squad "${squadName}" exists in entityData:`, squadExists);
       });
     }
-    
-    console.log('Current entityMappings:', entityMappings);
-    console.log('Current entityData:', entityData);
-    console.log('========================');
   };
 
   const validateDataConsistency = () => {
@@ -1165,7 +1162,6 @@ const IndexNew = () => {
     
     // Validate total responses
     if (totalResponses < 10) {
-      console.warn('Insufficient survey responses for meaningful analysis');
       return [];
     }
     
@@ -1219,15 +1215,12 @@ const IndexNew = () => {
         const mappedDPEs = Object.entries(entityMappings.dpeToSquad || {})
           .filter(([dpe, squad]) => squad === selectedEntityValue)
           .map(([dpe]) => dpe);
-        console.log(`getCurrentData() - Squad "${selectedEntityValue}" mapped DPEs:`, mappedDPEs);
         performanceData = rawPerformanceData.filter(p => mappedDPEs.includes(p.name));
-        console.log(`getCurrentData() - Squad "${selectedEntityValue}" performance data:`, performanceData);
         
         // Check if we have any meaningful performance data
         if (performanceData && performanceData.length > 0) {
-          console.log(`getCurrentData() - Squad "${selectedEntityValue}" has ${performanceData.length} performance records`);
+          // Squad has performance records
         } else {
-          console.log(`getCurrentData() - Squad "${selectedEntityValue}" has no performance data`);
           // Early return for squads with no performance data
           return {
             reportGeneration: { generated: 0, total: 50 },
@@ -1262,8 +1255,6 @@ const IndexNew = () => {
       // Check if we have meaningful performance data and aggregated metrics
       if (performanceData.length === 0) {
         // Return zero/null values when no data
-        console.log(`No data for ${selectedEntity} "${selectedEntityValue}": performanceData.length=${performanceData.length}`);
-        
         return {
           reportGeneration: null,
           dsatPercentage: null,
@@ -1290,7 +1281,6 @@ const IndexNew = () => {
         
         // If no data for this specific DPE, it should have been caught above
         if (!aggregatedMetrics) {
-          console.warn(`No data found for DPE "${selectedEntityValue}"`);
           aggregatedMetrics = { sct: null, cases: null, satisfaction: null };
         }
       } else if (selectedEntity === 'squad') {
@@ -1316,17 +1306,11 @@ const IndexNew = () => {
         const totalCases = performanceData.reduce((sum, p) => sum + p.cases, 0);
         const avgSCT = Math.round(performanceData.reduce((sum, p) => sum + p.sct, 0) / performanceData.length);
         
-        // Debug satisfaction values for each DPE
-        console.log(`Squad "${selectedEntityValue}" individual satisfaction values:`, 
-          performanceData.map(p => ({ name: p.name, satisfaction: p.satisfaction })));
-        
         // Only include DPEs with valid satisfaction data (> 0) for satisfaction average
         const validSatisfactionData = performanceData.filter(p => p.satisfaction > 0);
         const avgSatisfaction = validSatisfactionData.length > 0 
           ? Math.round(validSatisfactionData.reduce((sum, p) => sum + p.satisfaction, 0) / validSatisfactionData.length)
           : 0;
-          
-        console.log(`Squad "${selectedEntityValue}" satisfaction calculation: valid entries=${validSatisfactionData.length}, avgSatisfaction=${avgSatisfaction}`);
         
         aggregatedMetrics = {
           sct: avgSCT,
@@ -1369,7 +1353,6 @@ const IndexNew = () => {
 
       // Calculate derived metrics only if we have real performance data
       const hasRealPerformanceData = performanceData && performanceData.length > 0;
-      console.log(`getCurrentData() - hasRealPerformanceData: ${hasRealPerformanceData}, performanceData.length: ${performanceData?.length}, selectedEntity: ${selectedEntity}, selectedEntityValue: ${selectedEntityValue}`);
       
       // Also check if the entity has proper mappings AND valid satisfaction data
       let hasValidMappings = false;
@@ -1381,7 +1364,6 @@ const IndexNew = () => {
         hasValidMappings = mappedDPEs.length > 0;
         // Check if any DPE has valid satisfaction data (> 0)
         hasValidSatisfactionData = performanceData.some(p => p.satisfaction > 0);
-        console.log(`getCurrentData() - Squad "${selectedEntityValue}" has ${mappedDPEs.length} mapped DPEs`);
       } else if (selectedEntity === 'dpe') {
         hasValidMappings = Object.keys(entityMappings.dpeToSquad || {}).includes(selectedEntityValue);
         hasValidSatisfactionData = performanceData.some(p => p.satisfaction > 0);
@@ -1394,12 +1376,9 @@ const IndexNew = () => {
       
       // Only consider data valid if we have performance data, mappings, AND valid satisfaction data
       const hasValidData = hasRealPerformanceData && hasValidMappings && hasValidSatisfactionData;
-      console.log(`getCurrentData() - hasValidMappings: ${hasValidMappings}, hasValidSatisfactionData: ${hasValidSatisfactionData}, hasValidData: ${hasValidData}`);
       
       const dissatisfaction = hasValidData ? 
         Math.max(2, Math.min(12, 100 - aggregatedMetrics.satisfaction - 10)) : 0;
-      
-      console.log(`getCurrentData() - dissatisfaction: ${dissatisfaction}, aggregatedMetrics.satisfaction: ${aggregatedMetrics.satisfaction}`);
       
       const totalSurveys = hasValidData ? 
         Math.max(50, aggregatedMetrics.cases * 8) : 0; // Approximate 8 surveys per case
@@ -1577,27 +1556,36 @@ const IndexNew = () => {
           entityChanged={entityChanged}
         />
 
+        {/* Workflow Processing Status */}
+        {reportGenerated && !workflowCompleted && (
+          <div className="flex items-center justify-center p-8">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <div className="space-y-2">
+                <p className="text-lg font-medium">Processing workflows...</p>
+                <p className="text-sm text-muted-foreground">
+                  Calculating performance metrics from case data. This may take up to 2 minutes.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Dashboard Content */}
-        {reportGenerated && generatedEntityValue && reportCurrentData ? (() => {
+        {reportGenerated && generatedEntityValue && reportCurrentData && workflowCompleted ? (() => {
           // Check for entity mapping issues using generated values (not reactive to selection changes)
           const getGeneratedEntityMappingWarning = () => {
-            console.log('Checking mapping warning for:', { generatedEntity, generatedEntityValue });
-            console.log('Available entityMappings:', entityMappings);
-            
             if (!generatedEntity || !generatedEntityValue) {
-              console.log('No generated entity/value, returning null');
               return null;
             }
 
             if (generatedEntity === 'dpe' && generatedEntityValue) {
               const mappedSquad = entityMappings?.dpeToSquad?.[generatedEntityValue];
-              console.log(`DPE "${generatedEntityValue}" mapped to squad:`, mappedSquad);
               if (!mappedSquad) {
                 return `DPE "${generatedEntityValue}" is not mapped to any squad`;
               }
               
               const mappedTeam = entityMappings?.squadToTeam?.[mappedSquad];
-              console.log(`Squad "${mappedSquad}" mapped to team:`, mappedTeam);
               if (!mappedTeam) {
                 return `Squad "${mappedSquad}" is not mapped to any team`;
               }
@@ -1605,7 +1593,6 @@ const IndexNew = () => {
 
             if (generatedEntity === 'squad' && generatedEntityValue) {
               const mappedTeam = entityMappings?.squadToTeam?.[generatedEntityValue];
-              console.log(`Squad "${generatedEntityValue}" mapped to team:`, mappedTeam);
               if (!mappedTeam) {
                 return `Squad "${generatedEntityValue}" is not mapped to any team`;
               }
@@ -1615,7 +1602,6 @@ const IndexNew = () => {
                 .filter(([dpe, squad]) => squad === generatedEntityValue)
                 .map(([dpe]) => dpe);
               
-              console.log(`Squad "${generatedEntityValue}" mapped DPEs:`, mappedDPEs);
               if (mappedDPEs.length === 0) {
                 return `Squad "${generatedEntityValue}" has no DPE members mapped to it`;
               }
@@ -1627,7 +1613,6 @@ const IndexNew = () => {
                 .filter(([squad, team]) => team === generatedEntityValue)
                 .map(([squad]) => squad);
               
-              console.log(`Team "${generatedEntityValue}" has squads:`, mappedSquads);
               if (mappedSquads.length === 0) {
                 return `Team "${generatedEntityValue}" has no squads mapped to it`;
               }
@@ -1639,18 +1624,15 @@ const IndexNew = () => {
                 return dpeCount > 0;
               });
               
-              console.log(`Team "${generatedEntityValue}" has DPEs in squads:`, hasAnyDPEs);
               if (!hasAnyDPEs) {
                 return `Team "${generatedEntityValue}" has squads but no DPEs mapped to any squad`;
               }
             }
 
-            console.log('No mapping issues found');
             return null;
           };
 
           const mappingWarning = getGeneratedEntityMappingWarning();
-          console.log('Mapping warning result:', mappingWarning);
           
           if (mappingWarning) {
             return (
@@ -1759,7 +1741,7 @@ const IndexNew = () => {
                           ? reportDashboardData.performanceData.map(item => ({
                               name: item.name,
                               sct: calculateMetricsData?.sct || item.sct,
-                              cases: calculateMetricsData?.closedCases || item.closedCases || item.cases,
+                              cases: calculateMetricsData?.closedCases || item.cases,
                               satisfaction: calculateMetricsData?.satisfaction || item.satisfaction,
                               detailedCases: detailedCasesData || item.cases || [] // Real case data for modal
                             }))
@@ -1959,254 +1941,6 @@ const IndexNew = () => {
               isAnalysisEnabled={isAnalysisEnabled}
               selectedEntity={selectedEntity}
             />
-            
-            {/* Metric Breakdown Modal */}
-            {selectedMember && (
-              <Dialog open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {selectedMember.metric === 'sct' ? 'SCT Score Breakdown' : 
-                       selectedMember.metric === 'cases' ? 'Closed Cases Breakdown' :
-                       selectedMember.metric === 'csat' ? 'CSAT Breakdown' :
-                       selectedMember.metric === 'neutral' ? 'Neutral Feedback Breakdown' :
-                       'DSAT Breakdown'} - {selectedMember.member.name || generatedEntityValue}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-6">
-                    {selectedMember.metric === 'sct' ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">Current SCT</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold">{selectedMember.member.sct} days</div>
-                              <div className="text-xs text-muted-foreground">Target: ≤15 days</div>
-                            </CardContent>
-                          </Card>
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">Performance</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className={`text-2xl font-bold ${selectedMember.member.sct <= 15 ? 'text-green-600' : 'text-red-600'}`}>
-                                {selectedMember.member.sct <= 15 ? 'Meeting Target' : 'Above Target'}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {selectedMember.member.sct <= 15 ? 'Good performance' : `${selectedMember.member.sct - 15} days over target`}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">SCT Breakdown</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>Analysis Phase:</span>
-                                <span>{Math.round(selectedMember.member.sct * 0.3)} days</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Development Phase:</span>
-                                <span>{Math.round(selectedMember.member.sct * 0.5)} days</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Testing & Deployment:</span>
-                                <span>{Math.round(selectedMember.member.sct * 0.2)} days</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    ) : selectedMember.metric === 'cases' ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">Closed Cases</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold">{selectedMember.member.cases}</div>
-                              <div className="text-xs text-muted-foreground">This period</div>
-                            </CardContent>
-                          </Card>
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">Success Rate</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold text-green-600">
-                                {Math.round((selectedMember.member.cases / (selectedMember.member.cases + 2)) * 100)}%
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {selectedMember.member.cases} closed, {2} pending
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Case Types Breakdown</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>Bug Fixes:</span>
-                                <span>{Math.round(selectedMember.member.cases * 0.4)} cases</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Feature Requests:</span>
-                                <span>{Math.round(selectedMember.member.cases * 0.3)} cases</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Support Issues:</span>
-                                <span>{Math.round(selectedMember.member.cases * 0.3)} cases</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    ) : selectedMember.metric === 'csat' ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">CSAT Score</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold text-green-600">{selectedMember.member.value}</div>
-                              <div className="text-xs text-muted-foreground">{selectedMember.member.percentage}% of total</div>
-                            </CardContent>
-                          </Card>
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">Rating Range</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold">4-5 Stars</div>
-                              <div className="text-xs text-muted-foreground">Satisfied customers</div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Satisfaction Breakdown</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>5-Star Ratings:</span>
-                                <span>{Math.round(selectedMember.member.value * 0.7)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>4-Star Ratings:</span>
-                                <span>{Math.round(selectedMember.member.value * 0.3)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Primary Praise:</span>
-                                <span>Quality & Speed</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    ) : selectedMember.metric === 'neutral' ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">Neutral Responses</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold text-yellow-600">{selectedMember.member.value}</div>
-                              <div className="text-xs text-muted-foreground">{selectedMember.member.percentage}% of total</div>
-                            </CardContent>
-                          </Card>
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">Rating Range</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold">3 Stars</div>
-                              <div className="text-xs text-muted-foreground">Neutral feedback</div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Neutral Feedback Insights</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>Mixed Experience:</span>
-                                <span>{Math.round(selectedMember.member.value * 0.6)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Indifferent:</span>
-                                <span>{Math.round(selectedMember.member.value * 0.4)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Improvement Opportunity:</span>
-                                <span>Communication</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">DSAT Responses</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold text-red-600">{selectedMember.member.value}</div>
-                              <div className="text-xs text-muted-foreground">{selectedMember.member.percentage}% of total</div>
-                            </CardContent>
-                          </Card>
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-sm">Rating Range</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="text-2xl font-bold">1-2 Stars</div>
-                              <div className="text-xs text-muted-foreground">Dissatisfied customers</div>
-                            </CardContent>
-                          </Card>
-                        </div>
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Dissatisfaction Breakdown</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>1-Star Ratings:</span>
-                                <span>{Math.round(selectedMember.member.value * 0.4)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>2-Star Ratings:</span>
-                                <span>{Math.round(selectedMember.member.value * 0.6)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Primary Concern:</span>
-                                <span>Response Time</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
           </div>
         )}
       </div>

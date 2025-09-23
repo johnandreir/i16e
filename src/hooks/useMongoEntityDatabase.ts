@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { mongoEntityService, EntityData, EntityMappings, DashboardData } from '@/lib/mongoEntityService';
+import EntityService, { EntityData, EntityMappings, DashboardData } from '@/lib/entityService';
 
 export const useMongoEntityDatabase = () => {
-  const [entityService] = useState(() => mongoEntityService);
+  const [entityService] = useState(() => new EntityService());
   const [entityData, setEntityData] = useState<EntityData>({
     teams: ['Add New Team...'],
     squads: ['Add New Squad...'],
@@ -25,12 +25,9 @@ export const useMongoEntityDatabase = () => {
         const dataResponse = await entityService.getEntityData();
         const mappingsResponse = await entityService.getEntityMappings();
 
-        if (dataResponse.success && dataResponse.data) {
-          setEntityData(dataResponse.data);
-          console.log('✅ Successfully loaded entity data from MongoDB');
+        if (dataResponse) {
+          setEntityData(dataResponse);
         } else {
-          console.error('❌ Failed to load entity data:', dataResponse.error);
-          setError(`Failed to load entity data: ${dataResponse.error}`);
           setEntityData({
             teams: [],
             squads: [],
@@ -38,11 +35,9 @@ export const useMongoEntityDatabase = () => {
           });
         }
 
-        if (mappingsResponse.success && mappingsResponse.data) {
-          setEntityMappings(mappingsResponse.data);
+        if (mappingsResponse) {
+          setEntityMappings(mappingsResponse);
         } else {
-          console.error('❌ Failed to load entity mappings:', mappingsResponse.error);
-          setError(`Failed to load entity mappings: ${mappingsResponse.error}`);
           setEntityMappings({
             dpeToSquad: {},
             squadToTeam: {}

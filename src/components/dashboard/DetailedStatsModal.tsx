@@ -20,6 +20,17 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
   type,
   title
 }) => {
+  // Helper function to format dates to YYYY-MM-DD format
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const renderTeamDetails = () => (
     <div className="space-y-6">
       <Table>
@@ -109,30 +120,32 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Case ID</TableHead>
+                <TableHead>Product</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>SCT (Days)</TableHead>
                 <TableHead>Priority</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Closed</TableHead>
+                <TableHead>SCT (Days)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {details.map((detail: any, index: number) => (
                 <TableRow key={index}>
-                  <TableCell className="font-mono text-sm">{detail.caseId}</TableCell>
-                  <TableCell>{detail.title}</TableCell>
-                  <TableCell>
-                    <Badge variant={detail.sct > 20 ? "destructive" : detail.sct < 10 ? "success" : "secondary"}>
-                      {detail.sct}
-                    </Badge>
-                  </TableCell>
+                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
+                  <TableCell>{detail.title || 'N/A'}</TableCell>
                   <TableCell>
                   <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
-                    {detail.priority}
+                    {detail.priority || 'Medium'}
                   </Badge>
                   </TableCell>
-                  <TableCell>{detail.createdDate}</TableCell>
-                  <TableCell>{detail.closedDate}</TableCell>
+                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
+                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
+                  <TableCell>
+                    <Badge variant={(detail.case_age_days || detail.sct) > 20 ? "destructive" : (detail.case_age_days || detail.sct) < 10 ? "success" : "secondary"}>
+                      {detail.case_age_days || detail.sct || 0}
+                    </Badge>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -162,25 +175,31 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Case ID</TableHead>
+                <TableHead>Product</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Priority</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Closed</TableHead>
+                <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {details.map((detail: any, index: number) => (
                 <TableRow key={index}>
-                  <TableCell className="font-mono text-sm">{detail.caseId}</TableCell>
-                  <TableCell>{detail.title}</TableCell>
-                  <TableCell>
-                    <Badge variant={detail.status === 'Closed' ? "success" : detail.status === 'In Progress' ? "warning" : "secondary"}>
-                      {detail.status}
-                    </Badge>
-                  </TableCell>
+                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
+                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
+                  <TableCell>{detail.title || 'N/A'}</TableCell>
                   <TableCell>
                   <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
-                    {detail.priority}
+                    {detail.priority || 'Medium'}
                   </Badge>
+                  </TableCell>
+                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
+                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
+                  <TableCell>
+                    <Badge variant={detail.status === 'Closed' ? "success" : detail.status === 'In Progress' ? "warning" : "secondary"}>
+                      {detail.status || 'Unknown'}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}

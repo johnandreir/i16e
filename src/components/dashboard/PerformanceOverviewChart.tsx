@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Clock, CheckCircle, Users, TrendingUp } from 'lucide-react';
 
 export interface CaseData {
@@ -45,6 +46,48 @@ const DrillDownModal: React.FC<DrillDownModalProps> = ({ isOpen, onClose, owner,
 
   const sortedCases = cases.sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
 
+  // Helper function to format dates
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
+  // Helper function to format products array
+  const formatProducts = (products: any) => {
+    if (!products) return 'N/A';
+    
+    try {
+      // If it's a string, try to parse it as JSON
+      if (typeof products === 'string') {
+        const parsed = JSON.parse(products);
+        if (Array.isArray(parsed)) {
+          return parsed.length > 0 ? parsed.join(', ') : 'N/A';
+        }
+        return products;
+      }
+      
+      // If it's already an array
+      if (Array.isArray(products)) {
+        return products.length > 0 ? products.join(', ') : 'N/A';
+      }
+      
+      // Fallback to string conversion
+      return String(products);
+    } catch (error) {
+      // If JSON parsing fails, return the original string
+      return typeof products === 'string' ? products : 'N/A';
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
       case 'critical': return 'bg-red-500';
@@ -85,62 +128,53 @@ const DrillDownModal: React.FC<DrillDownModalProps> = ({ isOpen, onClose, owner,
         </div>
         
         <div className="p-6 overflow-y-auto max-h-[70vh]">
-          <div className="grid gap-4">
-            {sortedCases.map((caseItem) => (
-              <Card key={caseItem.case_id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{caseItem.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">Case ID: {caseItem.case_id}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge className={`${getPriorityColor(caseItem.priority)} text-white`}>
-                        {caseItem.priority}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-24">Case ID</TableHead>
+                <TableHead className="w-32">Product</TableHead>
+                <TableHead className="min-w-48">Title</TableHead>
+                <TableHead className="w-20">Priority</TableHead>
+                <TableHead className="w-24">Created</TableHead>
+                <TableHead className="w-24">Closed</TableHead>
+                <TableHead className="w-24">SCT (Days)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedCases.length > 0 ? (
+                sortedCases.map((caseItem, index) => (
+                  <TableRow key={caseItem.case_id}>
+                    <TableCell className="font-medium text-xs">{caseItem.case_id || 'N/A'}</TableCell>
+                    <TableCell className="text-xs">{formatProducts(caseItem.products)}</TableCell>
+                    <TableCell className="text-xs" title={caseItem.title}>
+                      <div className="max-w-48 truncate">{caseItem.title || 'N/A'}</div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <Badge 
+                        variant={
+                          caseItem.priority?.includes('P1') || caseItem.priority === 'High' ? 'destructive' : 
+                          caseItem.priority?.includes('P4') || caseItem.priority === 'Low' ? 'secondary' : 
+                          'default'
+                        }
+                        className="text-xs px-1 py-0"
+                      >
+                        {caseItem.priority || 'Medium'}
                       </Badge>
-                      <Badge className={`${getStatusColor(caseItem.status)} text-white`}>
-                        {caseItem.status}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Age: {caseItem.case_age_days} days</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Owner: {caseItem.owner_full_name}</span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Created: </span>
-                      {new Date(caseItem.created_date).toLocaleDateString()}
-                    </div>
-                    {caseItem.closed_date && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Closed: </span>
-                        {new Date(caseItem.closed_date).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {caseItem.products && caseItem.products.length > 0 && (
-                    <div className="mt-3">
-                      <span className="text-sm text-muted-foreground">Products: </span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {caseItem.products.map((product, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {product}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    </TableCell>
+                    <TableCell className="text-xs">{formatDate(caseItem.created_date)}</TableCell>
+                    <TableCell className="text-xs">{formatDate(caseItem.closed_date)}</TableCell>
+                    <TableCell className="font-bold text-xs">{caseItem.case_age_days || 0}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    No case data available
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>
