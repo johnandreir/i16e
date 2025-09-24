@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { X, Clock } from 'lucide-react';
+import { X, Clock, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface DetailedStatsModalProps {
@@ -22,6 +22,45 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
   title,
   onAnalyzeSCT
 }) => {
+  // State for sorting only - removed pagination
+  const [sortField, setSortField] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Helper function to handle sorting
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Helper function to sort data
+  const sortData = (data: any[], field: string, direction: 'asc' | 'desc') => {
+    return [...data].sort((a, b) => {
+      let aVal = a[field];
+      let bVal = b[field];
+      
+      // Handle different data types
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Helper function to render sort icons
+  const renderSortIcon = (field: string) => {
+    if (sortField !== field) return <ChevronUp className="w-4 h-4 opacity-50" />;
+    return sortDirection === 'asc' ? 
+      <ChevronUp className="w-4 h-4" /> : 
+      <ChevronDown className="w-4 h-4" />;
+  };
+
   // Helper function to format dates to YYYY-MM-DD format
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'N/A';
@@ -50,8 +89,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
   };
 
   const renderTeamDetails = () => {
-    // When type='team', we're actually showing case details for a squad within a team
-    // The data structure is { member, metric, details } just like individual view
     if (!data) {
       return (
         <div className="text-center py-8">
@@ -109,42 +146,126 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             </div>
           </div>
           
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Case ID</TableHead>
-                <TableHead>Case Owner</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Closed</TableHead>
-                <TableHead>SCT (Days)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {details.map((detail: any, index: number) => (
-                <TableRow key={index}>
-                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
-                  <TableCell className="text-sm">{detail.owner_full_name || 'N/A'}</TableCell>
-                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
-                  <TableCell>{detail.title || 'N/A'}</TableCell>
-                  <TableCell>
-                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
-                    {detail.priority || 'Medium'}
-                  </Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
-                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
-                  <TableCell>
-                    <Badge variant={(detail.case_age_days || detail.sct) > 20 ? "destructive" : (detail.case_age_days || detail.sct) < 10 ? "success" : "secondary"}>
-                      {detail.case_age_days || detail.sct || 0}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="flex-1 flex flex-col min-h-0 border rounded-lg">
+            <div className="flex-1 overflow-auto min-h-0" style={{ maxHeight: 'calc(80vh - 300px)' }}>
+              <div className="min-w-full">
+                <Table style={{ tableLayout: 'fixed', width: '100%' }}>
+                  <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                    <TableRow>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('case_id')}>
+                        <div className="flex items-center gap-1">
+                          Case ID
+                          {renderSortIcon('case_id')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '150px', maxWidth: '150px' }} onClick={() => handleSort('owner_full_name')}>
+                        <div className="flex items-center gap-1">
+                          Case Owner
+                          {renderSortIcon('owner_full_name')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '130px', maxWidth: '130px' }} onClick={() => handleSort('products')}>
+                        <div className="flex items-center gap-1">
+                          Product
+                          {renderSortIcon('products')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '250px', maxWidth: '250px' }} onClick={() => handleSort('title')}>
+                        <div className="flex items-center gap-1">
+                          Title
+                          {renderSortIcon('title')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '90px', maxWidth: '90px' }} onClick={() => handleSort('priority')}>
+                        <div className="flex items-center gap-1">
+                          Priority
+                          {renderSortIcon('priority')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('created_date')}>
+                        <div className="flex items-center gap-1">
+                          Created
+                          {renderSortIcon('created_date')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('closed_date')}>
+                        <div className="flex items-center gap-1">
+                          Closed
+                          {renderSortIcon('closed_date')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '100px', maxWidth: '100px' }} onClick={() => handleSort('sct')}>
+                        <div className="flex items-center gap-1">
+                          SCT (Days)
+                          {renderSortIcon('sct')}
+                        </div>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(() => {
+                      const sortedData = sortField ? sortData(details, sortField, sortDirection) : details;
+                      
+                      return sortedData.map((detail: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell 
+                            title={detail.case_id || detail.caseId || 'N/A'}
+                            className="font-mono text-sm truncate" 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                          >
+                            {detail.case_id || detail.caseId || 'N/A'}
+                          </TableCell>
+                          <TableCell 
+                            title={detail.owner_full_name || 'N/A'}
+                            className="text-sm truncate" 
+                            style={{ width: '150px', maxWidth: '150px' }}
+                          >
+                            {detail.owner_full_name || 'N/A'}
+                          </TableCell>
+                          <TableCell 
+                            title={detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}
+                            className="text-sm truncate" 
+                            style={{ width: '130px', maxWidth: '130px' }}
+                          >
+                            {detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}
+                          </TableCell>
+                          <TableCell 
+                            title={detail.title || 'N/A'}
+                            className="truncate" 
+                            style={{ width: '250px', maxWidth: '250px' }}
+                          >
+                            {detail.title || 'N/A'}
+                          </TableCell>
+                          <TableCell style={{ width: '90px', maxWidth: '90px' }}>
+                            <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                              {detail.priority || 'Medium'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                            className="truncate"
+                          >
+                            {formatDate(detail.created_date || detail.createdDate)}
+                          </TableCell>
+                          <TableCell 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                            className="truncate"
+                          >
+                            {formatDate(detail.closed_date || detail.closedDate)}
+                          </TableCell>
+                          <TableCell style={{ width: '100px', maxWidth: '100px' }}>
+                            <Badge variant={(detail.case_age_days || detail.sct) > 20 ? "destructive" : (detail.case_age_days || detail.sct) < 10 ? "success" : "secondary"}>
+                              {detail.case_age_days || detail.sct || 0}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -154,14 +275,10 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       const p2Cases = details.filter(d => d.priority === 'P2').length;
       const p3Cases = details.filter(d => d.priority === 'P3').length;
       const p4Cases = details.filter(d => d.priority === 'P4').length;
-      const closedCases = details.filter(d => d.status === 'Closed').length;
-      const openCases = details.length - closedCases;
       
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 mb-6">
               <div className="text-center p-4 bg-background rounded-lg border">
                 <p className="text-muted-foreground font-medium mb-1">Total Cases</p>
@@ -170,7 +287,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
               </div>
             </div>
 
-            {/* Priority Breakdown */}
             <div>
               <h4 className="font-semibold text-foreground mb-3">Priority Breakdown</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -198,108 +314,120 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             </div>
           </div>
           
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Case ID</TableHead>
-                <TableHead>Case Owner</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Closed</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {details.map((detail: any, index: number) => (
-                <TableRow key={index}>
-                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
-                  <TableCell className="text-sm">{detail.owner_full_name || 'N/A'}</TableCell>
-                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
-                  <TableCell>{detail.title || 'N/A'}</TableCell>
-                  <TableCell>
-                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
-                    {detail.priority || 'Medium'}
-                  </Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
-                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
-                  <TableCell>
-                    <Badge variant={detail.status === 'Closed' ? "success" : detail.status === 'In Progress' ? "warning" : "secondary"}>
-                      {detail.status || 'Unknown'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      );
-    }
-
-    if (metric === 'satisfaction') {
-      return (
-        <div className="space-y-6">
-          <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-2">{member.name} - Customer Satisfaction Analysis</h3>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Average Satisfaction</p>
-                <p className="font-semibold text-lg">{member.satisfaction}%</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Total Responses</p>
-                <p className="font-semibold text-lg">{details.length}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Highest Rating</p>
-                <p className="font-semibold text-lg">{Math.max(...details.map(d => d.satisfaction || 0))}%</p>
+          <div className="flex-1 flex flex-col min-h-0 border rounded-lg">
+            <div className="flex-1 overflow-auto min-h-0" style={{ maxHeight: 'calc(80vh - 300px)' }}>
+              <div className="min-w-full">
+                <Table style={{ tableLayout: 'fixed', width: '100%' }}>
+                  <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                    <TableRow>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('case_id')}>
+                        <div className="flex items-center gap-1">
+                          Case ID
+                          {renderSortIcon('case_id')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '150px', maxWidth: '150px' }} onClick={() => handleSort('owner_full_name')}>
+                        <div className="flex items-center gap-1">
+                          Case Owner
+                          {renderSortIcon('owner_full_name')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '130px', maxWidth: '130px' }} onClick={() => handleSort('products')}>
+                        <div className="flex items-center gap-1">
+                          Product
+                          {renderSortIcon('products')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '250px', maxWidth: '250px' }} onClick={() => handleSort('title')}>
+                        <div className="flex items-center gap-1">
+                          Title
+                          {renderSortIcon('title')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '90px', maxWidth: '90px' }} onClick={() => handleSort('priority')}>
+                        <div className="flex items-center gap-1">
+                          Priority
+                          {renderSortIcon('priority')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('created_date')}>
+                        <div className="flex items-center gap-1">
+                          Created
+                          {renderSortIcon('created_date')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('closed_date')}>
+                        <div className="flex items-center gap-1">
+                          Closed
+                          {renderSortIcon('closed_date')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '100px', maxWidth: '100px' }} onClick={() => handleSort('status')}>
+                        <div className="flex items-center gap-1">
+                          Status
+                          {renderSortIcon('status')}
+                        </div>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(() => {
+                      const sortedData = sortField ? sortData(details, sortField, sortDirection) : details;
+                      
+                      return sortedData.map((detail: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-mono text-sm overflow-hidden" style={{ width: '120px', maxWidth: '120px' }}>
+                            <div className="truncate" title={detail.case_id || detail.caseId || 'N/A'}>
+                              {detail.case_id || detail.caseId || 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm overflow-hidden" style={{ width: '150px', maxWidth: '150px' }}>
+                            <div className="truncate" title={detail.owner_full_name || 'N/A'}>
+                              {detail.owner_full_name || 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm overflow-hidden" style={{ width: '130px', maxWidth: '130px' }}>
+                            <div className="truncate" title={detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}>
+                              {detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="overflow-hidden" style={{ width: '250px', maxWidth: '250px' }}>
+                            <div className="truncate" title={detail.title || 'N/A'}>
+                              {detail.title || 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="overflow-hidden" style={{ width: '90px', maxWidth: '90px' }}>
+                            <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                              {detail.priority || 'Medium'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="overflow-hidden" style={{ width: '120px', maxWidth: '120px' }}>
+                            <div className="truncate">
+                              {formatDate(detail.created_date || detail.createdDate)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="overflow-hidden" style={{ width: '120px', maxWidth: '120px' }}>
+                            <div className="truncate">
+                              {formatDate(detail.closed_date || detail.closedDate)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="overflow-hidden" style={{ width: '100px', maxWidth: '100px' }}>
+                            <Badge variant={detail.status === 'Closed' ? "success" : detail.status === 'In Progress' ? "warning" : "secondary"}>
+                              {detail.status || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </div>
-          
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Case ID</TableHead>
-                <TableHead>Case Owner</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Closed</TableHead>
-                <TableHead>CSAT</TableHead>
-                <TableHead>Feedback</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {details.map((detail: any, index: number) => (
-                <TableRow key={index}>
-                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
-                  <TableCell className="text-sm">{detail.owner_full_name || 'N/A'}</TableCell>
-                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
-                  <TableCell>
-                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
-                    {detail.priority || 'Medium'}
-                  </Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
-                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
-                  <TableCell>
-                    <Badge variant={detail.satisfaction > 80 ? "success" : detail.satisfaction < 60 ? "destructive" : "warning"}>
-                      {detail.satisfaction || 0}%
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">{detail.feedback || 'No feedback'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
         </div>
       );
     }
 
-    // Default fallback
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">No details available for this metric</p>
@@ -365,40 +493,113 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             </div>
           </div>
           
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Case ID</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Closed</TableHead>
-                <TableHead>SCT (Days)</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {details.map((detail: any, index: number) => (
-                <TableRow key={index}>
-                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
-                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
-                  <TableCell>{detail.title || 'N/A'}</TableCell>
-                  <TableCell>
-                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
-                    {detail.priority || 'Medium'}
-                  </Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
-                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
-                  <TableCell>
-                    <Badge variant={(detail.case_age_days || detail.sct) > 20 ? "destructive" : (detail.case_age_days || detail.sct) < 10 ? "success" : "secondary"}>
-                      {detail.case_age_days || detail.sct || 0}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="flex-1 flex flex-col min-h-0 border rounded-lg">
+            <div className="flex-1 overflow-auto min-h-0" style={{ maxHeight: 'calc(80vh - 300px)' }}>
+              <div className="min-w-full">
+                <Table style={{ tableLayout: 'fixed', width: '100%' }}>
+                  <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                    <TableRow>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('case_id')}>
+                        <div className="flex items-center gap-1">
+                          Case ID
+                          {renderSortIcon('case_id')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '130px', maxWidth: '130px' }} onClick={() => handleSort('products')}>
+                        <div className="flex items-center gap-1">
+                          Product
+                          {renderSortIcon('products')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '250px', maxWidth: '250px' }} onClick={() => handleSort('title')}>
+                        <div className="flex items-center gap-1">
+                          Title
+                          {renderSortIcon('title')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '90px', maxWidth: '90px' }} onClick={() => handleSort('priority')}>
+                        <div className="flex items-center gap-1">
+                          Priority
+                          {renderSortIcon('priority')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('created_date')}>
+                        <div className="flex items-center gap-1">
+                          Created
+                          {renderSortIcon('created_date')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('closed_date')}>
+                        <div className="flex items-center gap-1">
+                          Closed
+                          {renderSortIcon('closed_date')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '100px', maxWidth: '100px' }} onClick={() => handleSort('sct')}>
+                        <div className="flex items-center gap-1">
+                          SCT (Days)
+                          {renderSortIcon('sct')}
+                        </div>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(() => {
+                      const sortedData = sortField ? sortData(details, sortField, sortDirection) : details;
+                      
+                      return sortedData.map((detail: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell 
+                            title={detail.case_id || detail.caseId || 'N/A'}
+                            className="font-mono text-sm truncate" 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                          >
+                            {detail.case_id || detail.caseId || 'N/A'}
+                          </TableCell>
+                          <TableCell 
+                            title={detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}
+                            className="text-sm truncate" 
+                            style={{ width: '130px', maxWidth: '130px' }}
+                          >
+                            {detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}
+                          </TableCell>
+                          <TableCell 
+                            title={detail.title || 'N/A'}
+                            className="truncate" 
+                            style={{ width: '250px', maxWidth: '250px' }}
+                          >
+                            {detail.title || 'N/A'}
+                          </TableCell>
+                          <TableCell style={{ width: '90px', maxWidth: '90px' }}>
+                            <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                              {detail.priority || 'Medium'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                            className="truncate"
+                          >
+                            {formatDate(detail.created_date || detail.createdDate)}
+                          </TableCell>
+                          <TableCell 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                            className="truncate"
+                          >
+                            {formatDate(detail.closed_date || detail.closedDate)}
+                          </TableCell>
+                          <TableCell style={{ width: '100px', maxWidth: '100px' }}>
+                            <Badge variant={(detail.case_age_days || detail.sct) > 20 ? "destructive" : (detail.case_age_days || detail.sct) < 10 ? "success" : "secondary"}>
+                              {detail.case_age_days || detail.sct || 0}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -408,14 +609,10 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
       const p2Cases = details.filter(d => d.priority === 'P2').length;
       const p3Cases = details.filter(d => d.priority === 'P3').length;
       const p4Cases = details.filter(d => d.priority === 'P4').length;
-      const closedCases = details.filter(d => d.status === 'Closed').length;
-      const openCases = details.length - closedCases;
       
       return (
         <div className="space-y-6">
           <div className="bg-card p-4 rounded-lg border">
-            
-            {/* Summary Cards */}
             <div className="grid grid-cols-1 gap-4 mb-6">
               <div className="text-center p-4 bg-background rounded-lg border">
                 <p className="text-muted-foreground font-medium mb-1">Total Cases</p>
@@ -424,7 +621,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
               </div>
             </div>
 
-            {/* Priority Breakdown */}
             <div>
               <h4 className="font-semibold text-foreground mb-3">Priority Breakdown</h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -452,141 +648,180 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
             </div>
           </div>
           
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Case ID</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Closed</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {details.map((detail: any, index: number) => (
-                <TableRow key={index}>
-                  <TableCell className="font-mono text-sm">{detail.case_id || detail.caseId || 'N/A'}</TableCell>
-                  <TableCell className="text-sm">{detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}</TableCell>
-                  <TableCell>{detail.title || 'N/A'}</TableCell>
-                  <TableCell>
-                  <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
-                    {detail.priority || 'Medium'}
-                  </Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(detail.created_date || detail.createdDate)}</TableCell>
-                  <TableCell>{formatDate(detail.closed_date || detail.closedDate)}</TableCell>
-                  <TableCell>
-                    <Badge variant={detail.status === 'Closed' ? "success" : detail.status === 'In Progress' ? "warning" : "secondary"}>
-                      {detail.status || 'Unknown'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      );
-    }
-    
-    if (metric === 'satisfaction') {
-      return (
-        <div className="space-y-6">
-          <div className="bg-card p-4 rounded-lg border">
-            <h3 className="font-semibold text-foreground mb-2">{member.name} - Customer Satisfaction</h3>
-            <div className="grid grid-cols-4 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Overall CSAT</p>
-                <p className="font-semibold text-lg">{member.satisfaction}%</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Total Surveys</p>
-                <p className="font-semibold text-lg">{details.length}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">5-Star Ratings</p>
-                <p className="font-semibold text-lg">{details.filter(d => d.rating === 5).length}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Avg Rating</p>
-                <p className="font-semibold text-lg">{(details.reduce((acc, d) => acc + d.rating, 0) / details.length).toFixed(1)}/5</p>
+          <div className="flex-1 flex flex-col min-h-0 border rounded-lg">
+            <div className="flex-1 overflow-auto min-h-0" style={{ maxHeight: 'calc(80vh - 300px)' }}>
+              <div className="min-w-full">
+                <Table style={{ tableLayout: 'fixed', width: '100%' }}>
+                  <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                    <TableRow>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('case_id')}>
+                        <div className="flex items-center gap-1">
+                          Case ID
+                          {renderSortIcon('case_id')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '130px', maxWidth: '130px' }} onClick={() => handleSort('products')}>
+                        <div className="flex items-center gap-1">
+                          Product
+                          {renderSortIcon('products')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '250px', maxWidth: '250px' }} onClick={() => handleSort('title')}>
+                        <div className="flex items-center gap-1">
+                          Title
+                          {renderSortIcon('title')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '90px', maxWidth: '90px' }} onClick={() => handleSort('priority')}>
+                        <div className="flex items-center gap-1">
+                          Priority
+                          {renderSortIcon('priority')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('created_date')}>
+                        <div className="flex items-center gap-1">
+                          Created
+                          {renderSortIcon('created_date')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '120px', maxWidth: '120px' }} onClick={() => handleSort('closed_date')}>
+                        <div className="flex items-center gap-1">
+                          Closed
+                          {renderSortIcon('closed_date')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '100px', maxWidth: '100px' }} onClick={() => handleSort('status')}>
+                        <div className="flex items-center gap-1">
+                          Status
+                          {renderSortIcon('status')}
+                        </div>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(() => {
+                      const sortedData = sortField ? sortData(details, sortField, sortDirection) : details;
+                      
+                      return sortedData.map((detail: any, index: number) => (
+                        <TableRow key={index}>
+                          <TableCell 
+                            title={detail.case_id || detail.caseId || 'N/A'}
+                            className="font-mono text-sm truncate" 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                          >
+                            {detail.case_id || detail.caseId || 'N/A'}
+                          </TableCell>
+                          <TableCell 
+                            title={detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}
+                            className="text-sm truncate" 
+                            style={{ width: '130px', maxWidth: '130px' }}
+                          >
+                            {detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}
+                          </TableCell>
+                          <TableCell 
+                            title={detail.title || 'N/A'}
+                            className="truncate" 
+                            style={{ width: '250px', maxWidth: '250px' }}
+                          >
+                            {detail.title || 'N/A'}
+                          </TableCell>
+                          <TableCell style={{ width: '90px', maxWidth: '90px' }}>
+                            <Badge variant={detail.priority === 'P1' ? "destructive" : detail.priority === 'P2' ? "warning" : "secondary"}>
+                              {detail.priority || 'Medium'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                            className="truncate"
+                          >
+                            {formatDate(detail.created_date || detail.createdDate)}
+                          </TableCell>
+                          <TableCell 
+                            style={{ width: '120px', maxWidth: '120px' }}
+                            className="truncate"
+                          >
+                            {formatDate(detail.closed_date || detail.closedDate)}
+                          </TableCell>
+                          <TableCell style={{ width: '100px', maxWidth: '100px' }}>
+                            <Badge variant={detail.status === 'Closed' ? "success" : detail.status === 'In Progress' ? "warning" : "secondary"}>
+                              {detail.status || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </div>
-          
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Survey ID</TableHead>
-                <TableHead>Case ID</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead>Submitted</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {details.map((detail: any, index: number) => (
-                <TableRow key={index}>
-                  <TableCell className="font-mono text-sm">{detail.surveyId}</TableCell>
-                  <TableCell className="font-mono text-sm">{detail.caseId}</TableCell>
-                  <TableCell>
-                    <Badge variant={detail.rating >= 4 ? "success" : detail.rating >= 3 ? "warning" : "destructive"}>
-                      {detail.rating}/5
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{detail.category}</TableCell>
-                  <TableCell className="max-w-xs truncate">{detail.comment}</TableCell>
-                  <TableCell>{detail.submittedDate}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
         </div>
       );
     }
     
     return null;
   };
+
   const renderSurveyDetails = () => (
-    <div className="space-y-6">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Rating Category</TableHead>
-            <TableHead>Count</TableHead>
-            <TableHead>Percentage</TableHead>
-            <TableHead>Trend (vs Last Month)</TableHead>
-            <TableHead>Comments Sample</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data?.map((item: any, index: number) => (
-            <TableRow key={index}>
-              <TableCell className="font-medium">{item.name}</TableCell>
-              <TableCell>
-                <Badge variant="outline">{item.value}</Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant={item.percentage > 50 ? "success" : item.percentage < 20 ? "destructive" : "secondary"}>
-                  {item.percentage}%
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant={index === 0 ? "success" : index === 2 ? "destructive" : "secondary"}>
-                  {index === 0 ? "+3%" : index === 2 ? "-1%" : "+0.5%"}
-                </Badge>
-              </TableCell>
-              <TableCell className="max-w-xs truncate">
-                {index === 0 && "Excellent support, very helpful"}
-                {index === 1 && "Response was okay, could be faster"}
-                {index === 2 && "Took too long to resolve issue"}
-              </TableCell>
+    <div className="space-y-6 flex-1 overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('name')}>
+                <div className="flex items-center gap-1">
+                  Rating Category
+                  {renderSortIcon('name')}
+                </div>
+              </TableHead>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('value')}>
+                <div className="flex items-center gap-1">
+                  Count
+                  {renderSortIcon('value')}
+                </div>
+              </TableHead>
+              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('percentage')}>
+                <div className="flex items-center gap-1">
+                  Percentage
+                  {renderSortIcon('percentage')}
+                </div>
+              </TableHead>
+              <TableHead>Trend (vs Last Month)</TableHead>
+              <TableHead>Comments Sample</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {(() => {
+              if (!data) return null;
+              const sortedData = sortField ? sortData(data, sortField, sortDirection) : data;
+              
+              return sortedData.map((item: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{item.value}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={item.percentage > 50 ? "success" : item.percentage < 20 ? "destructive" : "secondary"}>
+                      {item.percentage}%
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={index === 0 ? "success" : index === 2 ? "destructive" : "secondary"}>
+                      {index === 0 ? "+3%" : index === 2 ? "-1%" : "+0.5%"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate">
+                    {index === 0 && "Excellent support, very helpful"}
+                    {index === 1 && "Response was okay, could be faster"}
+                    {index === 2 && "Took too long to resolve issue"}
+                  </TableCell>
+                </TableRow>
+              ));
+            })()}
+          </TableBody>
+        </Table>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
         <div className="bg-card p-4 rounded-lg border">
@@ -613,12 +848,12 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-[90vw] h-[80vh] max-w-none flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold">{getModalTitle()}</DialogTitle>
         </DialogHeader>
         
-        <div className="mt-6">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {type === 'team' ? renderTeamDetails() : type === 'survey' ? renderSurveyDetails() : renderIndividualDetails()}
         </div>
       </DialogContent>
