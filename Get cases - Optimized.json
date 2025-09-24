@@ -1,0 +1,461 @@
+{
+  "name": "Get cases - Optimized",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "get-performance-optimized",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-656, 272],
+      "id": "74f7e7b1-015f-4d4e-b2bc-777a97e8c5c8",
+      "name": "Webhook",
+      "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized webhook processing - simpler approach for better performance\nconst inputData = $input.first();\nconsole.log('=== OPTIMIZED PROCESSING WEBHOOK DATA ===');\n\n// Get the actual webhook data\nconst webhookJson = $input.first().json;\nlet actualData = null;\n\nif (webhookJson && webhookJson.body) {\n  actualData = webhookJson.body;\n} else if (webhookJson) {\n  actualData = webhookJson;\n} else {\n  actualData = inputData;\n}\n\nif (actualData) {\n  const entityType = actualData.entityType || '';\n  const entityName = actualData.entityName || '';\n  const ownerNamesRaw = actualData.ownerNames;\n  const eurekaDateRange = actualData.eurekaDateRange || '';\n  const dateRange = actualData.dateRange;\n  \n  // Convert ownerNames\n  let ownerNames = [];\n  if (ownerNamesRaw && typeof ownerNamesRaw === 'object') {\n    ownerNames = Object.values(ownerNamesRaw);\n  }\n  \n  const result = {\n    webhookData: {\n      entityType: entityType,\n      entityName: entityName,\n      ownerNames: ownerNames,\n      eurekaDateRange: eurekaDateRange,\n      dateRange: dateRange,\n      optimizedMode: true\n    }\n  };\n  \n  console.log('ProcessWebhookData - Optimized SUCCESS:', JSON.stringify(result, null, 2));\n  return [{ json: result }];\n  \n} else {\n  console.log('ERROR - No data found');\n  return [{ json: { error: 'No data found' } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-432, 272],
+      "id": "d4346a35-a67b-42e7-8f35-e135bf52c6b5",
+      "name": "ProcessWebhookData - Optimized"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "collection": "cases"
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [-208, 352],
+      "id": "cdb18050-cc03-4fe7-b104-ea5a2a1d9f23",
+      "name": "deleteDB",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "Pl29NJOEfuRbqWf6",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create Eureka API request with optimized batch size\ntry {\n  const webhookData = $node['ProcessWebhookData - Optimized'].json.webhookData;\n  \n  console.log('=== CREATING OPTIMIZED EUREKA API PAYLOAD ===');\n  console.log('Webhook data:', JSON.stringify(webhookData, null, 2));\n  \n  if (!webhookData.ownerNames || !Array.isArray(webhookData.ownerNames) || webhookData.ownerNames.length === 0) {\n    console.error('ERROR: Invalid ownerNames:', webhookData.ownerNames);\n    return [{ json: { error: 'Invalid ownerNames', ownerNames: webhookData.ownerNames } }];\n  }\n  \n  if (!webhookData.eurekaDateRange || typeof webhookData.eurekaDateRange !== 'string') {\n    console.error('ERROR: Invalid eurekaDateRange:', webhookData.eurekaDateRange);\n    return [{ json: { error: 'Invalid eurekaDateRange', eurekaDateRange: webhookData.eurekaDateRange } }];\n  }\n  \n  // OPTIMIZATION: Use larger batch size for teams/squads\n  const ownerCount = webhookData.ownerNames.length;\n  const isLargeDataset = ownerCount > 3 || webhookData.entityType === 'squad' || webhookData.entityType === 'team';\n  const batchSize = 30; // API maximum limit - cannot exceed 30\n  \n  const eurekaPayload = {\n    action: \"query\",\n    q: \"*\",\n    source: \"corp_cases_en\",\n    lang: \"en-us\",\n    search_type: \"text_text\",\n    filter: {\n      owner_full_name: webhookData.ownerNames,\n      status: [\"Resolved\", \"Cancelled\"],\n      closed_date: [webhookData.eurekaDateRange]\n    },\n    field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\", \"content\"],\n    start: 1,\n    num: batchSize,\n    optimizedMode: true,\n    ownerCount: ownerCount,\n    isLargeDataset: isLargeDataset\n  };\n  \n  console.log(`=== OPTIMIZED EUREKA PAYLOAD CREATED (batch size: ${batchSize}) ===`);\n  console.log('Large dataset mode:', isLargeDataset);\n  \n  return [{ json: eurekaPayload }];\n  \n} catch (error) {\n  console.error('Error in optimized API payload creation:', error);\n  return [{ json: { error: error.message, stack: error.stack } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-208, 192],
+      "id": "c4ec96e6-5bae-4f2a-84dd-f3c8245da21d",
+      "name": "Create Optimized API Payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connectone-stg.trendmicro.com:8443/api/eurekasearch/EurekaSearch",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "693e96c64b6b4358be879c161f8e4cf4"
+            },
+            {
+              "name": "Content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [16, 192],
+      "id": "b526a5ab-829c-43d1-98c7-66aaca1ae535",
+      "name": "eurekaAPI - Optimized",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LuqOI2Vp6NW9GEzF",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "continue-condition",
+              "leftValue": "={{ $json.data.start }}",
+              "rightValue": "={{ $json.data.results[0].total - 50 }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [240, 192],
+      "id": "289c1c3c-91de-43d5-8f9e-131acf900383",
+      "name": "Continue Processing?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized pagination respecting API limits\ntry {\n  const inputData = $input.first().json;\n  \n  console.log('=== OPTIMIZED PAGINATION ===');\n  \n  let currentStart = 1;\n  if (inputData.data && typeof inputData.data.start === 'number') {\n    currentStart = inputData.data.start;\n  } else if (typeof inputData.start === 'number') {\n    currentStart = inputData.start;\n  }\n  \n  // Get the original payload info\n  const isLargeDataset = inputData.isLargeDataset || false;\n  const stepSize = 30; // API maximum limit - cannot exceed 30\n  const newStart = currentStart + stepSize;\n  \n  // Access webhook data for payload reconstruction\n  let originalPayload = null;\n  try {\n    const webhookData = $node['ProcessWebhookData - Optimized'].json.webhookData;\n    originalPayload = {\n      action: \"query\",\n      q: \"*\",\n      source: \"corp_cases_en\",\n      lang: \"en-us\",\n      search_type: \"text_text\",\n      filter: {\n        owner_full_name: webhookData.ownerNames,\n        status: [\"Resolved\", \"Cancelled\"],\n        closed_date: [webhookData.eurekaDateRange]\n      },\n      field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\", \"content\"],\n      num: 30\n    };\n  } catch (error) {\n    console.log('Could not access webhook data:', error.message);\n    return [{ json: { error: 'Pagination failed: no webhook data' } }];\n  }\n  \n  const paginationPayload = {\n    ...originalPayload,\n    start: newStart,\n    optimizedMode: true,\n    isLargeDataset: isLargeDataset\n  };\n  \n  console.log(`Optimized pagination: ${currentStart} -> ${newStart} (step: 30 - API limit)`);\n  return [{ json: paginationPayload }];\n  \n} catch (error) {\n  console.error('Error in optimized pagination:', error);\n  return [{ json: { error: 'Pagination failed: ' + error.message } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [464, 272],
+      "id": "dbd9b918-a90d-4beb-9712-30a926b2b4f1",
+      "name": "Optimized Pagination"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data.results[0].docs",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [240, 80],
+      "id": "6ed24812-ae13-4ec8-9af9-e63c0d32898d",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [464, 80],
+      "id": "3b24f0d4-49be-466b-a276-a301adae4519",
+      "name": "Merge Results",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized cleaning - adaptive processing based on dataset size\nconst inputData = $input.all();\nconst LARGE_DATASET_THRESHOLD = 80; // Higher threshold for optimized version\n\n// Determine processing mode\nconst useFastMode = inputData.length > LARGE_DATASET_THRESHOLD;\nconsole.log(`OPTIMIZED CLEANING: ${inputData.length} items, using ${useFastMode ? 'FAST' : 'NORMAL'} mode`);\n\nif (useFastMode) {\n  // ULTRA-FAST MODE: Minimal processing for very large datasets\n  console.log('ULTRA-FAST MODE: Minimal processing for maximum performance');\n  \n  const ultraFastResults = inputData.map(function(item) {\n    const data = item.json;\n    \n    // Only essential cleaning\n    function ultraQuickClean(text) {\n      if (!text || typeof text !== 'string') return text;\n      return text.replace(/\\s+/g, ' ').trim().substring(0, 500); // Truncate early\n    }\n    \n    return {\n      json: {\n        case_id: data.case_id,\n        priority: data.priority,\n        owner_full_name: data.owner_full_name,\n        title: ultraQuickClean(data.title),\n        products: Array.isArray(data.products) ? data.products[0] : data.products,\n        status: data.status,\n        created_date: data.created_date,\n        closed_date: data.closed_date,\n        content: ultraQuickClean(data.content),\n        ultra_fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`ULTRA-FAST MODE: Processed ${ultraFastResults.length} items`);\n  return ultraFastResults;\n  \n} else {\n  // FAST MODE: Optimized processing for medium datasets\n  console.log('FAST MODE: Optimized processing');\n  \n  const fastResults = inputData.map(function(item) {\n    const data = item.json;\n    \n    function quickClean(text) {\n      if (!text || typeof text !== 'string') return text;\n      return text\n        .replace(/&nbsp;/g, ' ')\n        .replace(/&amp;/g, '&')\n        .replace(/&lt;/g, '<')\n        .replace(/&gt;/g, '>')\n        .replace(/<[^>]*>/g, '') // Remove HTML tags\n        .replace(/\\s+/g, ' ')\n        .trim();\n    }\n    \n    return {\n      json: {\n        case_id: data.case_id,\n        priority: data.priority,\n        owner_full_name: data.owner_full_name,\n        title: quickClean(data.title),\n        products: Array.isArray(data.products) ? data.products[0] : data.products,\n        status: data.status,\n        created_date: data.created_date,\n        closed_date: data.closed_date,\n        content: quickClean(data.content),\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Processed ${fastResults.length} items`);\n  return fastResults;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [688, 80],
+      "id": "73390a09-47b5-4461-80c7-01480d3dbaf0",
+      "name": "Optimized Data Cleaning"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized case age calculation with simplified email processing\nconst items = $input.all();\n\nfunction calculateOptimizedCaseAge(jsonData) {\n  return jsonData.map(caseItem => {\n    const createdDate = new Date(caseItem.created_date);\n    const closedDate = new Date(caseItem.closed_date);\n    const caseAgeInDays = Math.ceil((closedDate - createdDate) / (1000 * 60 * 60 * 24));\n    \n    // Simplified email thread creation for performance\n    let emailThread = '';\n    if (caseItem.ultra_fast_processed) {\n      emailThread = `ULTRA-FAST: Case ${caseItem.case_id} - Content available but not processed for performance`;\n    } else if (caseItem.fast_processed) {\n      const content = caseItem.content || '';\n      emailThread = content \n        ? `FAST: Case ${caseItem.case_id}\\n\\nContent: ${content.substring(0, 300)}${content.length > 300 ? '...' : ''}`\n        : `FAST: Case ${caseItem.case_id}\\n\\nNo content available`;\n    } else {\n      emailThread = `Case ${caseItem.case_id}\\n\\nProcessed content available`;\n    }\n    \n    return {\n      ...caseItem,\n      case_age_days: caseAgeInDays,\n      structured_email_thread: emailThread\n    };\n  });\n}\n\nconst processedData = items.map(item => item.json);\nconst result = calculateOptimizedCaseAge(processedData);\n\nconsole.log(`Optimized case age calculation completed for ${result.length} items`);\nreturn result.map(caseData => ({ json: caseData }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [912, 80],
+      "id": "44cd15d8-7097-4d9c-9d6e-2f58f34c49e5",
+      "name": "Optimized Case Age & Email"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "cases",
+        "fields": "case_id, priority, owner_full_name, title, products, status, created_date, closed_date, case_age_days, structured_email_thread, fast_processed, ultra_fast_processed",
+        "options": {
+          "upsert": true
+        }
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [1136, 80],
+      "id": "8579842c-3ad4-4d6c-8e91-42a05ee8dc80",
+      "name": "Optimized DB Insert",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "Pl29NJOEfuRbqWf6",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized entity data preparation\nconsole.log('=== OPTIMIZED ENTITY DATA PREPARATION ===');\n\nconst processedCases = $input.all();\nconsole.log(`Processed ${processedCases.length} total cases in optimized mode`);\n\n// Get webhook data\nlet webhookData = null;\ntry {\n  const processedData = $('ProcessWebhookData - Optimized').first().json;\n  webhookData = processedData.webhookData;\n} catch (error) {\n  console.log('Could not access webhook data:', error.message);\n}\n\nif (!webhookData || !webhookData.ownerNames || webhookData.ownerNames.length === 0) {\n  // Fallback: use data from processed cases\n  const firstCase = processedCases[0]?.json;\n  if (firstCase) {\n    const entityData = {\n      entityValue: firstCase.owner_full_name,\n      owner_full_name: firstCase.owner_full_name,\n      source: 'get-cases-optimized-workflow',\n      timestamp: new Date().toISOString(),\n      totalCasesProcessed: processedCases.length,\n      optimizedMode: true\n    };\n    \n    console.log('✅ Optimized entity data from cases:', JSON.stringify(entityData, null, 2));\n    return [{ json: entityData }];\n  }\n  \n  throw new Error('No webhook data or processed cases available');\n}\n\n// Use webhook data for entity preparation\nconst entityValues = webhookData.ownerNames;\nconst entityData = {\n  entityValue: entityValues[0], // Use first entity as representative\n  owner_full_name: entityValues[0],\n  source: 'get-cases-optimized-workflow',\n  timestamp: new Date().toISOString(),\n  totalCasesProcessed: processedCases.length,\n  allEntities: entityValues,\n  entityType: webhookData.entityType || 'unknown',\n  entityName: webhookData.entityName || 'unknown',\n  optimizedMode: true\n};\n\nconsole.log('✅ Optimized entity data prepared:', JSON.stringify(entityData, null, 2));\nreturn [{ json: entityData }];"
+      },
+      "id": "fb34672d-4279-4bd7-9016-80eb53cd5b03",
+      "name": "Prepare Optimized Entity Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1360, 80]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "VaX3w979KjLLcgNY",
+          "cachedResultName": "Calculate metrics"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [1584, 0],
+      "id": "e355a0a6-8ab2-4b2e-9637-20f5875cb35a",
+      "name": "Calculate Metrics"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "dP6H6aWkrIG79yuw",
+          "mode": "list",
+          "cachedResultName": "Process Survey"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [1584, 160],
+      "id": "d42f3abc-d3cc-403b-9931-6a4ec254a3f4",
+      "name": "Process Survey"
+    },
+    {
+      "parameters": {},
+      "id": "wait-both-workflows-complete",
+      "name": "Wait for Both Workflows",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [1808, 80],
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "QkTL13ss9wmvB2Fm",
+          "mode": "list",
+          "cachedResultName": "Aggregate Data"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "trigger-aggregate-data",
+      "name": "Trigger Aggregate Data",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [2032, 80]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ProcessWebhookData - Optimized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessWebhookData - Optimized": {
+      "main": [
+        [
+          {
+            "node": "deleteDB",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Optimized API Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Optimized API Payload": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI - Optimized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eurekaAPI - Optimized": {
+      "main": [
+        [
+          {
+            "node": "Continue Processing?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue Processing?": {
+      "main": [
+        [
+          {
+            "node": "Optimized Pagination",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optimized Pagination": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI - Optimized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Optimized Data Cleaning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optimized Data Cleaning": {
+      "main": [
+        [
+          {
+            "node": "Optimized Case Age & Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optimized Case Age & Email": {
+      "main": [
+        [
+          {
+            "node": "Optimized DB Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optimized DB Insert": {
+      "main": [
+        [
+          {
+            "node": "Prepare Optimized Entity Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Optimized Entity Data": {
+      "main": [
+        [
+          {
+            "node": "Calculate Metrics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Process Survey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Metrics": {
+      "main": [
+        [
+          {
+            "node": "Wait for Both Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Survey": {
+      "main": [
+        [
+          {
+            "node": "Wait for Both Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Both Workflows": {
+      "main": [
+        [
+          {
+            "node": "Trigger Aggregate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "get-cases-optimized",
+  "tags": []
+}

@@ -17,6 +17,7 @@ import EntityManagementDialog from '@/components/dashboard/EntityManagementDialo
 import BackendStatus from '@/components/dashboard/BackendStatus';
 import { useEntityDatabase } from '@/hooks/useEntityDatabase';
 import { DashboardData } from '@/lib/entityService';
+import CustomerSatisfactionService, { EntitySatisfactionData, ChartSurveyData } from '@/lib/customerSatisfactionService';
 import { useToast } from '@/hooks/use-toast';
 
 const IndexNew = () => {
@@ -129,6 +130,11 @@ const IndexNew = () => {
   // Calculate metrics workflow results state
   const [calculateMetricsData, setCalculateMetricsData] = useState<any>(null);
   const [detailedCasesData, setDetailedCasesData] = useState<any[]>([]);
+  
+  // Customer satisfaction data state
+  const [satisfactionData, setSatisfactionData] = useState<EntitySatisfactionData | null>(null);
+  const [chartSurveyData, setChartSurveyData] = useState<ChartSurveyData[]>([]);
+  const [satisfactionLoading, setSatisfactionLoading] = useState<boolean>(false);
 
   // Removed auto-selection to allow user to manually choose entities
 
@@ -200,6 +206,105 @@ const IndexNew = () => {
     }
     
     setSelectedTimeRange(range);
+  };
+
+  // Fetch satisfaction data for the selected entity
+  const fetchSatisfactionData = async (entityName: string, entityType: string) => {
+    try {
+      setSatisfactionLoading(true);
+      console.log(`Fetching satisfaction data for ${entityType}: ${entityName}`);
+      
+      if (entityType === 'dpe') {
+        // Direct DPE satisfaction data
+        const data = await CustomerSatisfactionService.getEntitySatisfactionData(entityName, entityType);
+        if (data) {
+          setSatisfactionData(data);
+          const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(data.satisfactionData);
+          setChartSurveyData(chartData);
+          console.log(`✅ Loaded satisfaction data for DPE: ${entityName}`, data.satisfactionData);
+        } else {
+          console.log(`No satisfaction data found for DPE: ${entityName}`);
+          setSatisfactionData(null);
+          setChartSurveyData([]);
+        }
+      } else if (entityType === 'squad') {
+        // Aggregate satisfaction data for squad members
+        const squadMembers = getSquadMembers();
+        if (squadMembers.length > 0) {
+          const aggregatedData = await CustomerSatisfactionService.getAggregatedSatisfactionData(squadMembers, entityType);
+          if (aggregatedData) {
+            setSatisfactionData({
+              entityName,
+              entityType,
+              entityId: entityName,
+              owner_full_name: entityName,
+              satisfactionData: aggregatedData,
+              surveyDetails: [] // Aggregated data doesn't include individual survey details
+            });
+            const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(aggregatedData);
+            setChartSurveyData(chartData);
+            console.log(`✅ Loaded aggregated satisfaction data for Squad: ${entityName}`, aggregatedData);
+          } else {
+            console.log(`No satisfaction data found for Squad: ${entityName}`);
+            setSatisfactionData(null);
+            setChartSurveyData([]);
+          }
+        } else {
+          console.log(`No squad members found for: ${entityName}`);
+          setSatisfactionData(null);
+          setChartSurveyData([]);
+        }
+      } else if (entityType === 'team') {
+        // Aggregate satisfaction data for all squad members in the team
+        const teamSquads = Object.entries(entityMappings?.squadToTeam || {})
+          .filter(([squad, team]) => team === entityName)
+          .map(([squad]) => squad);
+        
+        const teamDPEs = teamSquads.flatMap(squadName => 
+          Object.entries(entityMappings?.dpeToSquad || {})
+            .filter(([dpe, squad]) => squad === squadName)
+            .map(([dpe]) => dpe)
+        );
+        
+        if (teamDPEs.length > 0) {
+          const aggregatedData = await CustomerSatisfactionService.getAggregatedSatisfactionData(teamDPEs, entityType);
+          if (aggregatedData) {
+            setSatisfactionData({
+              entityName,
+              entityType,
+              entityId: entityName,
+              owner_full_name: entityName,
+              satisfactionData: aggregatedData,
+              surveyDetails: [] // Aggregated data doesn't include individual survey details
+            });
+            const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(aggregatedData);
+            setChartSurveyData(chartData);
+            console.log(`✅ Loaded aggregated satisfaction data for Team: ${entityName}`, aggregatedData);
+          } else {
+            console.log(`No satisfaction data found for Team: ${entityName}`);
+            setSatisfactionData(null);
+            setChartSurveyData([]);
+          }
+        } else {
+          console.log(`No team members found for: ${entityName}`);
+          setSatisfactionData(null);
+          setChartSurveyData([]);
+        }
+      }
+      
+    } catch (error) {
+      console.error(`Error fetching satisfaction data for ${entityType}: ${entityName}`, error);
+      setSatisfactionData(null);
+      setChartSurveyData([]);
+      
+      toast({
+        title: "Satisfaction Data Error",
+        description: `Failed to load satisfaction data for ${entityName}. Using fallback display.`,
+        variant: "destructive"
+      });
+    } finally {
+      setSatisfactionLoading(false);
+    }
   };
 
   const handleGenerateReport = async () => {
@@ -368,6 +473,21 @@ const IndexNew = () => {
         setGeneratedEntityValue(selectedEntityValue);
         setEntityChanged(false);
         setIsAnalysisEnabled(true);
+        
+        // Only fetch satisfaction data separately for squads/teams, not for individual DPEs
+        // (Individual DPE satisfaction data is now extracted directly from performance data)
+        console.log('🔍 [FIRST] Checking if should fetch satisfaction data separately:', {
+          selectedEntity,
+          selectedEntityValue,
+          shouldFetch: selectedEntity === 'squad' || selectedEntity === 'team'
+        });
+        
+        if (selectedEntity === 'squad' || selectedEntity === 'team') {
+          console.log('⚡ [FIRST] Fetching satisfaction data separately for squad/team');
+          await fetchSatisfactionData(selectedEntityValue, selectedEntity);
+        } else {
+          console.log('⏭️ [FIRST] Skipping separate satisfaction fetch for DPE (will use performance data)');
+        }
       } else {
         // Set empty data structure as fallback
         setCachedDashboardData({
@@ -401,6 +521,21 @@ const IndexNew = () => {
         setGeneratedEntityValue(selectedEntityValue);
         setEntityChanged(false);
         setIsAnalysisEnabled(true);
+        
+        // Only fetch satisfaction data separately for squads/teams, not for individual DPEs
+        // (Individual DPE satisfaction data is now extracted directly from performance data)
+        console.log('🔍 [SECOND] Checking if should fetch satisfaction data separately:', {
+          selectedEntity,
+          selectedEntityValue,
+          shouldFetch: selectedEntity === 'squad' || selectedEntity === 'team'
+        });
+        
+        if (selectedEntity === 'squad' || selectedEntity === 'team') {
+          console.log('⚡ [SECOND] Fetching satisfaction data separately for squad/team');
+          await fetchSatisfactionData(selectedEntityValue, selectedEntity);
+        } else {
+          console.log('⏭️ [SECOND] Skipping separate satisfaction fetch for DPE (will use performance data)');
+        }
       }
     } catch (error) {
       // Set fallback data on error
@@ -501,8 +636,68 @@ const IndexNew = () => {
               sct: Math.round((performanceData.reduce((sum, dpe) => sum + dpe.sct, 0) / performanceData.length) * 100) / 100, // Average SCT rounded to 2 decimal places
               closedCases: performanceData.reduce((sum, dpe) => sum + dpe.cases, 0), // Total cases (always integer)
               satisfaction: Math.round((performanceData.reduce((sum, dpe) => sum + dpe.satisfaction, 0) / performanceData.length) * 100) / 100, // Average satisfaction rounded to 2 decimal places
-              dsatPercentage: null // DSAT not available in performance_data collection yet
+              dsatPercentage: null // Will be calculated from satisfaction data below
             };
+            
+            // Aggregate satisfaction data for squad
+            let totalCsat = 0, totalNeutral = 0, totalDsat = 0;
+            const validSatisfactionData = validResults.filter(result => result.data.metrics?.customerSatisfaction);
+            
+            validSatisfactionData.forEach(result => {
+              const satisfaction = result.data.metrics.customerSatisfaction;
+              totalCsat += satisfaction.csat || 0;
+              totalNeutral += satisfaction.neutral || 0;
+              totalDsat += satisfaction.dsat || 0;
+            });
+            
+            const totalSurveys = totalCsat + totalNeutral + totalDsat;
+            if (totalSurveys > 0) {
+              const aggregatedSatisfaction = {
+                csat: totalCsat,
+                neutral: totalNeutral,
+                dsat: totalDsat,
+                total: totalSurveys,
+                csatPercentage: Math.round((totalCsat / totalSurveys) * 100),
+                neutralPercentage: Math.round((totalNeutral / totalSurveys) * 100),
+                dsatPercentage: Math.round((totalDsat / totalSurveys) * 100),
+                lastUpdated: new Date().toISOString(),
+                source: 'squad-aggregated-satisfaction'
+              };
+              
+              // Update squad metrics with DSAT percentage
+              squadAggregatedMetrics.dsatPercentage = aggregatedSatisfaction.dsatPercentage;
+              
+              // Set satisfaction data for the squad
+              setSatisfactionData({
+                entityName: generatedEntityValue,
+                entityType: 'squad',
+                entityId: generatedEntityValue,
+                owner_full_name: generatedEntityValue,
+                satisfactionData: aggregatedSatisfaction,
+                surveyDetails: []
+              });
+              
+              // Format for chart
+              const chartData = [{
+                name: 'CSAT (4-5)',
+                value: aggregatedSatisfaction.csat,
+                percentage: aggregatedSatisfaction.csatPercentage,
+                color: '#10b981'
+              }, {
+                name: 'Neutral (3)',
+                value: aggregatedSatisfaction.neutral,
+                percentage: aggregatedSatisfaction.neutralPercentage,
+                color: '#f59e0b'
+              }, {
+                name: 'DSAT (1-2)',
+                value: aggregatedSatisfaction.dsat,
+                percentage: aggregatedSatisfaction.dsatPercentage,
+                color: '#ef4444'
+              }];
+              
+              setChartSurveyData(chartData);
+              console.log('📊 Set squad satisfaction data:', aggregatedSatisfaction);
+            }
             
             // Aggregate all detailed cases for the squad
             const allSquadCases = performanceData.reduce((allCases, dpe) => {
@@ -626,8 +821,69 @@ const IndexNew = () => {
               sct: Math.round((validSquadResults.reduce((sum, squad) => sum + squad.squadMetrics.sct, 0) / validSquadResults.length) * 100) / 100, // Average SCT
               closedCases: validSquadResults.reduce((sum, squad) => sum + squad.squadMetrics.cases, 0), // Total cases
               satisfaction: Math.round((validSquadResults.reduce((sum, squad) => sum + squad.squadMetrics.satisfaction, 0) / validSquadResults.length) * 100) / 100, // Average satisfaction
-              dsatPercentage: null // DSAT not available in performance_data collection yet
+              dsatPercentage: null // Will be calculated from satisfaction data below
             };
+            
+            // Aggregate satisfaction data for team (from all squads' DPE data)
+            let totalTeamCsat = 0, totalTeamNeutral = 0, totalTeamDsat = 0;
+            const allDPEResults = validSquadResults.flatMap(squad => squad.dpeData || []);
+            const validTeamSatisfactionData = allDPEResults.filter(dpe => dpe.data.metrics?.customerSatisfaction);
+            
+            validTeamSatisfactionData.forEach(dpe => {
+              const satisfaction = dpe.data.metrics.customerSatisfaction;
+              totalTeamCsat += satisfaction.csat || 0;
+              totalTeamNeutral += satisfaction.neutral || 0;
+              totalTeamDsat += satisfaction.dsat || 0;
+            });
+            
+            const totalTeamSurveys = totalTeamCsat + totalTeamNeutral + totalTeamDsat;
+            if (totalTeamSurveys > 0) {
+              const aggregatedTeamSatisfaction = {
+                csat: totalTeamCsat,
+                neutral: totalTeamNeutral,
+                dsat: totalTeamDsat,
+                total: totalTeamSurveys,
+                csatPercentage: Math.round((totalTeamCsat / totalTeamSurveys) * 100),
+                neutralPercentage: Math.round((totalTeamNeutral / totalTeamSurveys) * 100),
+                dsatPercentage: Math.round((totalTeamDsat / totalTeamSurveys) * 100),
+                lastUpdated: new Date().toISOString(),
+                source: 'team-aggregated-satisfaction'
+              };
+              
+              // Update team metrics with DSAT percentage
+              teamAggregatedMetrics.dsatPercentage = aggregatedTeamSatisfaction.dsatPercentage;
+              
+              // Set satisfaction data for the team
+              setSatisfactionData({
+                entityName: generatedEntityValue,
+                entityType: 'team',
+                entityId: generatedEntityValue,
+                owner_full_name: generatedEntityValue,
+                satisfactionData: aggregatedTeamSatisfaction,
+                surveyDetails: []
+              });
+              
+              // Format for chart
+              const chartData = [{
+                name: 'CSAT (4-5)',
+                value: aggregatedTeamSatisfaction.csat,
+                percentage: aggregatedTeamSatisfaction.csatPercentage,
+                color: '#10b981'
+              }, {
+                name: 'Neutral (3)',
+                value: aggregatedTeamSatisfaction.neutral,
+                percentage: aggregatedTeamSatisfaction.neutralPercentage,
+                color: '#f59e0b'
+              }, {
+                name: 'DSAT (1-2)',
+                value: aggregatedTeamSatisfaction.dsat,
+                percentage: aggregatedTeamSatisfaction.dsatPercentage,
+                color: '#ef4444'
+              }];
+              
+              setChartSurveyData(chartData);
+              console.log('📊 Set team satisfaction data:', aggregatedTeamSatisfaction);
+            }
             
             // Aggregate all detailed cases for the team
             const allTeamCases = performanceData.reduce((allCases, squad) => {
@@ -653,11 +909,33 @@ const IndexNew = () => {
       // Query using entity_name instead of entity since we're storing the name directly
       const apiUrl = `http://localhost:3001/api/performance-data?entity_name=${generatedEntityValue}&startDate=${startDate}&endDate=${endDate}`;
       
+      console.log('🔍 Fetching performance data from:', apiUrl);
+      console.log('🔍 Query parameters:', {
+        generatedEntityValue,
+        startDate,
+        endDate,
+        selectedTimeRange
+      });
+      
       try {
         let performanceResponse = await fetch(apiUrl);
         
+        console.log('📡 Performance API response status:', performanceResponse.status);
+        
         if (performanceResponse.ok) {
           const performanceResult = await performanceResponse.json();
+          
+          console.log('📊 Performance API returned:', {
+            count: performanceResult.length,
+            entities: performanceResult.map(r => r.entity_name),
+            sampleRecord: performanceResult[0] ? {
+              entity_name: performanceResult[0].entity_name,
+              date: performanceResult[0].date,
+              hasMetrics: !!performanceResult[0].metrics,
+              metricsKeys: Object.keys(performanceResult[0].metrics || {}),
+              hasSampleCases: !!performanceResult[0].sample_cases
+            } : null
+          });
           
           if (performanceResult && performanceResult.length > 0) {
             const latestMetrics = performanceResult[0];
@@ -665,10 +943,54 @@ const IndexNew = () => {
             const metricsToSet = {
               sct: latestMetrics.metrics?.sct,
               closedCases: latestMetrics.metrics?.closedCases,
-              satisfaction: latestMetrics.metrics?.satisfaction
+              satisfaction: latestMetrics.metrics?.customerSatisfaction?.csatPercentage || latestMetrics.metrics?.satisfaction,
+              dsatPercentage: latestMetrics.metrics?.customerSatisfaction?.dsatPercentage || 0
             };
             
             setCalculateMetricsData(metricsToSet);
+            
+            console.log('✅ Found performance data with metrics:', metricsToSet);
+
+            // Also extract satisfaction data directly from performance data if available
+            if (latestMetrics.metrics?.customerSatisfaction) {
+              console.log('📊 Extracting satisfaction data from performance record:', latestMetrics.metrics.customerSatisfaction);
+              
+              const satisfactionFromPerformance = {
+                entityName: latestMetrics.entity_name,
+                entityType: latestMetrics.entity_type,
+                entityId: latestMetrics.entity_id || latestMetrics._id,
+                owner_full_name: latestMetrics.entity_name,
+                satisfactionData: latestMetrics.metrics.customerSatisfaction,
+                surveyDetails: latestMetrics.metrics.surveyDetails || []
+              };
+              
+              setSatisfactionData(satisfactionFromPerformance);
+              console.log('✅ Set satisfaction data from performance record:', satisfactionFromPerformance);
+              
+              // Format for chart
+              const chartData = [{
+                name: 'CSAT (4-5)',
+                value: latestMetrics.metrics.customerSatisfaction.csat,
+                percentage: latestMetrics.metrics.customerSatisfaction.csatPercentage,
+                color: '#10b981' // green
+              }, {
+                name: 'Neutral (3)',
+                value: latestMetrics.metrics.customerSatisfaction.neutral,
+                percentage: latestMetrics.metrics.customerSatisfaction.neutralPercentage,
+                color: '#f59e0b' // amber
+              }, {
+                name: 'DSAT (1-2)',
+                value: latestMetrics.metrics.customerSatisfaction.dsat,
+                percentage: latestMetrics.metrics.customerSatisfaction.dsatPercentage,
+                color: '#ef4444' // red
+              }];
+              
+              setChartSurveyData(chartData);
+              console.log('📈 Set chart survey data from performance record:', chartData);
+            } else {
+              console.log('⚠️ No customerSatisfaction data found in performance record');
+              console.log('Available metrics keys:', Object.keys(latestMetrics.metrics || {}));
+            }
           
           if (latestMetrics.sample_cases) {
             // Map the real case data to the format expected by the UI
@@ -702,7 +1024,8 @@ const IndexNew = () => {
             });
             setDetailedCasesData(mappedCasesData);
           } else {
-            alert('No sample_cases found in performance data');
+            console.log('⚠️ Performance data found but no sample_cases field');
+            console.log('Available fields in performance data:', Object.keys(latestMetrics));
           }
           
           // Update reportCurrentData with the actual calculated metrics
@@ -711,7 +1034,8 @@ const IndexNew = () => {
             sct: latestMetrics.metrics?.sct,
             closedCases: latestMetrics.metrics?.closedCases,
             cases: latestMetrics.metrics?.closedCases,
-            satisfaction: latestMetrics.metrics?.satisfaction,
+            satisfaction: latestMetrics.metrics?.customerSatisfaction?.csatPercentage || latestMetrics.metrics?.satisfaction,
+            dsatPercentage: latestMetrics.metrics?.customerSatisfaction?.dsatPercentage || 0,
             hasMetricsData: true
           }));
           
@@ -720,13 +1044,24 @@ const IndexNew = () => {
           return;
         } else {
           // Performance data response was empty
+          console.log('📭 No performance data found in response');
+          console.log('🔍 This might mean:');
+          console.log('   - The workflows haven\'t completed yet');
+          console.log('   - The data aggregation workflow didn\'t run');
+          console.log('   - The entity name doesn\'t match stored data');
+          console.log('   - The date range doesn\'t match stored data');
         }
       } else {
         // Performance data response not OK
+        console.error('❌ Performance API request failed:', performanceResponse.status, performanceResponse.statusText);
       }
       } catch (apiError) {
         // Error during API call
+        console.error('❌ Error during performance API call:', apiError);
       }
+
+      console.log('⚠️  No valid performance data found, falling back to cases collection calculation');
+      console.log('📋 This should only happen if workflows haven\'t completed or data aggregation failed');
 
       // Fallback: Calculate metrics from cases data directly
       const casesResponse = await fetch(`http://localhost:3001/api/cases?owner_full_name=${generatedEntityValue}&status=Resolved&startDate=${startDate}&endDate=${endDate}`);
@@ -1913,15 +2248,25 @@ const IndexNew = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KPICard
                   title="SCT Score"
-                  value={formatKPIValue(calculateMetricsData?.sct || reportCurrentData?.sct)}
-                  target={calculateMetricsData?.sct !== undefined || reportCurrentData?.sct !== undefined ? 15 : null}
+                  value={formatKPIValue(
+                    calculateMetricsData?.sct || 
+                    reportCurrentData?.sct
+                  )}
+                  target={
+                    (calculateMetricsData?.sct !== undefined) || 
+                    (reportCurrentData?.sct !== undefined) ? 15 : null
+                  }
                   unit="days"
                   icon={<Clock className="h-4 w-4" />}
                   description=""
                 />
                 <KPICard
                   title="Closed Cases"
-                  value={calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases}
+                  value={
+                    calculateMetricsData?.closedCases || 
+                    reportCurrentData?.closedCases || 
+                    reportCurrentData?.cases
+                  }
                   target={null}
                   unit=""
                   icon={<CheckCircle className="h-4 w-4" />}
@@ -1929,16 +2274,32 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="CSAT Score"
-                  value={formatKPIValue(calculateMetricsData?.satisfaction || reportCurrentData?.satisfaction)}
-                  target={calculateMetricsData?.satisfaction !== undefined || reportCurrentData?.satisfaction !== undefined ? 85 : null}
+                  value={formatKPIValue(
+                    satisfactionData?.satisfactionData?.csatPercentage || 
+                    calculateMetricsData?.satisfaction || 
+                    reportCurrentData?.satisfaction
+                  )}
+                  target={
+                    (satisfactionData?.satisfactionData?.csatPercentage !== undefined) ||
+                    (calculateMetricsData?.satisfaction !== undefined) || 
+                    (reportCurrentData?.satisfaction !== undefined) ? 85 : null
+                  }
                   unit="%"
                   icon={<ThumbsUp className="h-4 w-4" />}
                   description=""
                 />
                 <KPICard
                   title="DSAT Score"
-                  value={formatKPIValue(calculateMetricsData?.dsatPercentage || reportCurrentData?.dsatPercentage)}
-                  target={calculateMetricsData?.dsatPercentage !== undefined || reportCurrentData?.dsatPercentage !== undefined ? 5 : null}
+                  value={formatKPIValue(
+                    satisfactionData?.satisfactionData?.dsatPercentage || 
+                    calculateMetricsData?.dsatPercentage || 
+                    reportCurrentData?.dsatPercentage
+                  )}
+                  target={
+                    (satisfactionData?.satisfactionData?.dsatPercentage !== undefined) ||
+                    (calculateMetricsData?.dsatPercentage !== undefined) || 
+                    (reportCurrentData?.dsatPercentage !== undefined) ? 5 : null
+                  }
                   unit="%"
                   icon={<ThumbsDown className="h-4 w-4" />}
                   description=""
@@ -2041,9 +2402,13 @@ const IndexNew = () => {
                   </CardHeader>
                   <CardContent className="pt-2">
                     <SurveyAnalysisChart
-                      data={reportCurrentData?.surveyData || []}
+                      data={chartSurveyData || []}
                       title={generatedEntityValue || 'Customer Satisfaction'}
-                      totalSurveys={reportCurrentData?.totalSurveys || 0}
+                      totalSurveys={
+                        (chartSurveyData || []).length > 0 
+                          ? (chartSurveyData || []).reduce((sum, item) => sum + (item.value || 0), 0)
+                          : (satisfactionData?.total || 0)
+                      }
                       onPieClick={handleSurveySegmentClick}
                     />
                   </CardContent>
@@ -2145,14 +2510,39 @@ const IndexNew = () => {
                 </CardHeader>
                 <CardContent className="pt-2">
                   {(() => {
-                    const surveyData = [];
-                    const totalSurveys = 0;
+                    // Use real satisfaction data if available
+                    const realSurveyData = chartSurveyData || [];
+                    // Calculate total surveys from the actual chart data values
+                    const totalSurveys = realSurveyData.length > 0 
+                      ? realSurveyData.reduce((sum, item) => sum + (item.value || 0), 0)
+                      : (satisfactionData?.total || 0);
+                    const entityTitle = generatedEntityValue || selectedEntityValue || 'Customer Satisfaction';
                     
-                    // Always show the SurveyAnalysisChart component, it will handle the "No data available" state internally
+                    console.log('🔍 Rendering Customer Satisfaction Distribution:', {
+                      hasRealData: realSurveyData.length > 0,
+                      totalSurveys,
+                      entityTitle,
+                      satisfactionLoading,
+                      satisfactionDataExists: !!satisfactionData,
+                      satisfactionDataStructure: satisfactionData,
+                      satisfactionDataTotal: satisfactionData?.total,
+                      chartSurveyData: realSurveyData,
+                      chartSurveyDataStructure: realSurveyData.length > 0 ? realSurveyData.map(d => ({ 
+                        name: d.name, 
+                        value: d.value, 
+                        percentage: d.percentage 
+                      })) : []
+                    });
+                    
+                    // Show message if no data
+                    if (realSurveyData.length === 0 && totalSurveys === 0) {
+                      console.log('📭 No satisfaction data available for chart rendering');
+                    }
+                    
                     return (
                       <SurveyAnalysisChart
-                        data={surveyData}
-                        title="Customer Satisfaction"
+                        data={realSurveyData}
+                        title={entityTitle}
                         totalSurveys={totalSurveys}
                         onPieClick={handleSurveySegmentClick}
                       />

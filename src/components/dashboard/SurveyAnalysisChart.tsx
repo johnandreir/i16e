@@ -23,6 +23,20 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
   totalSurveys,
   onPieClick 
 }) => {
+  // Debug the data being passed to the chart
+  console.log('🔍 SurveyAnalysisChart received:', {
+    title,
+    totalSurveys,
+    data,
+    dataLength: data?.length,
+    dataStructure: data?.map(item => ({
+      name: item?.name,
+      value: item?.value,
+      percentage: item?.percentage,
+      color: item?.color
+    }))
+  });
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -80,6 +94,17 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
 
   // Always show chart, but use empty data when no valid data exists
   const hasValidData = data && data.length > 0 && data.some(item => item.value > 0) && totalSurveys > 0;
+  
+  console.log('🔍 SurveyAnalysisChart validation:', {
+    dataExists: !!data,
+    dataLength: data?.length,
+    hasItemsWithValue: data?.some(item => item.value > 0),
+    totalSurveysValue: totalSurveys,
+    totalSurveysType: typeof totalSurveys,
+    totalSurveysValid: totalSurveys > 0,
+    finalHasValidData: hasValidData,
+    actualDataValues: data?.map(item => ({ name: item?.name, value: item?.value }))
+  });
   
   // Use empty placeholder data when no data is available to show chart structure
   const chartData = hasValidData ? data : [
