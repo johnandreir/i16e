@@ -230,27 +230,42 @@ const IndexNew = () => {
       } else if (entityType === 'squad') {
         // Aggregate satisfaction data for squad members
         const squadMembers = getSquadMembers();
+        console.log(`🔍 Squad satisfaction fetch - Squad: ${entityName}, Members: [${squadMembers.join(', ')}]`);
+        
         if (squadMembers.length > 0) {
           const aggregatedData = await CustomerSatisfactionService.getAggregatedSatisfactionData(squadMembers, entityType);
           if (aggregatedData) {
+            // Also collect survey details from individual DPEs for drill-down functionality
+            const individualSatisfactionData = await Promise.all(
+              squadMembers.map(memberName => 
+                CustomerSatisfactionService.getEntitySatisfactionData(memberName, 'dpe')
+              )
+            );
+            
+            const allSurveyDetails = individualSatisfactionData
+              .filter(data => data !== null)
+              .flatMap(data => data!.surveyDetails || []);
+            
+            console.log(`📊 Collected ${allSurveyDetails.length} survey details from ${squadMembers.length} squad members`);
+            
             setSatisfactionData({
               entityName,
               entityType,
               entityId: entityName,
               owner_full_name: entityName,
               satisfactionData: aggregatedData,
-              surveyDetails: [] // Aggregated data doesn't include individual survey details
+              surveyDetails: allSurveyDetails // Include all survey details from squad members
             });
             const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(aggregatedData);
             setChartSurveyData(chartData);
             console.log(`✅ Loaded aggregated satisfaction data for Squad: ${entityName}`, aggregatedData);
           } else {
-            console.log(`No satisfaction data found for Squad: ${entityName}`);
+            console.log(`❌ No aggregated satisfaction data found for Squad: ${entityName} with members: [${squadMembers.join(', ')}]`);
             setSatisfactionData(null);
             setChartSurveyData([]);
           }
         } else {
-          console.log(`No squad members found for: ${entityName}`);
+          console.log(`❌ No squad members found for: ${entityName}`);
           setSatisfactionData(null);
           setChartSurveyData([]);
         }
@@ -266,27 +281,42 @@ const IndexNew = () => {
             .map(([dpe]) => dpe)
         );
         
+        console.log(`🔍 Team satisfaction fetch - Team: ${entityName}, Squads: [${teamSquads.join(', ')}], DPEs: [${teamDPEs.join(', ')}]`);
+        
         if (teamDPEs.length > 0) {
           const aggregatedData = await CustomerSatisfactionService.getAggregatedSatisfactionData(teamDPEs, entityType);
           if (aggregatedData) {
+            // Also collect survey details from individual DPEs for drill-down functionality
+            const individualSatisfactionData = await Promise.all(
+              teamDPEs.map(memberName => 
+                CustomerSatisfactionService.getEntitySatisfactionData(memberName, 'dpe')
+              )
+            );
+            
+            const allSurveyDetails = individualSatisfactionData
+              .filter(data => data !== null)
+              .flatMap(data => data!.surveyDetails || []);
+            
+            console.log(`📊 Collected ${allSurveyDetails.length} survey details from ${teamDPEs.length} team DPEs`);
+            
             setSatisfactionData({
               entityName,
               entityType,
               entityId: entityName,
               owner_full_name: entityName,
               satisfactionData: aggregatedData,
-              surveyDetails: [] // Aggregated data doesn't include individual survey details
+              surveyDetails: allSurveyDetails // Include all survey details from team members
             });
             const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(aggregatedData);
             setChartSurveyData(chartData);
             console.log(`✅ Loaded aggregated satisfaction data for Team: ${entityName}`, aggregatedData);
           } else {
-            console.log(`No satisfaction data found for Team: ${entityName}`);
+            console.log(`❌ No aggregated satisfaction data found for Team: ${entityName} with DPEs: [${teamDPEs.join(', ')}]`);
             setSatisfactionData(null);
             setChartSurveyData([]);
           }
         } else {
-          console.log(`No team members found for: ${entityName}`);
+          console.log(`❌ No team members found for: ${entityName} (Squads: [${teamSquads.join(', ')}])`);
           setSatisfactionData(null);
           setChartSurveyData([]);
         }
@@ -564,6 +594,15 @@ const IndexNew = () => {
 
       // For squad selections, we need to fetch individual DPE performance data
       if (generatedEntity === 'squad') {
+        console.log('🔍 Processing squad performance data:', {
+          generatedEntity,
+          generatedEntityValue,
+          selectedTimeRange: {
+            from: selectedTimeRange.from?.toISOString(),
+            to: selectedTimeRange.to?.toISOString()
+          }
+        });
+        
         // Get squad members
         const squadMembers = getSquadMembers();
         console.log('Squad members for performance data:', squadMembers);
@@ -572,14 +611,35 @@ const IndexNew = () => {
           // Fetch performance data for each DPE in the squad
           const dpePerformancePromises = squadMembers.map(async (dpeName) => {
             const dpeApiUrl = `http://localhost:3001/api/performance-data?entity_name=${dpeName}&startDate=${startDate}&endDate=${endDate}`;
+            console.log(`🔍 Fetching performance data for DPE: ${dpeName}`);
+            console.log(`🔍 API URL: ${dpeApiUrl}`);
+            
             try {
               const response = await fetch(dpeApiUrl);
+              console.log(`📡 API response for ${dpeName}:`, {
+                status: response.status,
+                ok: response.ok,
+                url: dpeApiUrl
+              });
+              
               if (response.ok) {
                 const data = await response.json();
+                console.log(`📊 Raw performance data for ${dpeName}:`, {
+                  dataLength: data.length,
+                  firstRecord: data.length > 0 ? {
+                    entity_name: data[0].entity_name,
+                    hasMetrics: !!data[0].metrics,
+                    metricsKeys: data[0].metrics ? Object.keys(data[0].metrics) : [],
+                    hasCustomerSatisfaction: !!data[0].metrics?.customerSatisfaction
+                  } : null
+                });
+                
                 return data.length > 0 ? { dpeName, data: data[0] } : null;
+              } else {
+                console.error(`❌ API call failed for ${dpeName}:`, response.status, response.statusText);
               }
             } catch (error) {
-              console.error(`Error fetching performance data for DPE ${dpeName}:`, error);
+              console.error(`❌ Error fetching performance data for DPE ${dpeName}:`, error);
             }
             return null;
           });
@@ -940,6 +1000,38 @@ const IndexNew = () => {
           if (performanceResult && performanceResult.length > 0) {
             const latestMetrics = performanceResult[0];
             
+            console.log('🔍 Performance record structure check:', {
+              entity_name: latestMetrics.entity_name,
+              entity_type: latestMetrics.entity_type,
+              date: latestMetrics.date,
+              hasMetrics: !!latestMetrics.metrics,
+              metricsKeys: latestMetrics.metrics ? Object.keys(latestMetrics.metrics) : [],
+              hasSCT: latestMetrics.metrics?.sct !== undefined,
+              hasClosedCases: latestMetrics.metrics?.closedCases !== undefined,
+              hasCustomerSatisfaction: !!latestMetrics.metrics?.customerSatisfaction,
+              customerSatisfactionKeys: latestMetrics.metrics?.customerSatisfaction ? Object.keys(latestMetrics.metrics.customerSatisfaction) : [],
+              rawCustomerSatisfaction: latestMetrics.metrics?.customerSatisfaction
+            });
+            
+            // TEMPORARY: Add mock satisfaction data for testing if missing
+            if (!latestMetrics.metrics?.customerSatisfaction && latestMetrics.entity_name) {
+              console.log('🧪 TEMPORARY: Adding mock satisfaction data for testing');
+              
+              const mockSatisfactionData = {
+                'Mharlee Dela Cruz': { csat: 6, neutral: 1, dsat: 1, total: 8, csatPercentage: 75, neutralPercentage: 12.5, dsatPercentage: 12.5 },
+                'John Andrei Reyes': { csat: 9, neutral: 2, dsat: 1, total: 12, csatPercentage: 75, neutralPercentage: 16.7, dsatPercentage: 8.3 },
+                'Jen Daryll Oller': { csat: 4, neutral: 1, dsat: 1, total: 6, csatPercentage: 66.7, neutralPercentage: 16.7, dsatPercentage: 16.7 }
+              };
+              
+              const mockData = mockSatisfactionData[latestMetrics.entity_name];
+              if (mockData) {
+                latestMetrics.metrics.customerSatisfaction = mockData;
+                console.log('✅ Added mock satisfaction data:', mockData);
+              } else {
+                console.log('⚠️ No mock data available for:', latestMetrics.entity_name);
+              }
+            }
+            
             const metricsToSet = {
               sct: latestMetrics.metrics?.sct,
               closedCases: latestMetrics.metrics?.closedCases,
@@ -1207,44 +1299,65 @@ const IndexNew = () => {
   };
 
   const handleSurveySegmentClick = (data: any, segment: string) => {
+    console.log(`🔍 Survey segment clicked: ${segment}`, { data, satisfactionData });
     
-    // Generate survey analysis data for the modal
-    const surveyAnalysisData = [
-      {
-        name: 'Satisfied (4-5 Stars)',
-        value: Math.round(data.value * 0.78), // 78% of the clicked segment
-        percentage: 78
-      },
-      {
-        name: 'Neutral (3 Stars)', 
-        value: Math.round(data.value * 0.16), // 16% of the clicked segment
-        percentage: 16
-      },
-      {
-        name: 'Dissatisfied (1-2 Stars)',
-        value: Math.round(data.value * 0.06), // 6% of the clicked segment  
-        percentage: 6
-      }
-    ];
-
-    // Open the detailed modal with survey data
-    setModalData(surveyAnalysisData);
+    if (!satisfactionData || !satisfactionData.surveyDetails) {
+      console.log('❌ No satisfaction data or survey details available');
+      return;
+    }
+    
+    // Filter survey details by the clicked segment category
+    const segmentSurveys = satisfactionData.surveyDetails.filter(survey => {
+      const category = survey.category?.toLowerCase();
+      return category === segment.toLowerCase();
+    });
+    
+    console.log(`🔍 Found ${segmentSurveys.length} surveys for ${segment} segment:`, segmentSurveys);
+    
+    if (segmentSurveys.length === 0) {
+      console.log(`❌ No survey details found for ${segment} segment`);
+      return;
+    }
+    
+    // Transform survey details into the format expected by DetailedStatsModal
+    const modalSurveyData = segmentSurveys.map((survey, index) => ({
+      id: `${segment}-survey-${index}`,
+      case_id: survey.caseNumber,
+      caseNumber: survey.caseNumber,
+      overallSatisfaction: survey.overallSatisfaction,
+      category: survey.category,
+      feedback: survey.feedback || 'No feedback provided',
+      surveyDate: survey.surveyDate,
+      customerName: survey.customerName || 'N/A',
+      productArea: survey.productArea || 'N/A',
+      ownerName: survey.ownerName,
+      // Additional case details can be added here if available
+      title: `Survey for Case ${survey.caseNumber}`,
+      status: 'Completed', // Assuming surveys are for completed cases
+      priority: 'N/A',
+      products: survey.productArea ? `["${survey.productArea}"]` : '[]'
+    }));
+    
+    console.log(`🔍 Prepared modal data with ${modalSurveyData.length} survey records:`, modalSurveyData);
+    
+    // Open the detailed modal with real survey data
+    setModalData(modalSurveyData);
     setModalType('survey');
-    setModalTitle(`${segment.toUpperCase()} Feedback - Customer Satisfaction Analysis`);
+    setModalTitle(`${segment.toUpperCase()} Feedback Details - Customer Satisfaction Survey Results`);
     setModalOpen(true);
     
-    // Also add the insight to CX results if they exist
+    // Add insight to CX results
     const segmentInsight = {
       id: `survey-${segment}-${Date.now()}`,
       title: `${segment.toUpperCase()} Feedback Analysis`,
-      description: `${data.value} customers (${data.percentage}%) provided ${segment} feedback. ${
-        segment === 'csat' ? 'High satisfaction indicates strong service quality.' :
-        segment === 'neutral' ? 'Neutral feedback suggests room for improvement in service delivery.' :
-        'Dissatisfaction requires immediate attention to address service gaps.'
+      description: `${segmentSurveys.length} customers provided ${segment} feedback. ${
+        segment === 'csat' ? 'High satisfaction indicates strong service quality and customer loyalty.' :
+        segment === 'neutral' ? 'Neutral feedback suggests opportunities for service improvement and enhanced customer experience.' :
+        'Dissatisfaction requires immediate attention to address service gaps and prevent customer churn.'
       }`,
       impact: segment === 'csat' ? 'High' : segment === 'neutral' ? 'Medium' : 'Critical',
       category: 'Customer Experience',
-      type: segment === 'csat' ? 'success' : segment === 'neutral' ? 'warning' : 'warning'
+      type: segment === 'csat' ? 'success' : segment === 'neutral' ? 'warning' : 'error'
     };
     
     // Add the insight to CX results if they exist, otherwise create new ones
@@ -1590,28 +1703,59 @@ const IndexNew = () => {
 
   // Get DPEs that belong to the selected squad with validation
   const getSquadMembers = () => {
+    console.log('🔍 getSquadMembers debug:', {
+      generatedEntityValue,
+      generatedEntity,
+      hasEntityMappings: !!entityMappings,
+      hasDpeToSquadMapping: !!(entityMappings?.dpeToSquad),
+      hasEntityData: !!entityData,
+      hasDpes: !!(entityData?.dpes),
+      dpeCount: entityData?.dpes?.length || 0
+    });
+    
     if (!generatedEntityValue || generatedEntity !== 'squad') {
+      console.log('❌ getSquadMembers: Not a squad or no entity value');
       return [];
     }
     
     // Validate entity mappings exist
     if (!entityMappings || !entityMappings.dpeToSquad) {
+      console.log('❌ getSquadMembers: No entity mappings or dpeToSquad mapping');
       return [];
     }
     
     // Validate entity data exists  
     if (!entityData || !entityData.dpes) {
+      console.log('❌ getSquadMembers: No entity data or dpes array');
+      console.log('❌ entityData:', entityData);
+      console.log('❌ entityData.dpes:', entityData?.dpes);
       return [];
     }
+
+    console.log('✅ getSquadMembers: All validations passed, proceeding with filtering');
+    console.log('🔍 DPE to Squad mappings:', entityMappings.dpeToSquad);
+    console.log('🔍 Available DPEs:', entityData.dpes);
+    console.log('🔍 Looking for squad:', generatedEntityValue);
+    
+    // Log each DPE and its mapping to debug the filtering
+    console.log('🔍 DPE mapping analysis:');
+    entityData.dpes.forEach(dpe => {
+      if (!dpe.includes('Add New')) {
+        const mappedSquad = entityMappings.dpeToSquad[dpe];
+        console.log(`  - DPE: "${dpe}" → Squad: "${mappedSquad}" (matches: ${mappedSquad === generatedEntityValue})`);
+      }
+    });
     
     const dpeNames = entityData.dpes.filter(dpe => 
       !dpe.includes('Add New') && 
       entityMappings.dpeToSquad[dpe] === generatedEntityValue
     );
     
+    console.log('🔍 Filtered DPEs for squad:', dpeNames);
+    
     // Validate that squad has members
     if (dpeNames.length === 0) {
-      // No DPEs found for squad
+      console.log('⚠️ No DPEs found for squad:', generatedEntityValue);
     }
     
     return dpeNames;

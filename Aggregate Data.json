@@ -1,36 +1,36 @@
 {
-  "name": "Aggregate Data",
+  "name": "Save KPI",
   "nodes": [
     {
       "parameters": {},
-      "id": "7e1165c5-5414-4278-a8a9-0a9a91ef64e4",
+      "id": "1ff75981-f10c-459e-b864-5b00a2499029",
       "name": "Aggregate Data Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [320, 96]
+      "position": [-352, -96]
     },
     {
       "parameters": {
-        "jsCode": "// Combine KPI data from Calculate Metrics and Process Survey workflows\nconst allInputData = $input.all();\n\nconsole.log('=== SAVE KPI WORKFLOW - DATA MERGING ===');\nconsole.log('Received items for KPI merge:', allInputData.length);\n\n// Separate records by type and group by entity\nconst casePerformanceRecords = new Map();\nconst satisfactionRecords = new Map();\n\nallInputData.forEach((item, index) => {\n  const kpiData = item.json;\n  const entityName = kpiData.entity_name || kpiData.entityName;\n  \n  // Determine record type\n  if (kpiData.metrics?.customerSatisfaction) {\n    // This is a satisfaction record from Process Survey\n    console.log(`📊 Satisfaction record ${index + 1}: ${entityName}`);\n    satisfactionRecords.set(entityName, kpiData);\n  } else if (kpiData.metrics?.sct !== undefined || kpiData.sample_cases) {\n    // This is a case performance record from Calculate Metrics\n    console.log(`📈 Case performance record ${index + 1}: ${entityName}`);\n    casePerformanceRecords.set(entityName, kpiData);\n  } else {\n    console.log(`⚠️ Unknown record type ${index + 1}: ${entityName}`);\n  }\n});\n\nconsole.log('📋 Data grouping summary:', {\n  casePerformanceEntities: Array.from(casePerformanceRecords.keys()),\n  satisfactionEntities: Array.from(satisfactionRecords.keys()),\n  totalCaseRecords: casePerformanceRecords.size,\n  totalSatisfactionRecords: satisfactionRecords.size\n});\n\n// Merge data by entity - use case performance as base, add satisfaction data\nconst mergedRecords = [];\n\n// Process each case performance record as the base\ncasePerformanceRecords.forEach((caseRecord, entityName) => {\n  const satisfactionRecord = satisfactionRecords.get(entityName);\n  \n  console.log(`🔄 Merging data for: ${entityName}`, {\n    hasCaseData: !!caseRecord,\n    hasSatisfactionData: !!satisfactionRecord\n  });\n  \n  // Create merged record with case performance as base\n  const mergedRecord = {\n    entity_id: satisfactionRecord?.entity_id || null, // Use satisfaction entity_id if available\n    entity_name: caseRecord.entity_name,\n    entity_type: caseRecord.entity_type,\n    date: caseRecord.date,\n    \n    // Merge metrics: case performance + satisfaction data\n    metrics: {\n      // Case performance metrics\n      sct: caseRecord.metrics?.sct || 0,\n      closedCases: caseRecord.metrics?.closedCases || 0,\n      \n      // Add satisfaction data if available\n      ...(satisfactionRecord?.metrics?.customerSatisfaction && {\n        customerSatisfaction: satisfactionRecord.metrics.customerSatisfaction\n      }),\n      \n      // Add survey details if available\n      ...(satisfactionRecord?.metrics?.surveyDetails && {\n        surveyDetails: satisfactionRecord.metrics.surveyDetails\n      })\n    },\n    \n    // Case performance specific fields\n    cases_count: caseRecord.cases_count || 0,\n    sample_cases: caseRecord.sample_cases || [],\n    metadata: caseRecord.metadata || {},\n    \n    // Timestamps - use most recent or case performance timestamps\n    created_at: caseRecord.created_at,\n    updated_at: caseRecord.updated_at || new Date(),\n    \n    // Source tracking\n    source: satisfactionRecord?.source ? \n      `${caseRecord.source || 'case-workflow'} + ${satisfactionRecord.source}` : \n      (caseRecord.source || 'case-workflow')\n  };\n  \n  mergedRecords.push(mergedRecord);\n  \n  console.log(`✅ Merged record for ${entityName}:`, {\n    hasScMetrics: !!(mergedRecord.metrics.sct || mergedRecord.metrics.closedCases),\n    hasSatisfactionMetrics: !!mergedRecord.metrics.customerSatisfaction,\n    hasSurveyDetails: !!mergedRecord.metrics.surveyDetails,\n    casesCount: mergedRecord.cases_count,\n    sampleCasesCount: mergedRecord.sample_cases?.length || 0\n  });\n});\n\n// Handle satisfaction records that don't have corresponding case performance records\nsatisfactionRecords.forEach((satisfactionRecord, entityName) => {\n  if (!casePerformanceRecords.has(entityName)) {\n    console.log(`⚠️ Satisfaction-only record for: ${entityName} (no case performance data)`);\n    \n    // Create record with satisfaction data only\n    const satisfactionOnlyRecord = {\n      entity_id: satisfactionRecord.entity_id || null,\n      entity_name: satisfactionRecord.entity_name,\n      entity_type: satisfactionRecord.entity_type,\n      date: satisfactionRecord.date,\n      \n      metrics: {\n        sct: 0, // No case data available\n        closedCases: 0, // No case data available\n        customerSatisfaction: satisfactionRecord.metrics.customerSatisfaction,\n        surveyDetails: satisfactionRecord.metrics.surveyDetails || []\n      },\n      \n      cases_count: 0,\n      sample_cases: [],\n      metadata: {\n        entityType: satisfactionRecord.entity_type,\n        calculationSource: 'satisfaction-only',\n        note: 'No case performance data available for this entity'\n      },\n      \n      created_at: satisfactionRecord.created_at,\n      updated_at: new Date(),\n      source: satisfactionRecord.source\n    };\n    \n    mergedRecords.push(satisfactionOnlyRecord);\n  }\n});\n\nconsole.log('🎯 Final merged records summary:', {\n  totalMergedRecords: mergedRecords.length,\n  entitiesWithBothData: casePerformanceRecords.size,\n  entitiesWithSatisfactionOnly: satisfactionRecords.size - casePerformanceRecords.size\n});\n\nif (mergedRecords.length > 0) {\n  console.log('📋 Sample merged record structure:', Object.keys(mergedRecords[0]));\n  console.log('📊 Sample metrics keys:', Object.keys(mergedRecords[0].metrics));\n}\n\n// Return merged records for MongoDB insertion\nreturn mergedRecords.map(record => ({ json: record }));"
+        "jsCode": "// Combine KPI data from Calculate Metrics and Process Survey workflows\nconst allInputData = $input.all();\n\nconsole.log('=== SAVE KPI WORKFLOW - DATA MERGING ===');\nconsole.log('Received items for KPI merge:', allInputData.length);\n\n// Separate records by type and group by entity\nconst casePerformanceRecords = new Map();\nconst satisfactionRecords = new Map();\n\nallInputData.forEach((item, index) => {\n  const kpiData = item.json;\n  const entityName = kpiData.entity_name || kpiData.entityName;\n  \n  console.log(`🔍 Processing record ${index + 1}:`, {\n    entityName,\n    entityType: kpiData.entity_type,\n    entityId: kpiData.entity_id,\n    hasCustomerSatisfaction: !!kpiData.metrics?.customerSatisfaction,\n    hasSCT: kpiData.metrics?.sct !== undefined,\n    hasSampleCases: !!kpiData.sample_cases,\n    source: kpiData.source\n  });\n  \n  // Determine record type\n  if (kpiData.metrics?.customerSatisfaction) {\n    // This is a satisfaction record from Process Survey\n    console.log(`📊 Satisfaction record ${index + 1}: ${entityName}`);\n    satisfactionRecords.set(entityName, kpiData);\n  } else if (kpiData.metrics?.sct !== undefined || kpiData.sample_cases) {\n    // This is a case performance record from Calculate Metrics\n    console.log(`📈 Case performance record ${index + 1}: ${entityName}`);\n    casePerformanceRecords.set(entityName, kpiData);\n  } else {\n    console.log(`⚠️ Unknown record type ${index + 1}: ${entityName}`);\n  }\n});\n\nconsole.log('📋 Data grouping summary:', {\n  casePerformanceEntities: Array.from(casePerformanceRecords.keys()),\n  satisfactionEntities: Array.from(satisfactionRecords.keys()),\n  totalCaseRecords: casePerformanceRecords.size,\n  totalSatisfactionRecords: satisfactionRecords.size\n});\n\n// Debug the entity matching problem\nif (casePerformanceRecords.size === 0) {\n  console.log('🔥 CRITICAL: No case performance records found!');\n  console.log('🔍 All input records:', allInputData.map(item => ({\n    entity_name: item.json.entity_name,\n    entity_type: item.json.entity_type,\n    hasMetrics: !!item.json.metrics,\n    metricsKeys: item.json.metrics ? Object.keys(item.json.metrics) : [],\n    hasSampleCases: !!item.json.sample_cases,\n    source: item.json.source\n  })));\n}\n\nif (satisfactionRecords.size > 0 && casePerformanceRecords.size === 0) {\n  console.log('⚠️ MISMATCH: We have satisfaction records but NO case performance records');\n  console.log('This suggests the Calculate Metrics workflow is not running or not producing output');\n}\n\n// Merge data by entity - use case performance as base, add satisfaction data\nconst mergedRecords = [];\n\n// Process each case performance record as the base\ncasePerformanceRecords.forEach((caseRecord, entityName) => {\n  const satisfactionRecord = satisfactionRecords.get(entityName);\n  \n  console.log(`🔄 Merging data for: ${entityName}`, {\n    hasCaseData: !!caseRecord,\n    hasSatisfactionData: !!satisfactionRecord\n  });\n  \n  // Create merged record with case performance as base\n  const mergedRecord = {\n    entity_id: caseRecord.entity_name || caseRecord.entity_id, // Use consistent entity identifier\n    entity_name: caseRecord.entity_name,\n    entity_type: caseRecord.entity_type,\n    date: caseRecord.date,\n    \n    // Merge metrics: case performance + satisfaction data\n    metrics: {\n      // Case performance metrics\n      sct: caseRecord.metrics?.sct || 0,\n      closedCases: caseRecord.metrics?.closedCases || 0,\n      \n      // Add satisfaction data if available\n      ...(satisfactionRecord?.metrics?.customerSatisfaction && {\n        customerSatisfaction: satisfactionRecord.metrics.customerSatisfaction\n      })\n    },\n    \n    // Case performance specific fields\n    cases_count: caseRecord.cases_count || 0,\n    sample_cases: caseRecord.sample_cases || [],\n    \n    // Survey details at root level (not in metrics)\n    ...(satisfactionRecord?.metrics?.surveyDetails && {\n      surveyDetails: satisfactionRecord.metrics.surveyDetails\n    }),\n    \n    metadata: caseRecord.metadata || {},\n    \n    // Timestamps - use most recent or case performance timestamps\n    created_at: caseRecord.created_at,\n    updated_at: caseRecord.updated_at || new Date(),\n    \n    // Source tracking\n    source: satisfactionRecord?.source ? \n      `${caseRecord.source || 'case-workflow'} + ${satisfactionRecord.source}` : \n      (caseRecord.source || 'case-workflow')\n  };\n  \n  mergedRecords.push(mergedRecord);\n  \n  console.log(`✅ Merged record for ${entityName}:`, {\n    hasScMetrics: !!(mergedRecord.metrics.sct || mergedRecord.metrics.closedCases),\n    hasSatisfactionMetrics: !!mergedRecord.metrics.customerSatisfaction,\n    hasSurveyDetails: !!mergedRecord.surveyDetails,\n    casesCount: mergedRecord.cases_count,\n    sampleCasesCount: mergedRecord.sample_cases?.length || 0\n  });\n});\n\n// Handle satisfaction records that don't have corresponding case performance records\nsatisfactionRecords.forEach((satisfactionRecord, entityName) => {\n  if (!casePerformanceRecords.has(entityName)) {\n    console.log(`⚠️ SKIPPING Satisfaction-only record for: ${entityName} (no case performance data found)`);\n    console.log(`❌ Available case performance entities:`, Array.from(casePerformanceRecords.keys()));\n    console.log(`❌ This satisfaction entity: ${entityName} not found in case performance records`);\n    \n    // DO NOT CREATE satisfaction-only records - they cause excess data\n    // Instead, log the issue for debugging\n    console.log(`🚫 Not saving satisfaction-only record for ${entityName} to prevent excess data`);\n  }\n});\n\nconsole.log('🎯 Final merged records summary:', {\n  totalMergedRecords: mergedRecords.length,\n  entitiesWithBothData: casePerformanceRecords.size,\n  entitiesWithSatisfactionOnly: satisfactionRecords.size - casePerformanceRecords.size\n});\n\nif (mergedRecords.length > 0) {\n  console.log('📋 Sample merged record structure:', Object.keys(mergedRecords[0]));\n  console.log('📊 Sample metrics keys:', Object.keys(mergedRecords[0].metrics));\n}\n\n// Return merged records for MongoDB insertion\nreturn mergedRecords.map(record => ({ json: record }));"
       },
-      "id": "dd0266d0-1048-4b0d-b8a9-968f0b347d27",
+      "id": "69fc2f6c-f3cb-4c22-ac0e-aedcc401cbb6",
       "name": "Process Aggregate Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [544, 96]
+      "position": [-128, -96]
     },
     {
       "parameters": {
         "operation": "insert",
         "collection": "performance_data",
-        "fields": "entity_id, entity_name, entity_type, date, metrics, cases_count, sample_cases, metadata, created_at, updated_at, source",
+        "fields": "entity_id, entity_name, entity_type, date, metrics, cases_count, sample_cases, surveyDetails, metadata, created_at, updated_at, source",
         "options": {}
       },
-      "id": "27885ef4-5768-4310-8853-7c60db5c8dab",
+      "id": "73e8b6f5-f26c-4e0d-b19d-2b264cbd99b0",
       "name": "Save Aggregate Data",
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1,
-      "position": [1216, 96],
+      "position": [96, -96],
       "credentials": {
         "mongoDb": {
           "id": "Pl29NJOEfuRbqWf6",
@@ -40,138 +40,14 @@
     },
     {
       "parameters": {},
-      "id": "003d2967-75df-4aba-8e7b-a3477d5de764",
+      "id": "93598bf2-3453-411b-a609-308046f2b59d",
       "name": "Done",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1440, 96]
+      "position": [320, -96]
     }
   ],
-  "pinData": {
-    "Aggregate Data Trigger": [
-      {
-        "json": {
-          "entity_name": "Mharlee Dela Cruz",
-          "entity_type": "dpe",
-          "date": "2025-09-24",
-          "metrics": {
-            "sct": 53,
-            "closedCases": 3
-          },
-          "cases_count": 3,
-          "sample_cases": [
-            {
-              "case_id": "TM-03608291",
-              "title": "Uninstaller for Apex",
-              "status": "Resolved",
-              "priority": "P3",
-              "case_age_days": 78,
-              "owner_full_name": "Mharlee Dela Cruz",
-              "created_date": "2025-07-07T08:20:39+00:00",
-              "closed_date": "2025-09-22T13:00:11+00:00",
-              "products": "[\"Apex One\"]"
-            },
-            {
-              "case_id": "TM-03737488",
-              "title": "Unable to uninstall Apex One agent",
-              "status": "Resolved",
-              "priority": "P4",
-              "case_age_days": 20,
-              "owner_full_name": "Mharlee Dela Cruz",
-              "created_date": "2025-08-14T10:08:07+00:00",
-              "closed_date": "2025-09-03T08:33:45+00:00",
-              "products": "[\"Trend Vision One\"]"
-            },
-            {
-              "case_id": "TM-03653642",
-              "title": "[PCT-72561] Hosts remain in \"Unmanaged endpoints\" status",
-              "status": "Resolved",
-              "priority": "P4",
-              "case_age_days": 61,
-              "owner_full_name": "Mharlee Dela Cruz",
-              "created_date": "2025-07-11T08:42:04+00:00",
-              "closed_date": "2025-09-09T13:12:47+00:00",
-              "products": "[\"Trend Vision One\"]"
-            }
-          ],
-          "metadata": {
-            "totalSctDays": 159,
-            "validSctCases": 3,
-            "entityType": "dpe",
-            "calculationSource": "multi-dpe-workflow",
-            "batchId": "2025-09-24T21:47:51.751Z"
-          },
-          "created_at": "2025-09-24T21:47:51.814Z",
-          "updated_at": "2025-09-24T21:47:51.814Z"
-        }
-      },
-      {
-        "json": {
-          "entity_id": "Mharlee Dela Cruz",
-          "entity_name": "Mharlee Dela Cruz",
-          "entity_type": "dpe",
-          "date": "2025-09-24",
-          "metrics": {
-            "customerSatisfaction": {
-              "csat": 4,
-              "neutral": 0,
-              "dsat": 0,
-              "total": 4,
-              "csatPercentage": 100,
-              "neutralPercentage": 0,
-              "dsatPercentage": 0,
-              "lastUpdated": "2025-09-24T21:47:53.170Z",
-              "source": "satisfaction-survey-workflow"
-            },
-            "surveyDetails": [
-              {
-                "caseNumber": "TM-03292294",
-                "overallSatisfaction": 5,
-                "category": "csat",
-                "feedback": "",
-                "surveyDate": "2025-09-24T21:47:53.162Z",
-                "customerName": "",
-                "productArea": "",
-                "ownerName": "Mharlee Dela Cruz"
-              },
-              {
-                "caseNumber": "TM-03292171",
-                "overallSatisfaction": 5,
-                "category": "csat",
-                "feedback": "",
-                "surveyDate": "2025-09-24T21:47:53.162Z",
-                "customerName": "",
-                "productArea": "",
-                "ownerName": "Mharlee Dela Cruz"
-              },
-              {
-                "caseNumber": "TM-03292294",
-                "overallSatisfaction": 5,
-                "category": "csat",
-                "feedback": "",
-                "surveyDate": "2025-09-24T21:47:53.163Z",
-                "customerName": "",
-                "productArea": "",
-                "ownerName": "Mharlee Dela Cruz"
-              },
-              {
-                "caseNumber": "TM-03526262",
-                "overallSatisfaction": 5,
-                "category": "csat",
-                "feedback": "",
-                "surveyDate": "2025-09-24T21:47:53.163Z",
-                "customerName": "",
-                "productArea": "",
-                "ownerName": "Mharlee Dela Cruz"
-              }
-            ]
-          },
-          "created_at": "2025-09-24T21:47:53.171Z",
-          "source": "satisfaction-workflow"
-        }
-      }
-    ]
-  },
+  "pinData": {},
   "connections": {
     "Aggregate Data Trigger": {
       "main": [
@@ -211,7 +87,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "569e7195-b7f4-48d8-a10c-b56f6ffe12a9",
+  "versionId": "5cb0d819-7d46-45db-90d0-dd08b7b284af",
   "meta": {
     "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
   },

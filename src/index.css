@@ -44,7 +44,11 @@ All colors MUST be HSL.
     --ring: 217 91% 60%;
 
     /* Dashboard specific tokens */
-    --dashboard-bg: linear-gradient(135deg, hsl(210 20% 98%) 0%, hsl(217 20% 96%) 100%);
+    --dashboard-bg: linear-gradient(
+      135deg,
+      hsl(210 20% 98%) 0%,
+      hsl(217 20% 96%) 100%
+    );
     --glass-bg: hsla(0, 0%, 100%, 0.8);
     --glass-border: hsla(217, 91%, 60%, 0.2);
     --kpi-success: 142 76% 56%;
@@ -57,9 +61,12 @@ All colors MUST be HSL.
 
     /* Shadows */
     --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-glow: 0 0 0 1px hsla(217, 91%, 60%, 0.1), 0 4px 16px hsla(217, 91%, 60%, 0.12);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-glow: 0 0 0 1px hsla(217, 91%, 60%, 0.1),
+      0 4px 16px hsla(217, 91%, 60%, 0.12);
 
     --radius: 0.5rem;
 
@@ -117,7 +124,11 @@ All colors MUST be HSL.
     --ring: 217 91% 60%;
 
     /* Dashboard specific tokens */
-    --dashboard-bg: linear-gradient(135deg, hsl(215 28% 9%) 0%, hsl(215 25% 12%) 100%);
+    --dashboard-bg: linear-gradient(
+      135deg,
+      hsl(215 28% 9%) 0%,
+      hsl(215 25% 12%) 100%
+    );
     --glass-bg: hsla(215, 25%, 12%, 0.8);
     --glass-border: hsla(217, 91%, 60%, 0.3);
     --kpi-success: 142 76% 56%;
@@ -130,9 +141,12 @@ All colors MUST be HSL.
 
     /* Shadows */
     --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-    --shadow-glow: 0 0 0 1px hsla(217, 91%, 60%, 0.2), 0 4px 16px hsla(217, 91%, 60%, 0.25);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3),
+      0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3),
+      0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-glow: 0 0 0 1px hsla(217, 91%, 60%, 0.2),
+      0 4px 16px hsla(217, 91%, 60%, 0.25);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -172,5 +186,19 @@ All colors MUST be HSL.
 
   .chart-container {
     @apply glass-card rounded-xl p-4;
+  }
+
+  /* Recharts tooltip cursor fixes */
+  .recharts-tooltip-cursor {
+    fill: transparent !important;
+    stroke: transparent !important;
+  }
+
+  .recharts-active-bar rect {
+    fill-opacity: 1 !important;
+  }
+
+  .recharts-bar-rectangle:hover {
+    filter: brightness(1.1);
   }
 }

@@ -764,83 +764,142 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
 
   const renderSurveyDetails = () => (
     <div className="space-y-6 flex-1 overflow-hidden flex flex-col">
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('name')}>
-                <div className="flex items-center gap-1">
-                  Rating Category
-                  {renderSortIcon('name')}
-                </div>
-              </TableHead>
-              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('value')}>
-                <div className="flex items-center gap-1">
-                  Count
-                  {renderSortIcon('value')}
-                </div>
-              </TableHead>
-              <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('percentage')}>
-                <div className="flex items-center gap-1">
-                  Percentage
-                  {renderSortIcon('percentage')}
-                </div>
-              </TableHead>
-              <TableHead>Trend (vs Last Month)</TableHead>
-              <TableHead>Comments Sample</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(() => {
-              if (!data) return null;
-              const sortedData = sortField ? sortData(data, sortField, sortDirection) : data;
-              
-              return sortedData.map((item: any, index: number) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{item.value}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={item.percentage > 50 ? "success" : item.percentage < 20 ? "destructive" : "secondary"}>
-                      {item.percentage}%
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={index === 0 ? "success" : index === 2 ? "destructive" : "secondary"}>
-                      {index === 0 ? "+3%" : index === 2 ? "-1%" : "+0.5%"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {index === 0 && "Excellent support, very helpful"}
-                    {index === 1 && "Response was okay, could be faster"}
-                    {index === 2 && "Took too long to resolve issue"}
-                  </TableCell>
+      <div className="flex-1 flex flex-col min-h-0 border rounded-lg">
+        <div className="flex-1 overflow-auto min-h-0" style={{ maxHeight: 'calc(80vh - 350px)' }}>
+          <div className="min-w-full">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                <TableRow>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('case_id')}>
+                    <div className="flex items-center gap-1">
+                      Case Number
+                      {renderSortIcon('case_id')}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('overallSatisfaction')}>
+                    <div className="flex items-center gap-1">
+                      Rating
+                      {renderSortIcon('overallSatisfaction')}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('category')}>
+                    <div className="flex items-center gap-1">
+                      Category
+                      {renderSortIcon('category')}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('surveyDate')}>
+                    <div className="flex items-center gap-1">
+                      Survey Date
+                      {renderSortIcon('surveyDate')}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('customerName')}>
+                    <div className="flex items-center gap-1">
+                      Customer
+                      {renderSortIcon('customerName')}
+                    </div>
+                  </TableHead>
+                  <TableHead>Feedback</TableHead>
                 </TableRow>
-              ));
-            })()}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        <div className="bg-card p-4 rounded-lg border">
-          <h4 className="font-semibold text-sm text-muted-foreground">Key Insights</h4>
-          <ul className="text-sm text-foreground space-y-1 mt-2">
-            <li>• 78% customers highly satisfied (4-5 rating)</li>
-            <li>• 6% dissatisfaction rate (lowest in 6 months)</li>
-            <li>• Response time main factor in ratings</li>
-            <li>• Technical expertise highly appreciated</li>
-          </ul>
-        </div>
-        <div className="bg-card p-4 rounded-lg border">
-          <h4 className="font-semibold text-sm text-muted-foreground">Action Items</h4>
-          <ul className="text-sm text-foreground space-y-1 mt-2">
-            <li>• Reduce average response time by 20%</li>
-            <li>• Implement proactive communication</li>
-            <li>• Focus on first-contact resolution</li>
-            <li>• Enhanced follow-up procedures</li>
-          </ul>
+              </TableHeader>
+              <TableBody>
+                {(() => {
+                  if (!data || data.length === 0) {
+                    return (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          No survey data available
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  
+                  const sortedData = sortField ? sortData(data, sortField, sortDirection) : data;
+                  
+                  return sortedData.map((survey: any, index: number) => {
+                    // Get satisfaction rating display
+                    const getRatingBadge = (rating: number, category: string) => {
+                      const variant = category === 'csat' ? 'success' : 
+                                   category === 'neutral' ? 'secondary' : 'destructive';
+                      return (
+                        <Badge variant={variant}>
+                          {rating}/5 ⭐
+                        </Badge>
+                      );
+                    };
+                    
+                    const getCategoryBadge = (category: string) => {
+                      const variant = category === 'csat' ? 'success' : 
+                                   category === 'neutral' ? 'secondary' : 'destructive';
+                      const label = category === 'csat' ? 'CSAT' :
+                                  category === 'neutral' ? 'Neutral' : 'DSAT';
+                      return <Badge variant={variant}>{label}</Badge>;
+                    };
+                    
+                    const formatDate = (dateString: string) => {
+                      try {
+                        return new Date(dateString).toLocaleDateString();
+                      } catch {
+                        return dateString || 'N/A';
+                      }
+                    };
+                    
+                    return (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">
+                          <code className="text-xs bg-muted px-2 py-1 rounded">
+                            {survey.case_id || survey.caseNumber || 'N/A'}
+                          </code>
+                        </TableCell>
+                        <TableCell>
+                          {getRatingBadge(survey.overallSatisfaction || 0, survey.category)}
+                        </TableCell>
+                        <TableCell>
+                          {getCategoryBadge(survey.category)}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(survey.surveyDate)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {survey.customerName || 'N/A'}
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="text-sm">
+                            {survey.feedback && survey.feedback !== 'No feedback provided' ? (
+                              <div className="space-y-1">
+                                <p className="text-wrap break-words" style={{ 
+                                  display: '-webkit-box', 
+                                  WebkitLineClamp: 3, 
+                                  WebkitBoxOrient: 'vertical', 
+                                  overflow: 'hidden' 
+                                }}>
+                                  {survey.feedback}
+                                </p>
+                                {survey.feedback.length > 100 && (
+                                  <button 
+                                    className="text-xs text-primary hover:underline"
+                                    onClick={() => {
+                                      alert(`Full Feedback:\n\n${survey.feedback}`);
+                                    }}
+                                    title="Click to see full feedback"
+                                  >
+                                    Show full feedback
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground italic">No feedback provided</span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  });
+                })()}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
     </div>

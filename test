@@ -1,0 +1,118 @@
+  {
+    "entity_name": "Mharlee Dela Cruz",
+    "entity_type": "dpe",
+    "date": "2025-09-25",
+    "metrics": {
+      "sct": 5.3,
+      "closedCases": 4
+    },
+	      "customerSatisfaction": {
+        "csat": 4,
+        "neutral": 0,
+        "dsat": 0,
+        "total": 4,
+        "csatPercentage": 100,
+        "neutralPercentage": 0,
+        "dsatPercentage": 0,
+        "lastUpdated": "2025-09-25T10:52:11.238Z",
+        "source": "satisfaction-survey-workflow"
+      },
+    "cases_count": 4,
+    "sample_cases": [
+      {
+        "case_id": "TM-03677360",
+        "title": "WFBS customers complain about slow excel performance",
+        "status": "Resolved",
+        "priority": "P3",
+        "case_age_days": 7,
+        "owner_full_name": "Mharlee Dela Cruz",
+        "created_date": "2025-07-14T11:27:18+00:00",
+        "closed_date": "2025-07-21T09:03:19+00:00",
+        "products": "[\"Worry-Free Business Security Services\"]"
+      },
+      {
+        "case_id": "TM-03522637",
+        "title": "Uninstall tool for XBC",
+        "status": "Resolved",
+        "priority": "P3",
+        "case_age_days": 8,
+        "owner_full_name": "Mharlee Dela Cruz",
+        "created_date": "2025-06-25T14:42:53+00:00",
+        "closed_date": "2025-07-03T13:01:17+00:00",
+        "products": "[\"Apex One\"]"
+      },
+      {
+        "case_id": "TM-03550456",
+        "title": "CHANGE FROM CLP to LMP LAMPROS MARIS",
+        "status": "Resolved",
+        "priority": "P3",
+        "case_age_days": 3,
+        "owner_full_name": "Mharlee Dela Cruz",
+        "created_date": "2025-07-01T07:18:08+00:00",
+        "closed_date": "2025-07-03T12:51:51+00:00",
+        "products": "[\"Worry-Free Business Security Services\"]"
+      },
+      {
+        "case_id": "TM-03550437",
+        "title": "CHANGE FROM CLP to LMP MOURTZINOS NIKOLAOS",
+        "status": "Resolved",
+        "priority": "P3",
+        "case_age_days": 3,
+        "owner_full_name": "Mharlee Dela Cruz",
+        "created_date": "2025-07-01T07:15:53+00:00",
+        "closed_date": "2025-07-03T12:52:15+00:00",
+        "products": "[\"Worry-Free Business Security Services\"]"
+      }
+    ],
+	"surveyDetails": [
+        {
+          "caseNumber": "TM-03292294",
+          "overallSatisfaction": 5,
+          "category": "csat",
+          "feedback": "",
+          "surveyDate": "2025-09-25T10:52:11.202Z",
+          "customerName": "",
+          "productArea": "",
+          "ownerName": "Mharlee Dela Cruz"
+        },
+        {
+          "caseNumber": "TM-03292171",
+          "overallSatisfaction": 5,
+          "category": "csat",
+          "feedback": "",
+          "surveyDate": "2025-09-25T10:52:11.203Z",
+          "customerName": "",
+          "productArea": "",
+          "ownerName": "Mharlee Dela Cruz"
+        },
+        {
+          "caseNumber": "TM-03292294",
+          "overallSatisfaction": 5,
+          "category": "csat",
+          "feedback": "",
+          "surveyDate": "2025-09-25T10:52:11.203Z",
+          "customerName": "",
+          "productArea": "",
+          "ownerName": "Mharlee Dela Cruz"
+        },
+        {
+          "caseNumber": "TM-03526262",
+          "overallSatisfaction": 5,
+          "category": "csat",
+          "feedback": "",
+          "surveyDate": "2025-09-25T10:52:11.203Z",
+          "customerName": "",
+          "productArea": "",
+          "ownerName": "Mharlee Dela Cruz"
+        }
+      ],
+    "metadata": {
+      "totalSctDays": 21,
+      "validSctCases": 4,
+      "entityType": "squad",
+      "calculationSource": "multi-dpe-workflow",
+      "batchId": "2025-09-25T10:52:09.467Z"
+    },
+    "created_at": "2025-09-25T10:52:09.556Z",
+    "updated_at": "2025-09-25T10:52:09.556Z"
+  }

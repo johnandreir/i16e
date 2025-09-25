@@ -102,10 +102,6 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
               <BarChart 
                 data={chartData} 
                 margin={{ top: dynamicTopMargin, right: 30, left: 20, bottom: 5 }}
-                style={{ 
-                  '--recharts-bar-hover': 'transparent',
-                  '--recharts-bar-active': 'transparent'
-                } as React.CSSProperties}
               >
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis 
@@ -117,7 +113,7 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 height={80}
               />
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
               <Legend />
               <Bar 
                 dataKey="sct" 

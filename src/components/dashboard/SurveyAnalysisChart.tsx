@@ -103,15 +103,30 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
     totalSurveysType: typeof totalSurveys,
     totalSurveysValid: totalSurveys > 0,
     finalHasValidData: hasValidData,
-    actualDataValues: data?.map(item => ({ name: item?.name, value: item?.value }))
+    actualDataValues: data?.map(item => ({ name: item?.name, value: item?.value })),
+    filteredDataLength: hasValidData ? data.filter(item => item.value > 0).length : 0
   });
   
   // Use empty placeholder data when no data is available to show chart structure
-  const chartData = hasValidData ? data : [
-    { name: 'CSAT (4-5)', value: 0, percentage: 0, color: '#10b981' },
-    { name: 'Neutral (3)', value: 0, percentage: 0, color: '#f59e0b' },
-    { name: 'DSAT (1-2)', value: 0, percentage: 0, color: '#ef4444' }
-  ];
+  const chartData = hasValidData ? 
+    data.filter(item => item.value > 0) : // Filter out segments with 0 values for cleaner pie chart
+    [
+      { name: 'CSAT (4-5)', value: 0, percentage: 0, color: '#10b981' },
+      { name: 'Neutral (3)', value: 0, percentage: 0, color: '#f59e0b' },
+      { name: 'DSAT (1-2)', value: 0, percentage: 0, color: '#ef4444' }
+    ];
+
+  console.log('🎨 Chart rendering data:', {
+    originalDataLength: data?.length || 0,
+    filteredDataLength: chartData.length,
+    chartData: chartData.map(item => ({
+      name: item.name,
+      value: item.value,
+      percentage: item.percentage
+    })),
+    isSingleSegment: chartData.length === 1,
+    hasValidData
+  });
 
   const handleSegmentClick = (data: any, index: number) => {
     if (onPieClick && hasValidData) {
@@ -149,9 +164,18 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
                 fill="#8884d8"
                 dataKey="value"
                 onClick={handleSegmentClick}
+                startAngle={90} // Start from top for better visual alignment
+                endAngle={450} // Full circle for proper rendering
+                stroke={chartData.length === 1 ? "none" : "#ffffff"} // Remove stroke for single segment
+                strokeWidth={chartData.length === 1 ? 0 : 2} // No stroke width for single segment
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.color}
+                    stroke={chartData.length === 1 ? "none" : "#ffffff"}
+                    strokeWidth={chartData.length === 1 ? 0 : 1}
+                  />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />

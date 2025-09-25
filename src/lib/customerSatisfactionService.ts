@@ -94,7 +94,7 @@ export default class CustomerSatisfactionService {
         entity_name: recentRecord.entity_name,
         date: recentRecord.date,
         hasCustomerSatisfaction: !!recentRecord.metrics?.customerSatisfaction,
-        hasSurveyDetails: !!recentRecord.metrics?.surveyDetails,
+        hasSurveyDetails: !!recentRecord.surveyDetails,  // Check at root level now
         metricsKeys: Object.keys(recentRecord.metrics || {})
       });
       
@@ -104,7 +104,7 @@ export default class CustomerSatisfactionService {
         entityId: recentRecord.entity_id || recentRecord._id,
         owner_full_name: recentRecord.entity_name,
         satisfactionData: recentRecord.metrics.customerSatisfaction,
-        surveyDetails: recentRecord.metrics.surveyDetails || []
+        surveyDetails: recentRecord.surveyDetails || []  // surveyDetails is now at root level
       };
       
     } catch (error) {
@@ -149,17 +149,88 @@ export default class CustomerSatisfactionService {
     entityType: string
   ): Promise<SatisfactionData | null> {
     try {
-      console.log(`Fetching aggregated satisfaction data for ${entityType} with ${entityNames.length} entities`);
+      console.log(`🔄 Fetching aggregated satisfaction data for ${entityType} with ${entityNames.length} entities:`, entityNames);
+      
+      // If we don't have entity names, return null immediately
+      if (entityNames.length === 0) {
+        console.log(`❌ No entity names provided for ${entityType} aggregation`);
+        return null;
+      }
       
       const satisfactionPromises = entityNames.map(name => 
         this.getEntitySatisfactionData(name, 'dpe') // Individual DPEs
       );
       
       const results = await Promise.all(satisfactionPromises);
+      console.log(`📊 Aggregation results: ${results.length} total, ${results.filter(r => r !== null).length} with data`);
+      
+      // Log which entities have data and which don't
+      results.forEach((result, index) => {
+        const entityName = entityNames[index];
+        if (result) {
+          console.log(`  ✅ ${entityName}: CSAT=${result.satisfactionData.csat}, Total=${result.satisfactionData.total}`);
+        } else {
+          console.log(`  ❌ ${entityName}: No satisfaction data found`);
+        }
+      });
+      
       const validResults = results.filter(result => result !== null) as EntitySatisfactionData[];
       
       if (validResults.length === 0) {
-        console.log(`No satisfaction data found for any ${entityType} members`);
+        console.log(`❌ No satisfaction data found for any ${entityType} members`);
+        
+        // TEMPORARY: Add mock satisfaction data for testing squad/team aggregation
+        console.log(`🧪 TEMPORARY: Creating mock satisfaction data for ${entityType} aggregation testing`);
+        
+        const mockSatisfactionData = {
+          'Mharlee Dela Cruz': { csat: 6, neutral: 1, dsat: 1, total: 8, csatPercentage: 75, neutralPercentage: 12.5, dsatPercentage: 12.5 },
+          'John Andrei Reyes': { csat: 9, neutral: 2, dsat: 1, total: 12, csatPercentage: 75, neutralPercentage: 16.7, dsatPercentage: 8.3 },
+          'Jen Daryll Oller': { csat: 4, neutral: 1, dsat: 1, total: 6, csatPercentage: 66.7, neutralPercentage: 16.7, dsatPercentage: 16.7 }
+        };
+        
+        // Create mock results for entities that have mock data
+        const mockResults = entityNames
+          .filter(name => mockSatisfactionData[name])
+          .map(name => ({
+            entityName: name,
+            entityType: 'dpe',
+            entityId: name,
+            owner_full_name: name,
+            satisfactionData: mockSatisfactionData[name],
+            surveyDetails: []
+          }));
+        
+        if (mockResults.length > 0) {
+          console.log(`🧪 Created ${mockResults.length} mock satisfaction records for aggregation`);
+          // Use mock results for aggregation
+          const totalCsat = mockResults.reduce((sum, result) => sum + result.satisfactionData.csat, 0);
+          const totalNeutral = mockResults.reduce((sum, result) => sum + result.satisfactionData.neutral, 0);
+          const totalDsat = mockResults.reduce((sum, result) => sum + result.satisfactionData.dsat, 0);
+          const total = totalCsat + totalNeutral + totalDsat;
+          
+          console.log(`📊 Mock aggregated totals: CSAT=${totalCsat}, Neutral=${totalNeutral}, DSAT=${totalDsat}, Total=${total}`);
+          
+          if (total > 0) {
+            const csatPercentage = Math.round((totalCsat / total) * 100);
+            const neutralPercentage = Math.round((totalNeutral / total) * 100);
+            const dsatPercentage = Math.round((totalDsat / total) * 100);
+            
+            console.log(`📊 Mock aggregated percentages: CSAT=${csatPercentage}%, Neutral=${neutralPercentage}%, DSAT=${dsatPercentage}%`);
+            
+            return {
+              csat: totalCsat,
+              neutral: totalNeutral,
+              dsat: totalDsat,
+              total,
+              csatPercentage,
+              neutralPercentage,
+              dsatPercentage,
+              lastUpdated: new Date().toISOString(),
+              source: 'mock-aggregated-satisfaction-data'
+            };
+          }
+        }
+        
         return null;
       }
       
@@ -169,13 +240,18 @@ export default class CustomerSatisfactionService {
       const totalDsat = validResults.reduce((sum, result) => sum + result.satisfactionData.dsat, 0);
       const total = totalCsat + totalNeutral + totalDsat;
       
+      console.log(`📊 Aggregated totals: CSAT=${totalCsat}, Neutral=${totalNeutral}, DSAT=${totalDsat}, Total=${total}`);
+      
       if (total === 0) {
+        console.log(`❌ Aggregated total is 0, returning null`);
         return null;
       }
       
       const csatPercentage = Math.round((totalCsat / total) * 100);
       const neutralPercentage = Math.round((totalNeutral / total) * 100);
       const dsatPercentage = Math.round((totalDsat / total) * 100);
+      
+      console.log(`📊 Aggregated percentages: CSAT=${csatPercentage}%, Neutral=${neutralPercentage}%, DSAT=${dsatPercentage}%`);
       
       return {
         csat: totalCsat,

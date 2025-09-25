@@ -298,7 +298,7 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
               />
               <YAxis yAxisId="left" orientation="left" />
               <YAxis yAxisId="right" orientation="right" />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
               <Legend />
               
               <Bar 
