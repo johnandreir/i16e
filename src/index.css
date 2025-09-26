@@ -58,6 +58,10 @@ All colors MUST be HSL.
     --chart-secondary: 142 76% 56%;
     --chart-tertiary: 48 96% 53%;
     --chart-quaternary: 262 83% 58%;
+    --chart-border: 0 0% 0%; /* Black borders for light mode */
+    
+    /* Chatbot specific colors */
+    --primary-shade-50: 217 89% 55%;
 
     /* Shadows */
     --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -138,6 +142,10 @@ All colors MUST be HSL.
     --chart-secondary: 142 76% 56%;
     --chart-tertiary: 48 96% 53%;
     --chart-quaternary: 262 83% 58%;
+    --chart-border: 0 0% 100%; /* White borders for dark mode */
+    
+    /* Chatbot specific colors */
+    --primary-shade-50: 217 89% 55%;
 
     /* Shadows */
     --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);

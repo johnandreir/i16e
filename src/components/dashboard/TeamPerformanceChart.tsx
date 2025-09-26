@@ -126,6 +126,8 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 onMouseLeave={() => setHoveredBar({ type: null, index: null })}
                 fillOpacity={hoveredBar.type === 'sct' || hoveredBar.type === null ? 1 : 0.6}
                 isAnimationActive={false}
+                stroke="hsl(var(--chart-border))"
+                strokeWidth={2}
               />
               <Bar 
                 dataKey="cases" 
@@ -138,6 +140,8 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 onMouseLeave={() => setHoveredBar({ type: null, index: null })}
                 fillOpacity={hoveredBar.type === 'cases' || hoveredBar.type === null ? 1 : 0.6}
                 isAnimationActive={false}
+                stroke="hsl(var(--chart-border))"
+                strokeWidth={2}
               />
             </BarChart>
           </ResponsiveContainer>

@@ -166,15 +166,15 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
                 onClick={handleSegmentClick}
                 startAngle={90} // Start from top for better visual alignment
                 endAngle={450} // Full circle for proper rendering
-                stroke={chartData.length === 1 ? "none" : "#ffffff"} // Remove stroke for single segment
-                strokeWidth={chartData.length === 1 ? 0 : 2} // No stroke width for single segment
+                stroke="hsl(var(--chart-border))" // Always show outer border
+                strokeWidth={3} // Always show outer border with consistent width
               >
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={entry.color}
-                    stroke={chartData.length === 1 ? "none" : "#ffffff"}
-                    strokeWidth={chartData.length === 1 ? 0 : 1}
+                    stroke={chartData.length === 1 ? "transparent" : "hsl(var(--chart-border))"} // Transparent stroke for single segment, visible for multiple
+                    strokeWidth={chartData.length === 1 ? 0 : 2} // No stroke width for single segment, thinner for multiple
                   />
                 ))}
               </Pie>

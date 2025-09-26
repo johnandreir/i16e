@@ -308,6 +308,8 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
                 fill="#3b82f6"
                 onClick={handleBarClick}
                 style={{ cursor: 'pointer' }}
+                stroke="hsl(var(--chart-border))"
+                strokeWidth={2}
               />
               <Bar 
                 yAxisId="right"
@@ -316,6 +318,8 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
                 fill="#10b981"
                 onClick={handleBarClick}
                 style={{ cursor: 'pointer' }}
+                stroke="hsl(var(--chart-border))"
+                strokeWidth={2}
               />
               <Bar 
                 yAxisId="right"
@@ -324,6 +328,8 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
                 fill="#ef4444"
                 onClick={handleBarClick}
                 style={{ cursor: 'pointer' }}
+                stroke="hsl(var(--chart-border))"
+                strokeWidth={2}
               />
             </BarChart>
           </ResponsiveContainer>

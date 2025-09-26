@@ -15,6 +15,7 @@ import DetailedStatsModal from '@/components/dashboard/DetailedStatsModal';
 import QuickEntityAdd from '@/components/dashboard/QuickEntityAdd';
 import EntityManagementDialog from '@/components/dashboard/EntityManagementDialog';
 import BackendStatus from '@/components/dashboard/BackendStatus';
+import Chatbot from '@/components/dashboard/Chatbot';
 import { useEntityDatabase } from '@/hooks/useEntityDatabase';
 import { DashboardData } from '@/lib/entityService';
 import CustomerSatisfactionService, { EntitySatisfactionData, ChartSurveyData } from '@/lib/customerSatisfactionService';
@@ -2411,6 +2412,32 @@ const IndexNew = () => {
             </div>
             
             <div className="flex items-center space-x-3">
+              <QuickEntityAdd
+                createTeam={createTeam}
+                createSquad={createSquad}
+                createDPE={createDPE}
+                entityData={formatEntityDataForQuickAdd()}
+                key={entityRefreshKey}
+              />
+              <EntityManagementDialog
+                allEntityData={formatEntityDataForComponents()}
+                entityMappings={formatEntityMappingsForComponents()}
+                onEntityDataChange={handleEntityDataChange}
+                onMappingsChange={handleMappingsChange}
+                createTeam={createTeam}
+                createSquad={createSquad}
+                createDPE={createDPE}
+                updateTeam={updateTeam}
+                updateSquad={updateSquad}
+                updateDPE={updateDPE}
+                deleteTeam={deleteTeam}
+                deleteSquad={deleteSquad}
+                deleteDPE={deleteDPE}
+                getTeamsWithIds={getTeamsWithIds}
+                getSquadsWithIds={getSquadsWithIds}
+                getDPEsWithIds={getDPEsWithIds}
+                refreshKey={entityRefreshKey}
+              />
               <ThemeToggle />
             </div>
           </div>
@@ -2422,58 +2449,6 @@ const IndexNew = () => {
         {/* Backend Status - Always visible at the top */}
         <BackendStatus />
         
-        {/* Performance Analysis Tools - First Panel */}
-        <Card className="glass-card p-4">
-          <CardHeader className="p-0 mb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Performance Analysis Tools
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <QuickEntityAdd
-                  createTeam={createTeam}
-                  createSquad={createSquad}
-                  createDPE={createDPE}
-                  entityData={formatEntityDataForQuickAdd()}
-                  key={entityRefreshKey}
-                />
-                <EntityManagementDialog
-                  allEntityData={formatEntityDataForComponents()}
-                  entityMappings={formatEntityMappingsForComponents()}
-                  onEntityDataChange={handleEntityDataChange}
-                  onMappingsChange={handleMappingsChange}
-                  createTeam={createTeam}
-                  createSquad={createSquad}
-                  createDPE={createDPE}
-                  updateTeam={updateTeam}
-                  updateSquad={updateSquad}
-                  updateDPE={updateDPE}
-                  deleteTeam={deleteTeam}
-                  deleteSquad={deleteSquad}
-                  deleteDPE={deleteDPE}
-                  getTeamsWithIds={getTeamsWithIds}
-                  getSquadsWithIds={getSquadsWithIds}
-                  getDPEsWithIds={getDPEsWithIds}
-                  refreshKey={entityRefreshKey}
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <div className="flex flex-wrap gap-2 px-0 pb-0">
-            <Button 
-              onClick={handleCXInsight}
-              disabled={isLoading || !isAnalysisEnabled}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <ThumbsUp className="h-4 w-4" />
-              CX Insight
-            </Button>
-          </div>
-        </Card>
-
         {/* Filter Section */}
         <FilterSection
           selectedEntity={selectedEntity}
@@ -2943,6 +2918,9 @@ const IndexNew = () => {
         onAnalyzeSCT={handleAnalyzeSCT}
         onAnalyzeSurvey={handleAnalyzeSurvey}
       />
+
+      {/* Chatbot */}
+      <Chatbot />
     </div>
   );
 };
