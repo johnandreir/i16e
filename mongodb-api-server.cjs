@@ -1337,7 +1337,7 @@ app.put('/api/squad/:id', async (req, res) => {
     const response = {
       id: squad._id.toString(),
       name: squad.name,
-      teamID: (squad.teamID || squad.teamId || squad.team_id)?.toString() || null, // Handle field name variations
+      teamID: squad.teamID?.toString(),
       description: squad.description,
       created_at: (squad.created_at || squad.createdAt)?.toISOString() || new Date().toISOString(),
       updated_at: (squad.updated_at || squad.updatedAt)?.toISOString() || new Date().toISOString()
@@ -1474,7 +1474,7 @@ app.put('/api/dpe/:id', async (req, res) => {
     const response = {
       id: dpe._id.toString(),
       name: dpe.name,
-      squadID: (dpe.squadID || dpe.squadId || dpe.squad_id)?.toString() || null, // Handle field name variations
+      squadID: dpe.squadID?.toString(),
       email: dpe.email,
       role: dpe.role,
       created_at: (dpe.created_at || dpe.createdAt)?.toISOString() || new Date().toISOString(),
@@ -1779,9 +1779,10 @@ app.get('/api/entities/validate', async (req, res) => {
     const warnings = [];
 
     // Check for orphaned squads (squads without valid teams)
-    const orphanedSquads = squads.filter(squad =>
-      !teams.some(team => team._id.toString() === squad.team_id?.toString())
-    );
+    const orphanedSquads = squads.filter(squad => {
+      const teamId = squad.teamID || squad.teamId || squad.team_id;
+      return !teams.some(team => team._id.toString() === teamId?.toString())
+    });
 
     if (orphanedSquads.length > 0) {
       issues.push({
@@ -1793,9 +1794,10 @@ app.get('/api/entities/validate', async (req, res) => {
     }
 
     // Check for orphaned DPEs (DPEs without valid squads)
-    const orphanedDPEs = dpes.filter(dpe =>
-      !squads.some(squad => squad._id.toString() === dpe.squad_id?.toString())
-    );
+    const orphanedDPEs = dpes.filter(dpe => {
+      const squadId = dpe.squadID || dpe.squadId || dpe.squad_id;
+      return !squads.some(squad => squad._id.toString() === squadId?.toString())
+    });
 
     if (orphanedDPEs.length > 0) {
       issues.push({
@@ -1808,7 +1810,10 @@ app.get('/api/entities/validate', async (req, res) => {
 
     // Check for teams without squads (warning)
     const emptyTeams = teams.filter(team =>
-      !squads.some(squad => squad.team_id?.toString() === team._id.toString())
+      !squads.some(squad => {
+        const teamId = squad.teamID || squad.teamId || squad.team_id;
+        return teamId?.toString() === team._id.toString();
+      })
     );
 
     if (emptyTeams.length > 0) {
@@ -1822,7 +1827,10 @@ app.get('/api/entities/validate', async (req, res) => {
 
     // Check for squads without DPEs (warning)
     const emptySquads = squads.filter(squad =>
-      !dpes.some(dpe => dpe.squad_id?.toString() === squad._id.toString())
+      !dpes.some(dpe => {
+        const squadId = dpe.squadID || dpe.squadId || dpe.squad_id;
+        return squadId?.toString() === squad._id.toString();
+      })
     );
 
     if (emptySquads.length > 0) {
