@@ -11,10 +11,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.3,
-      "position": [
-        0,
-        0
-      ],
+      "position": [0, 0],
       "id": "f043387e-4957-4d4b-bef1-358595dfc7e3",
       "name": "When chat message received",
       "webhookId": "850736dd-ddac-4e8d-9ea4-799c64607835"
@@ -27,10 +24,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
       "typeVersion": 1,
-      "position": [
-        688,
-        176
-      ],
+      "position": [688, 176],
       "id": "e08c5660-65a8-4c2b-834c-c02b143eca46",
       "name": "MongoDB Chat Memory2",
       "credentials": {
@@ -52,10 +46,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
-      "position": [
-        528,
-        176
-      ],
+      "position": [528, 176],
       "id": "92ebd1a5-1219-48bc-bd4d-405d4c84a195",
       "name": "OpenAI Chat Model2",
       "credentials": {
@@ -73,10 +64,7 @@
       },
       "type": "n8n-nodes-base.mongoDbTool",
       "typeVersion": 1.2,
-      "position": [
-        912,
-        176
-      ],
+      "position": [912, 176],
       "id": "51949fbf-348d-4568-afcc-578ed77b1258",
       "name": "Customer Surveys",
       "credentials": {
@@ -96,10 +84,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
-      "position": [
-        624,
-        0
-      ],
+      "position": [624, 0],
       "id": "588cfb02-e7b3-49d9-aaf7-9552a2c631f0",
       "name": "AI Agent"
     },
@@ -111,10 +96,7 @@
       },
       "type": "n8n-nodes-base.mongoDbTool",
       "typeVersion": 1.2,
-      "position": [
-        800,
-        176
-      ],
+      "position": [800, 176],
       "id": "b949c611-bfef-4286-b960-5c6ddd341406",
       "name": "Cases",
       "credentials": {
@@ -142,10 +124,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.code",
       "typeVersion": 1,
-      "position": [
-        1536,
-        0
-      ],
+      "position": [1536, 0],
       "id": "4c637d55-cc3e-43e7-b156-816b61e8c530",
       "name": "LangChain Code"
     },
@@ -161,10 +140,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
-      "position": [
-        160,
-        176
-      ],
+      "position": [160, 176],
       "id": "b9ac8c26-9789-48ad-b0ce-69879847328a",
       "name": "OpenAI Chat Model",
       "credentials": {
@@ -180,10 +156,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
       "typeVersion": 1,
-      "position": [
-        320,
-        208
-      ],
+      "position": [320, 208],
       "id": "ee2b34a8-85be-44ec-a3fc-45a815d702d0",
       "name": "MongoDB Chat Memory",
       "credentials": {
@@ -201,10 +174,7 @@
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
-      "position": [
-        208,
-        0
-      ],
+      "position": [208, 0],
       "id": "49785e61-c92e-445b-92dd-6614a193d7f2",
       "name": "Query Builder"
     }
