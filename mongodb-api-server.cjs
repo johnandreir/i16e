@@ -1144,22 +1144,38 @@ app.post('/api/dpe', async (req, res) => {
 // PUT and DELETE endpoints for Teams
 app.put('/api/team/:id', async (req, res) => {
   try {
+    console.log('🔄 Team update request received:', req.params.id, req.body);
+    
     if (!isConnected || !db) {
+      console.log('❌ Database not available for team update');
       return res.status(503).json({ error: 'Database not available' });
     }
 
     const { id } = req.params;
     const { name, description } = req.body;
 
+    console.log('📝 Team update data - ID:', id, 'Name:', name, 'Description:', description);
+
     if (!name) {
+      console.log('❌ Missing required field: name');
       return res.status(400).json({ error: 'Team name is required' });
     }
 
     const { ObjectId } = require('mongodb');
+    
+    // Validate ObjectId
+    if (!ObjectId.isValid(id)) {
+      console.log('❌ Invalid team ID format:', id);
+      return res.status(400).json({ error: 'Invalid team ID format' });
+    }
+
     const updateData = {
       name,
+      description: description || null, // Store description field
       updated_at: new Date()
     };
+
+    console.log('📝 Team update data to set:', updateData);
 
     const updateOperation = async (collection) => {
       return await collection.findOneAndUpdate(
@@ -1170,25 +1186,32 @@ app.put('/api/team/:id', async (req, res) => {
     };
 
     const result = await performDatabaseOperation(updateOperation, 'teams', 'update team');
+    console.log('💾 Team update result:', result);
 
     if (!result.success) {
-      return res.status(503).json({ error: 'Failed to update team' });
+      console.error('❌ Team update failed:', result.error);
+      return res.status(503).json({ error: 'Failed to update team', details: result.error });
     }
 
     if (!result.data.value) {
+      console.log('❌ Team not found:', id);
       return res.status(404).json({ error: 'Team not found' });
     }
 
     const team = result.data.value;
-    res.json({
+    const response = {
       id: team._id.toString(),
       name: team.name,
-      created_at: team.created_at.toISOString(),
-      updated_at: team.updated_at.toISOString()
-    });
+      description: team.description,
+      created_at: (team.created_at || team.createdAt)?.toISOString() || new Date().toISOString(),
+      updated_at: (team.updated_at || team.updatedAt)?.toISOString() || new Date().toISOString()
+    };
+    
+    console.log('✅ Team update successful:', response);
+    res.json(response);
   } catch (error) {
     console.error('❌ Error updating team:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
@@ -1236,36 +1259,58 @@ app.delete('/api/team/:id', async (req, res) => {
 // PUT and DELETE endpoints for Squads
 app.put('/api/squad/:id', async (req, res) => {
   try {
+    console.log('🔄 Squad update request received:', req.params.id, req.body);
+    
     if (!isConnected || !db) {
+      console.log('❌ Database not available for squad update');
       return res.status(503).json({ error: 'Database not available' });
     }
 
     const { id } = req.params;
     const { name, teamID, description } = req.body;
 
+    console.log('📝 Squad update data - ID:', id, 'Name:', name, 'TeamID:', teamID, 'Description:', description);
+
     if (!name || !teamID) {
+      console.log('❌ Missing required fields - name:', !!name, 'teamID:', !!teamID);
       return res.status(400).json({ error: 'Squad name and teamID are required' });
     }
 
     const { ObjectId } = require('mongodb');
+
+    // Validate ObjectIds
+    if (!ObjectId.isValid(id)) {
+      console.log('❌ Invalid squad ID format:', id);
+      return res.status(400).json({ error: 'Invalid squad ID format' });
+    }
+
+    if (!ObjectId.isValid(teamID)) {
+      console.log('❌ Invalid team ID format:', teamID);
+      return res.status(400).json({ error: 'Invalid team ID format' });
+    }
 
     // Verify team exists
     const checkTeamOperation = async (collection) => {
       return await collection.findOne({ _id: new ObjectId(teamID) });
     };
 
+    console.log('🔍 Checking if team exists:', teamID);
     const teamCheck = await performDatabaseOperation(checkTeamOperation, 'teams', 'check team exists');
+    console.log('🔍 Team check result:', teamCheck);
 
     if (!teamCheck.success || !teamCheck.data) {
+      console.log('❌ Team does not exist:', teamID);
       return res.status(400).json({ error: 'Selected team does not exist' });
     }
 
     const updateData = {
       name,
       teamID: new ObjectId(teamID),
-      description,
+      description: description || null, // Store description field
       updated_at: new Date()
     };
+
+    console.log('📝 Squad update data to set:', updateData);
 
     const updateOperation = async (collection) => {
       return await collection.findOneAndUpdate(
@@ -1276,26 +1321,33 @@ app.put('/api/squad/:id', async (req, res) => {
     };
 
     const result = await performDatabaseOperation(updateOperation, 'squads', 'update squad');
+    console.log('💾 Squad update result:', result);
 
     if (!result.success) {
-      return res.status(503).json({ error: 'Failed to update squad' });
+      console.error('❌ Squad update failed:', result.error);
+      return res.status(503).json({ error: 'Failed to update squad', details: result.error });
     }
 
     if (!result.data.value) {
+      console.log('❌ Squad not found:', id);
       return res.status(404).json({ error: 'Squad not found' });
     }
 
     const squad = result.data.value;
-    res.json({
+    const response = {
       id: squad._id.toString(),
       name: squad.name,
-      team_id: squad.team_id.toString(),
-      created_at: squad.created_at.toISOString(),
-      updated_at: squad.updated_at.toISOString()
-    });
+      teamID: (squad.teamID || squad.teamId || squad.team_id)?.toString() || null, // Handle field name variations
+      description: squad.description,
+      created_at: (squad.created_at || squad.createdAt)?.toISOString() || new Date().toISOString(),
+      updated_at: (squad.updated_at || squad.updatedAt)?.toISOString() || new Date().toISOString()
+    };
+    
+    console.log('✅ Squad update successful:', response);
+    res.json(response);
   } catch (error) {
     console.error('❌ Error updating squad:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
@@ -1343,35 +1395,59 @@ app.delete('/api/squad/:id', async (req, res) => {
 // PUT and DELETE endpoints for DPEs
 app.put('/api/dpe/:id', async (req, res) => {
   try {
+    console.log('🔄 DPE update request received:', req.params.id, req.body);
+    
     if (!isConnected || !db) {
+      console.log('❌ Database not available for DPE update');
       return res.status(503).json({ error: 'Database not available' });
     }
 
     const { id } = req.params;
     const { name, squadID, email, role } = req.body;
 
+    console.log('📝 DPE update data - ID:', id, 'Name:', name, 'SquadID:', squadID, 'Email:', email, 'Role:', role);
+
     if (!name || !squadID) {
+      console.log('❌ Missing required fields - name:', !!name, 'squadID:', !!squadID);
       return res.status(400).json({ error: 'DPE name and squadID are required' });
     }
 
     const { ObjectId } = require('mongodb');
+
+    // Validate ObjectIds
+    if (!ObjectId.isValid(id)) {
+      console.log('❌ Invalid DPE ID format:', id);
+      return res.status(400).json({ error: 'Invalid DPE ID format' });
+    }
+
+    if (!ObjectId.isValid(squadID)) {
+      console.log('❌ Invalid squad ID format:', squadID);
+      return res.status(400).json({ error: 'Invalid squad ID format' });
+    }
 
     // Verify squad exists
     const checkSquadOperation = async (collection) => {
       return await collection.findOne({ _id: new ObjectId(squadID) });
     };
 
+    console.log('🔍 Checking if squad exists:', squadID);
     const squadCheck = await performDatabaseOperation(checkSquadOperation, 'squads', 'check squad exists');
+    console.log('🔍 Squad check result:', squadCheck);
 
     if (!squadCheck.success || !squadCheck.data) {
+      console.log('❌ Squad does not exist:', squadID);
       return res.status(400).json({ error: 'Selected squad does not exist' });
     }
 
     const updateData = {
       name,
       squadID: new ObjectId(squadID),
+      email: email || null, // Store email field
+      role: role || null,   // Store role field
       updated_at: new Date()
     };
+
+    console.log('📝 DPE update data to set:', updateData);
 
     const updateOperation = async (collection) => {
       return await collection.findOneAndUpdate(
@@ -1382,26 +1458,34 @@ app.put('/api/dpe/:id', async (req, res) => {
     };
 
     const result = await performDatabaseOperation(updateOperation, 'dpes', 'update dpe');
+    console.log('💾 DPE update result:', result);
 
     if (!result.success) {
-      return res.status(503).json({ error: 'Failed to update DPE' });
+      console.error('❌ DPE update failed:', result.error);
+      return res.status(503).json({ error: 'Failed to update DPE', details: result.error });
     }
 
     if (!result.data.value) {
+      console.log('❌ DPE not found:', id);
       return res.status(404).json({ error: 'DPE not found' });
     }
 
     const dpe = result.data.value;
-    res.json({
+    const response = {
       id: dpe._id.toString(),
       name: dpe.name,
-      squad_id: dpe.squad_id.toString(),
-      created_at: dpe.created_at.toISOString(),
-      updated_at: dpe.updated_at.toISOString()
-    });
+      squadID: (dpe.squadID || dpe.squadId || dpe.squad_id)?.toString() || null, // Handle field name variations
+      email: dpe.email,
+      role: dpe.role,
+      created_at: (dpe.created_at || dpe.createdAt)?.toISOString() || new Date().toISOString(),
+      updated_at: (dpe.updated_at || dpe.updatedAt)?.toISOString() || new Date().toISOString()
+    };
+    
+    console.log('✅ DPE update successful:', response);
+    res.json(response);
   } catch (error) {
     console.error('❌ Error updating DPE:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 

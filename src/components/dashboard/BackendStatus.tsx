@@ -59,15 +59,6 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
       url: 'http://localhost:3001/api/n8n/health',
       category: 'workflow',
       priority: 'high'
-    },
-    {
-      name: 'n8n Webhook Status',
-      status: 'unknown',
-      lastCheck: new Date(),
-      details: 'Checking webhook status...',
-      url: 'http://localhost:3001/api/n8n/health',
-      category: 'workflow',
-      priority: 'medium'
     }
   ]);
 
@@ -147,56 +138,6 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
     }
   };
 
-  const checkWebhookHealth = async (): Promise<{ status: ServiceStatus['status'], details: string }> => {
-    try {
-      // Use backend API proxy to check webhook health (avoiding CORS)
-      const response = await fetch('http://localhost:3001/api/n8n/health', {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000)
-      });
-
-      if (!response.ok) {
-        return {
-          status: 'unhealthy',
-          details: `Backend API error: ${response.status} ${response.statusText}`
-        };
-      }
-
-      const healthData = await response.json();
-      const webhookStatus = healthData.n8nHealth?.n8nWebhookStatus;
-      
-      const getCasesHealthy = webhookStatus?.getCases?.reachable;
-      const metricsHealthy = webhookStatus?.calculateMetrics?.reachable;
-      
-      const getCasesMessage = webhookStatus?.getCases?.message || 'Unknown';
-      const metricsMessage = webhookStatus?.calculateMetrics?.message || 'Unknown';
-      
-      if (getCasesHealthy && metricsHealthy) {
-        return {
-          status: 'healthy',
-          details: 'All webhook endpoints active and listening'
-        };
-      } else if (getCasesHealthy || metricsHealthy) {
-        const workingEndpoint = getCasesHealthy ? 'Get Cases' : 'Calculate Metrics';
-        const failedEndpoint = getCasesHealthy ? 'Calculate Metrics' : 'Get Cases';
-        return {
-          status: 'unhealthy',
-          details: `${workingEndpoint} webhook active, ${failedEndpoint} webhook inactive`
-        };
-      } else {
-        return {
-          status: 'unhealthy',
-          details: 'No webhook endpoints active'
-        };
-      }
-    } catch (error) {
-      return {
-        status: 'unhealthy',
-        details: error instanceof Error ? error.message : 'Webhook status check failed'
-      };
-    }
-  };
-
   const checkServiceHealth = async (service: ServiceStatus): Promise<ServiceStatus> => {
     let result: { status: ServiceStatus['status'], details: string, health?: DetailedHealth };
 
@@ -222,9 +163,6 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
         break;
       case 'n8n Workflow Status':
         result = await checkN8nHealth();
-        break;
-      case 'n8n Webhook Status':
-        result = await checkWebhookHealth();
         break;
       case 'MongoDB Database':
         // Check if this was recently updated by the API Server check (within last 10 seconds)
@@ -379,7 +317,7 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
       <CardContent>
         <div className="space-y-4">
           {/* Service Status Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {services.map((service) => (
               <div
                 key={service.name}
@@ -411,34 +349,6 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
               </div>
             ))}
           </div>
-
-          {/* Detailed Health Information */}
-          {detailedHealth && (
-            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-              <h4 className="font-medium text-sm mb-2 flex items-center text-foreground">
-                <Database className="h-4 w-4 mr-2" />
-                MongoDB API Server Details
-              </h4>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="text-muted-foreground">
-                  <span className="font-medium text-foreground">Database Connection:</span>{' '}
-                  {detailedHealth.mongodb.connected ? '✅ Connected' : '❌ Disconnected'}
-                </div>
-                <div className="text-muted-foreground">
-                  <span className="font-medium text-foreground">Server Uptime:</span>{' '}
-                  {Math.floor(detailedHealth.server.uptime / 60)} minutes
-                </div>
-                <div className="text-muted-foreground">
-                  <span className="font-medium text-foreground">Memory Usage:</span>{' '}
-                  {Math.round(detailedHealth.server.memory?.heapUsed / 1024 / 1024 || 0)} MB
-                </div>
-                <div className="text-muted-foreground">
-                  <span className="font-medium text-foreground">Process ID:</span>{' '}
-                  {detailedHealth.server.pid}
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* System Status Summary */}
           <div className="border-t pt-3">
