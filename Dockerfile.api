@@ -10,7 +10,7 @@ RUN apk add --no-cache curl
 RUN npm install express@^4.19.2 mongodb@^6.10.0 cors@^2.8.5
 
 # Copy application files
-COPY mongodb-api-server.cjs ./
+COPY mongodb-api-server-fixed.cjs ./mongodb-api-server.cjs
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
