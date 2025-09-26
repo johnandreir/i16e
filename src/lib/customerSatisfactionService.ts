@@ -95,8 +95,17 @@ export default class CustomerSatisfactionService {
         date: recentRecord.date,
         hasCustomerSatisfaction: !!recentRecord.metrics?.customerSatisfaction,
         hasSurveyDetails: !!recentRecord.surveyDetails,  // Check at root level now
+        surveyDetailsLength: recentRecord.surveyDetails?.length || 0,  // Add length check
+        sampleSurveyDetail: recentRecord.surveyDetails?.[0],  // Show first survey detail
         metricsKeys: Object.keys(recentRecord.metrics || {})
       });
+      
+      // Debug survey details extraction
+      const extractedSurveyDetails = recentRecord.surveyDetails || [];
+      console.log(`🔍 Extracting survey details: ${extractedSurveyDetails.length} items`);
+      if (extractedSurveyDetails.length > 0) {
+        console.log(`📝 First survey detail structure:`, extractedSurveyDetails[0]);
+      }
       
       return {
         entityName,
@@ -104,7 +113,7 @@ export default class CustomerSatisfactionService {
         entityId: recentRecord.entity_id || recentRecord._id,
         owner_full_name: recentRecord.entity_name,
         satisfactionData: recentRecord.metrics.customerSatisfaction,
-        surveyDetails: recentRecord.surveyDetails || []  // surveyDetails is now at root level
+        surveyDetails: extractedSurveyDetails  // Use extracted variable for debugging
       };
       
     } catch (error) {

@@ -53,6 +53,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
+    image: i16e-api
     container_name: i16e-api
     restart: unless-stopped
     ports:

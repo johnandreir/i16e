@@ -48,10 +48,9 @@ async function showFullStatus() {
             console.log();
             
             console.log('🔗 N8N Webhook Status:');
-            console.log(`  Get Cases - Reachable: ${data.n8nHealth.n8nWebhookStatus.getCases.reachable}`);
-            console.log(`  Get Cases - Message: ${data.n8nHealth.n8nWebhookStatus.getCases.message}`);
-            console.log(`  Calculate Metrics - Reachable: ${data.n8nHealth.n8nWebhookStatus.calculateMetrics.reachable}`);
-            console.log(`  Calculate Metrics - Message: ${data.n8nHealth.n8nWebhookStatus.calculateMetrics.message}`);
+            console.log(`  Get Performance - Reachable: ${data.n8nHealth.n8nWebhookStatus.getPerformance.reachable}`);
+            console.log(`  Get Performance - Status: ${data.n8nHealth.n8nWebhookStatus.getPerformance.status}`);
+            console.log(`  Get Performance - Message: ${data.n8nHealth.n8nWebhookStatus.getPerformance.message}`);
             console.log();
             
             console.log('🏁 Overall Status:');

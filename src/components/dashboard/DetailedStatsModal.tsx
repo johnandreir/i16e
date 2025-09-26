@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { X, Clock, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Clock, ChevronUp, ChevronDown, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface DetailedStatsModalProps {
@@ -12,6 +12,7 @@ interface DetailedStatsModalProps {
   type: 'team' | 'survey' | 'individual';
   title: string;
   onAnalyzeSCT?: () => void;
+  onAnalyzeSurvey?: () => void;
 }
 
 const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
@@ -20,7 +21,8 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
   data,
   type,
   title,
-  onAnalyzeSCT
+  onAnalyzeSCT,
+  onAnalyzeSurvey
 }) => {
   // State for sorting only - removed pagination
   const [sortField, setSortField] = useState<string>('');
@@ -764,6 +766,28 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
 
   const renderSurveyDetails = () => (
     <div className="space-y-6 flex-1 overflow-hidden flex flex-col">
+      {/* Analyze Survey Button Section */}
+      <div className="flex-shrink-0 bg-card p-4 rounded-lg border">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="font-semibold text-foreground mb-1">Survey Analysis</h3>
+            <p className="text-sm text-muted-foreground">Analyze survey feedback patterns and insights</p>
+          </div>
+          {onAnalyzeSurvey && (
+            <Button 
+              onClick={onAnalyzeSurvey}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Analyze Survey
+            </Button>
+          )}
+        </div>
+      </div>
+      
+      {/* Survey Data Table */}
       <div className="flex-1 flex flex-col min-h-0 border rounded-lg">
         <div className="flex-1 overflow-auto min-h-0" style={{ maxHeight: 'calc(80vh - 350px)' }}>
           <div className="min-w-full">
@@ -794,12 +818,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                       {renderSortIcon('surveyDate')}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('customerName')}>
-                    <div className="flex items-center gap-1">
-                      Customer
-                      {renderSortIcon('customerName')}
-                    </div>
-                  </TableHead>
                   <TableHead>Feedback</TableHead>
                 </TableRow>
               </TableHeader>
@@ -808,7 +826,7 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                   if (!data || data.length === 0) {
                     return (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           No survey data available
                         </TableCell>
                       </TableRow>
@@ -860,9 +878,6 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {formatDate(survey.surveyDate)}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {survey.customerName || 'N/A'}
                         </TableCell>
                         <TableCell className="max-w-xs">
                           <div className="text-sm">

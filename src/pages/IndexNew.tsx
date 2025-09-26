@@ -126,6 +126,7 @@ const IndexNew = () => {
   const [modalTitle, setModalTitle] = useState<string>('');
   const [sctAnalysisResults, setSctAnalysisResults] = useState<any>(null);
   const [cxInsightResults, setCxInsightResults] = useState<any>(null);
+  const [surveyAnalysisResults, setSurveyAnalysisResults] = useState<any>(null);
   
   // Calculate metrics workflow results state
   const [calculateMetricsData, setCalculateMetricsData] = useState<any>(null);
@@ -727,6 +728,13 @@ const IndexNew = () => {
               // Update squad metrics with DSAT percentage
               squadAggregatedMetrics.dsatPercentage = aggregatedSatisfaction.dsatPercentage;
               
+              // Collect all survey details from squad members for drill-down functionality
+              const allSquadSurveyDetails = validSatisfactionData
+                .flatMap(result => result.data.surveyDetails || [])
+                .filter(survey => survey.caseNumber && survey.category); // Filter out invalid entries
+              
+              console.log(`📊 Collected ${allSquadSurveyDetails.length} survey details from ${validSatisfactionData.length} squad DPEs`);
+              
               // Set satisfaction data for the squad
               setSatisfactionData({
                 entityName: generatedEntityValue,
@@ -734,7 +742,7 @@ const IndexNew = () => {
                 entityId: generatedEntityValue,
                 owner_full_name: generatedEntityValue,
                 satisfactionData: aggregatedSatisfaction,
-                surveyDetails: []
+                surveyDetails: allSquadSurveyDetails // Include all survey details from squad members
               });
               
               // Format for chart
@@ -913,6 +921,13 @@ const IndexNew = () => {
               // Update team metrics with DSAT percentage
               teamAggregatedMetrics.dsatPercentage = aggregatedTeamSatisfaction.dsatPercentage;
               
+              // Collect all survey details from team members (all DPEs across all squads) for drill-down functionality
+              const allTeamSurveyDetails = validTeamSatisfactionData
+                .flatMap(dpe => dpe.data.surveyDetails || [])
+                .filter(survey => survey.caseNumber && survey.category); // Filter out invalid entries
+              
+              console.log(`📊 Collected ${allTeamSurveyDetails.length} survey details from ${validTeamSatisfactionData.length} team DPEs across all squads`);
+              
               // Set satisfaction data for the team
               setSatisfactionData({
                 entityName: generatedEntityValue,
@@ -920,7 +935,7 @@ const IndexNew = () => {
                 entityId: generatedEntityValue,
                 owner_full_name: generatedEntityValue,
                 satisfactionData: aggregatedTeamSatisfaction,
-                surveyDetails: []
+                surveyDetails: allTeamSurveyDetails // Include all survey details from team members
               });
               
               // Format for chart
@@ -1053,8 +1068,15 @@ const IndexNew = () => {
                 entityId: latestMetrics.entity_id || latestMetrics._id,
                 owner_full_name: latestMetrics.entity_name,
                 satisfactionData: latestMetrics.metrics.customerSatisfaction,
-                surveyDetails: latestMetrics.metrics.surveyDetails || []
+                surveyDetails: latestMetrics.surveyDetails || []  // Fixed: survey details are at root level
               };
+              
+              console.log('🔍 Survey details extraction debug:', {
+                hasMetricsSurveyDetails: !!latestMetrics.metrics.surveyDetails,
+                hasRootSurveyDetails: !!latestMetrics.surveyDetails,
+                rootSurveyDetailsLength: latestMetrics.surveyDetails?.length || 0,
+                extractedLength: satisfactionFromPerformance.surveyDetails.length
+              });
               
               setSatisfactionData(satisfactionFromPerformance);
               console.log('✅ Set satisfaction data from performance record:', satisfactionFromPerformance);
@@ -1301,13 +1323,41 @@ const IndexNew = () => {
   const handleSurveySegmentClick = (data: any, segment: string) => {
     console.log(`🔍 Survey segment clicked: ${segment}`, { data, satisfactionData });
     
-    if (!satisfactionData || !satisfactionData.surveyDetails) {
-      console.log('❌ No satisfaction data or survey details available');
+    if (!satisfactionData) {
+      console.log('❌ No satisfaction data available');
       return;
     }
     
+    console.log('🔍 Satisfaction data structure:', {
+      hasData: !!satisfactionData,
+      hasSurveyDetails: !!satisfactionData.surveyDetails,
+      surveyDetailsLength: satisfactionData.surveyDetails?.length || 0,
+      surveyDetailsType: typeof satisfactionData.surveyDetails,
+      surveyDetailsIsArray: Array.isArray(satisfactionData.surveyDetails),
+      firstSurveyDetail: satisfactionData.surveyDetails?.[0],
+      allKeys: Object.keys(satisfactionData)
+    });
+    
+    if (!satisfactionData.surveyDetails) {
+      console.log('❌ No survey details available in satisfaction data');
+      return;
+    }
+    
+    if (!Array.isArray(satisfactionData.surveyDetails)) {
+      console.log('❌ Survey details is not an array:', typeof satisfactionData.surveyDetails);
+      return;
+    }
+    
+    if (satisfactionData.surveyDetails.length === 0) {
+      console.log('❌ Survey details array is empty');
+      return;
+    }
+    
+    console.log(`📊 Processing ${satisfactionData.surveyDetails.length} survey details for segment: ${segment}`);
+    
     // Filter survey details by the clicked segment category
     const segmentSurveys = satisfactionData.surveyDetails.filter(survey => {
+      console.log(`🔍 Checking survey: ${survey.caseNumber} | category: "${survey.category}" vs segment: "${segment}"`);
       const category = survey.category?.toLowerCase();
       return category === segment.toLowerCase();
     });
@@ -1682,6 +1732,175 @@ const IndexNew = () => {
     };
     
     setCxInsightResults(cxInsights);
+  };
+
+  const handleAnalyzeSurvey = () => {
+    // Get entity-specific terminology
+    const entityType = generatedEntity || selectedEntity;
+    const entityName = generatedEntityValue || selectedEntityValue;
+    const entityLabel = entityType === 'dpe' ? 'DPE' : entityType === 'squad' ? 'Squad' : 'Team';
+    
+    // Use survey data from modalData or satisfaction data
+    const surveyData = modalData || [];
+    const realSatisfactionData = satisfactionData;
+    
+    if (!realSatisfactionData || (!surveyData.length && !realSatisfactionData.surveyDetails)) {
+      // Fallback when no survey data available
+      const fallbackAnalysis = {
+        insights: [
+          {
+            id: '1',
+            title: 'No Survey Data Available',
+            description: 'No customer satisfaction survey data found for the selected entity and time period.',
+            impact: 'Low',
+            category: 'data',
+            type: 'info',
+            recommendation: 'Ensure surveys are being collected and processed for comprehensive feedback analysis.'
+          }
+        ],
+        metrics: {
+          totalSurveys: 0,
+          averageRating: 'N/A',
+          csatPercentage: realSatisfactionData?.satisfactionData?.csatPercentage || 0,
+          neutralPercentage: realSatisfactionData?.satisfactionData?.neutralPercentage || 0,
+          dsatPercentage: realSatisfactionData?.satisfactionData?.dsatPercentage || 0,
+          trend: 'Insufficient Data',
+          sentiment: 'Unknown'
+        },
+        surveys: []
+      };
+      setSurveyAnalysisResults(fallbackAnalysis);
+      return;
+    }
+    
+    // Analyze real survey data
+    const insights = [];
+    const surveys = surveyData.length > 0 ? surveyData : (realSatisfactionData.surveyDetails || []);
+    
+    // Calculate metrics from survey data
+    const totalSurveys = surveys.length;
+    const ratings = surveys.map(s => s.overallSatisfaction).filter(r => r > 0);
+    const averageRating = ratings.length > 0 ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : 0;
+    
+    const csatCount = surveys.filter(s => s.category === 'csat').length;
+    const neutralCount = surveys.filter(s => s.category === 'neutral').length;
+    const dsatCount = surveys.filter(s => s.category === 'dsat').length;
+    
+    const csatPercentage = totalSurveys > 0 ? Math.round((csatCount / totalSurveys) * 100) : 0;
+    const neutralPercentage = totalSurveys > 0 ? Math.round((neutralCount / totalSurveys) * 100) : 0;
+    const dsatPercentage = totalSurveys > 0 ? Math.round((dsatCount / totalSurveys) * 100) : 0;
+    
+    // Overall satisfaction analysis
+    if (csatPercentage >= 80) {
+      insights.push({
+        id: '1',
+        title: `Excellent Customer Satisfaction Performance`,
+        description: `${entityName} achieves ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${csatCount} satisfied customers out of ${totalSurveys} total surveys.`,
+        impact: 'High',
+        category: 'performance',
+        type: 'success',
+        recommendation: `Continue current practices and share successful strategies with other team members.`
+      });
+    } else if (csatPercentage >= 60) {
+      insights.push({
+        id: '1',
+        title: `Good Customer Satisfaction with Room for Improvement`,
+        description: `${entityName} has ${csatPercentage}% CSAT rate (${csatCount}/${totalSurveys} surveys). Average rating: ${averageRating}/5. Target: 80%+ CSAT.`,
+        impact: 'Medium',
+        category: 'performance',
+        type: 'warning',
+        recommendation: `Focus on converting neutral feedback to positive. Analyze DSAT cases for improvement opportunities.`
+      });
+    } else {
+      insights.push({
+        id: '1',
+        title: `Customer Satisfaction Needs Immediate Attention`,
+        description: `${entityName} has ${csatPercentage}% CSAT rate (${csatCount}/${totalSurveys} surveys). Average rating: ${averageRating}/5. This is below acceptable standards.`,
+        impact: 'High',
+        category: 'performance',
+        type: 'error',
+        recommendation: `Urgent action required. Review DSAT feedback patterns and implement service improvements immediately.`
+      });
+    }
+    
+    // DSAT analysis
+    if (dsatCount > 0) {
+      const dsatFeedback = surveys.filter(s => s.category === 'dsat');
+      const commonIssues = dsatFeedback.map(s => s.feedback).filter(f => f && f !== 'No feedback provided');
+      
+      insights.push({
+        id: '2',
+        title: `Dissatisfied Customer Feedback Analysis`,
+        description: `${dsatCount} customers expressed dissatisfaction (${dsatPercentage}% of total). ${commonIssues.length} provided specific feedback.`,
+        impact: 'High',
+        category: 'feedback',
+        type: 'warning',
+        recommendation: `Review DSAT feedback for common themes. Address recurring issues and follow up with dissatisfied customers.`
+      });
+    } else {
+      insights.push({
+        id: '2',
+        title: `Zero Dissatisfied Customers`,
+        description: `No DSAT feedback received from ${totalSurveys} survey responses. This indicates consistent service quality.`,
+        impact: 'High',
+        category: 'feedback',
+        type: 'success',
+        recommendation: `Maintain current service standards. Continue monitoring to ensure sustained customer satisfaction.`
+      });
+    }
+    
+    // Feedback quality analysis
+    const surveysWithFeedback = surveys.filter(s => s.feedback && s.feedback !== 'No feedback provided');
+    const feedbackRate = totalSurveys > 0 ? Math.round((surveysWithFeedback.length / totalSurveys) * 100) : 0;
+    
+    insights.push({
+      id: '3',
+      title: `Customer Feedback Engagement`,
+      description: `${surveysWithFeedback.length} of ${totalSurveys} customers provided detailed feedback (${feedbackRate}%). This provides valuable insights for improvement.`,
+      impact: 'Medium',
+      category: 'engagement',
+      type: feedbackRate >= 50 ? 'success' : 'info',
+      recommendation: feedbackRate >= 50 ? 
+        `Great feedback engagement! Use these insights to drive continuous improvement.` :
+        `Consider improving feedback collection methods to gather more detailed customer insights.`
+    });
+    
+    // Case variety in surveys
+    const uniqueCases = [...new Set(surveys.map(s => s.case_id || s.caseNumber).filter(Boolean))];
+    if (uniqueCases.length > 0) {
+      insights.push({
+        id: '4',
+        title: `Case Coverage Analysis`,
+        description: `Surveys collected for ${uniqueCases.length} unique cases. This provides comprehensive coverage of service interactions.`,
+        impact: 'Medium',
+        category: 'coverage',
+        type: 'info',
+        recommendation: `Continue collecting surveys across all case types to maintain comprehensive feedback coverage.`
+      });
+    }
+    
+    const surveyAnalysis = {
+      insights,
+      metrics: {
+        totalSurveys,
+        averageRating,
+        csatPercentage,
+        neutralPercentage,
+        dsatPercentage,
+        trend: csatPercentage >= 80 ? 'Excellent' : csatPercentage >= 60 ? 'Good' : 'Needs Improvement',
+        sentiment: averageRating >= 4.5 ? 'Very Positive' : averageRating >= 4.0 ? 'Positive' : averageRating >= 3.0 ? 'Neutral' : 'Negative'
+      },
+      surveys: surveys.map(survey => ({
+        id: survey.case_id || survey.caseNumber,
+        rating: survey.overallSatisfaction,
+        category: survey.category,
+        feedback: survey.feedback || 'No feedback provided',
+        date: survey.surveyDate,
+        customer: survey.customerName || 'Anonymous'
+      }))
+    };
+    
+    setSurveyAnalysisResults(surveyAnalysis);
   };
 
   // Utility functions
@@ -2156,6 +2375,10 @@ const IndexNew = () => {
       allInsights = [...allInsights, ...cxInsightResults.insights];
     }
     
+    if (surveyAnalysisResults) {
+      allInsights = [...allInsights, ...surveyAnalysisResults.insights];
+    }
+    
     return allInsights;
   };
 
@@ -2551,7 +2774,7 @@ const IndexNew = () => {
                       totalSurveys={
                         (chartSurveyData || []).length > 0 
                           ? (chartSurveyData || []).reduce((sum, item) => sum + (item.value || 0), 0)
-                          : (satisfactionData?.total || 0)
+                          : (satisfactionData?.satisfactionData?.total || 0)
                       }
                       onPieClick={handleSurveySegmentClick}
                     />
@@ -2659,7 +2882,7 @@ const IndexNew = () => {
                     // Calculate total surveys from the actual chart data values
                     const totalSurveys = realSurveyData.length > 0 
                       ? realSurveyData.reduce((sum, item) => sum + (item.value || 0), 0)
-                      : (satisfactionData?.total || 0);
+                      : (satisfactionData?.satisfactionData?.total || 0);
                     const entityTitle = generatedEntityValue || selectedEntityValue || 'Customer Satisfaction';
                     
                     console.log('🔍 Rendering Customer Satisfaction Distribution:', {
@@ -2669,7 +2892,7 @@ const IndexNew = () => {
                       satisfactionLoading,
                       satisfactionDataExists: !!satisfactionData,
                       satisfactionDataStructure: satisfactionData,
-                      satisfactionDataTotal: satisfactionData?.total,
+                      satisfactionDataTotal: satisfactionData?.satisfactionData?.total,
                       chartSurveyData: realSurveyData,
                       chartSurveyDataStructure: realSurveyData.length > 0 ? realSurveyData.map(d => ({ 
                         name: d.name, 
@@ -2718,6 +2941,7 @@ const IndexNew = () => {
         type={modalType}
         title={modalTitle}
         onAnalyzeSCT={handleAnalyzeSCT}
+        onAnalyzeSurvey={handleAnalyzeSurvey}
       />
     </div>
   );
