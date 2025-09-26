@@ -1,5 +1,5 @@
 {
-  "name": "Get cases",
+  "name": "Step 1",
   "nodes": [
     {
       "parameters": {
@@ -65,8 +65,11 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [576, 256],
-      "id": "f946689b-8808-4ca0-9852-92ecfb4a7e93",
+      "position": [
+        1008,
+        320
+      ],
+      "id": "eb5555f4-bc13-40fa-a9f5-b836eb49b8a7",
       "name": "onlyDocs"
     },
     {
@@ -95,12 +98,15 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [-336, 448],
-      "id": "cb50123c-ee16-420c-b103-439bd8f6a23a",
+      "position": [
+        96,
+        512
+      ],
+      "id": "49076c71-184f-43ba-82c3-9e869483990f",
       "name": "eurekaAPI",
       "credentials": {
         "httpBasicAuth": {
-          "id": "LuqOI2Vp6NW9GEzF",
+          "id": "NXYnB4PqWAZ37mHL",
           "name": "Unnamed credential"
         }
       }
@@ -112,16 +118,22 @@
       },
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [352, 256],
-      "id": "925fedc4-ef96-4ca1-bfa6-02b698e01169",
+      "position": [
+        784,
+        320
+      ],
+      "id": "ec0e39c5-584d-4569-8db7-b16502578ab0",
       "name": "Split Out"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [-112, 256],
-      "id": "f5b9d3a0-5aec-424e-ba4c-d09f3ea7be75",
+      "position": [
+        320,
+        320
+      ],
+      "id": "6b4f993c-bb33-49eb-a5ca-f71ebb299b6d",
       "name": "Merge",
       "executeOnce": true
     },
@@ -131,8 +143,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [128, 256],
-      "id": "c87b77fe-269b-42a9-8fde-649cd1df7558",
+      "position": [
+        560,
+        320
+      ],
+      "id": "91b7c5a7-6c51-49d6-bb91-6bb409536cc9",
       "name": "cleanHTML&PII"
     },
     {
@@ -141,8 +156,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 256],
-      "id": "72e9798c-f7d7-4934-887b-ca60178d52c5",
+      "position": [
+        1232,
+        320
+      ],
+      "id": "23d85a9e-688a-426c-8a4e-3bf21a86092b",
       "name": "structurizeEmail"
     },
     {
@@ -151,8 +169,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1024, 256],
-      "id": "c872d5b4-bfee-4587-baf5-7821077a6cf5",
+      "position": [
+        1456,
+        320
+      ],
+      "id": "7296e79a-532f-489d-abe9-30c211071e5c",
       "name": "calcCaseAgeDay"
     },
     {
@@ -162,9 +183,12 @@
         "width": 1616
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [-192, 160],
+      "position": [
+        240,
+        224
+      ],
       "typeVersion": 1,
-      "id": "ae114b13-2127-45ad-a426-00c0d461862f",
+      "id": "22799112-595b-4b2d-928c-386ecaed2252",
       "name": "Sticky Note"
     },
     {
@@ -176,13 +200,16 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [1248, 256],
-      "id": "50a79cdd-c1be-4240-b29e-adad772ca40e",
+      "position": [
+        1680,
+        320
+      ],
+      "id": "478c900f-ab75-42cf-bc28-d6730bd31402",
       "name": "populateDB",
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -193,8 +220,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1472, 256],
-      "id": "341c07f0-fd75-48dd-81d3-288661b448cd",
+      "position": [
+        1904,
+        320
+      ],
+      "id": "ea5e161c-1f95-412f-a063-eef2a34359c1",
       "name": "Trigger Entity Processing"
     },
     {
@@ -204,13 +234,16 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [-784, 368],
-      "id": "37716ef8-df49-4f82-83d8-2460569c611b",
+      "position": [
+        -352,
+        432
+      ],
+      "id": "93c2522e-b48b-4f46-aa3d-2aaa55fc3e1f",
       "name": "deleteDB",
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -223,9 +256,12 @@
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [-400, 336],
+      "position": [
+        32,
+        400
+      ],
       "typeVersion": 1,
-      "id": "49a49b5c-252b-4a8d-8baf-2a49fed97d5f",
+      "id": "f1ee9a00-e53f-4cff-8f2c-0289c5e0a10b",
       "name": "Sticky Note1"
     },
     {
@@ -234,8 +270,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [128, 512],
-      "id": "1b44ff1f-0add-4e71-87a1-6e46ebf01576",
+      "position": [
+        560,
+        576
+      ],
+      "id": "e7e95979-497c-4dd4-8deb-a27d58096f01",
       "name": "Edit Fields"
     },
     {
@@ -264,8 +303,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-112, 448],
-      "id": "068305cb-7a6b-4ece-9128-300a339a255e",
+      "position": [
+        320,
+        512
+      ],
+      "id": "c4c268bc-ef1f-47cc-968b-376d5c5d5636",
       "name": "Pagination Check"
     },
     {
@@ -276,9 +318,12 @@
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [-992, -144],
+      "position": [
+        -560,
+        -80
+      ],
       "typeVersion": 1,
-      "id": "b5e75049-5c6d-4c1d-b6c5-4916b514cb31",
+      "id": "906c677a-33c8-4d63-ae69-a2efacad4c46",
       "name": "Sticky Note3"
     },
     {
@@ -289,8 +334,11 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-1232, 448],
-      "id": "5cef7682-ac8a-448f-bad6-acb85a033640",
+      "position": [
+        -800,
+        512
+      ],
+      "id": "76bcbb0a-750a-4dbf-9474-4010af6a0be3",
       "name": "Webhook",
       "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
     },
@@ -300,8 +348,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-1008, 448],
-      "id": "eb98cc11-2715-4c38-8589-80d70b32c358",
+      "position": [
+        -576,
+        512
+      ],
+      "id": "6a86f6a9-1186-42d1-9e47-e8a3cdc830da",
       "name": "ProcessWebhookData"
     },
     {
@@ -310,84 +361,33 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-560, 448],
-      "id": "d6706219-b6c5-4330-9de0-f6ef24a9f3f8",
+      "position": [
+        -128,
+        512
+      ],
+      "id": "9c095e34-524d-4f38-a6eb-db2644e40afe",
       "name": "Edit Fields_declareStart"
     },
     {
       "parameters": {
         "jsCode": "// Prepare entity data directly from ProcessWebhookData for Execute Workflow\nconsole.log('=== PREPARE ENTITY DATA FOR EXECUTE WORKFLOW ===');\n\n// Get the original webhook data directly from ProcessWebhookData node\nconst processedData = $('ProcessWebhookData').first().json;\nconsole.log('Data from ProcessWebhookData node:', JSON.stringify(processedData, null, 2));\n\nif (!processedData || !processedData.webhookData) {\n  throw new Error('No webhook data found from ProcessWebhookData node');\n}\n\nconst webhookData = processedData.webhookData;\nconsole.log('Extracted webhookData:', JSON.stringify(webhookData, null, 2));\n\n// Extract entity values from webhook data\nlet entityValues = [];\n\n// Try different extraction strategies\nif (webhookData.ownerNames && Array.isArray(webhookData.ownerNames) && webhookData.ownerNames.length > 0) {\n  entityValues = webhookData.ownerNames;\n  console.log('✅ Found entityValues in ownerNames:', entityValues);\n} else if (webhookData.entityValue) {\n  entityValues = [webhookData.entityValue];\n  console.log('✅ Found entityValue in entityValue:', webhookData.entityValue);\n} else if (webhookData.entityName) {\n  entityValues = [webhookData.entityName];\n  console.log('✅ Found entityValue in entityName:', webhookData.entityName);\n}\n\n// FAIL if no entity values - no fallbacks\nif (!entityValues || entityValues.length === 0) {\n  console.error('❌ CRITICAL: No entityValues found in webhook data');\n  console.error('Available webhook data keys:', Object.keys(webhookData));\n  throw new Error('CRITICAL: No entityValues found - cannot execute Calculate Metrics workflow');\n}\n\nconsole.log(`✅ Found ${entityValues.length} entities to process:`, entityValues);\n\n// Create data structure for each entity (multiple outputs for multiple Calculate Metrics executions)\nconst executeDataArray = entityValues.map((entityValue, index) => {\n  return {\n    entityValue: entityValue,\n    owner_full_name: entityValue,\n    source: 'get-cases-workflow',\n    timestamp: new Date().toISOString(),\n    entityIndex: index,\n    totalEntities: entityValues.length,\n    entityType: webhookData.entityType || 'unknown',\n    entityName: webhookData.entityName || 'unknown'\n  };\n});\n\nconsole.log('✅ Entity data prepared for Execute Workflow:', JSON.stringify(executeDataArray, null, 2));\nconsole.log(`✅ Will trigger ${executeDataArray.length} Calculate Metrics workflow executions`);\n\n// Return multiple items, one for each entity\nreturn executeDataArray.map(data => ({ json: data }));"
       },
-      "id": "eb9ad596-9cbf-4640-9d72-d0400d03ed75",
+      "id": "9925a115-45bc-43ed-a583-8f4e2a1488a1",
       "name": "Prepare Entity Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1696, 256]
+      "position": [
+        2128,
+        320
+      ]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
+          "value": "qZ1v8w3jqsYtSUq4",
           "mode": "list",
-          "value": "VaX3w979KjLLcgNY",
-          "cachedResultName": "Calculate metrics"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {}
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [1920, 160],
-      "id": "1e9707e8-44de-4434-8fb9-8ddddb06a5e2",
-      "name": "Call 'Calculate metrics'"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "dP6H6aWkrIG79yuw",
-          "mode": "list",
-          "cachedResultName": "Process Survey"
-        },
-        "workflowInputs": {
-          "mappingMode": "passthrough"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [1920, 352],
-      "id": "8056f212-3ffc-4ec1-9e48-e77e76a47f78",
-      "name": "Process Customer Survey"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Aggregate multiple Process Survey outputs for merge node compatibility\nconst allItems = $input.all();\n\nconsole.log('🔄 Survey Results Aggregation:', {\n  totalInputs: allItems.length,\n  inputTypes: allItems.map(item => {\n    const json = item.json;\n    return {\n      entity_name: json?.entity_name,\n      entity_type: json?.entity_type,\n      hasMetrics: !!json?.metrics,\n      hasCustomerSatisfaction: !!json?.metrics?.customerSatisfaction\n    };\n  })\n});\n\nif (allItems.length === 0) {\n  console.log('⚠️ No Process Survey outputs to aggregate');\n  return [];\n}\n\nif (allItems.length === 1) {\n  console.log('✅ Single Process Survey output, passing through unchanged');\n  return allItems;\n}\n\n// Multiple outputs - pass them all through for Aggregate Data workflow to handle\nconsole.log('📊 Multiple Process Survey outputs detected, passing all through');\nconsole.log('📋 Survey data summary:', allItems.map(item => ({\n  entity_name: item.json?.entity_name,\n  satisfaction_total: item.json?.metrics?.customerSatisfaction?.total,\n  has_survey_details: !!item.json?.metrics?.surveyDetails\n})));\n\n// Pass all survey results through - the Aggregate Data workflow will handle the merging\nreturn allItems;"
-      },
-      "id": "survey-aggregator-node",
-      "name": "Aggregate Survey Results",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [2032, 352]
-    },
-    {
-      "parameters": {},
-      "id": "40528176-6704-42dc-a4de-e6f54a2ffaaf",
-      "name": "Wait for Both Workflows Complete",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [2144, 256]
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "QkTL13ss9wmvB2Fm",
-          "mode": "list",
-          "cachedResultName": "Aggregate Data"
+          "cachedResultName": "Step 2"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -399,18 +399,104 @@
         },
         "options": {}
       },
-      "id": "88d8903e-618a-4da6-ac73-cef5934cb112",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2352,
+        224
+      ],
+      "id": "001c3fc6-e0a1-4724-a2a3-367d3dc2ffae",
+      "name": "Call 'Calculate metrics'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4Ag84oc6TwKqyFfR",
+          "mode": "list",
+          "cachedResultName": "Step 3"
+        },
+        "workflowInputs": {
+          "mappingMode": "passthrough",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2352,
+        416
+      ],
+      "id": "46de1eb6-ce9e-43a4-939b-0dd6e2e8e1f4",
+      "name": "Process Customer Survey"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate multiple Process Survey outputs for merge node compatibility\nconst allItems = $input.all();\n\nconsole.log('🔄 Survey Results Aggregation:', {\n  totalInputs: allItems.length,\n  inputTypes: allItems.map(item => {\n    const json = item.json;\n    return {\n      entity_name: json?.entity_name,\n      entity_type: json?.entity_type,\n      hasMetrics: !!json?.metrics,\n      hasCustomerSatisfaction: !!json?.metrics?.customerSatisfaction\n    };\n  })\n});\n\nif (allItems.length === 0) {\n  console.log('⚠️ No Process Survey outputs to aggregate');\n  return [];\n}\n\nif (allItems.length === 1) {\n  console.log('✅ Single Process Survey output, passing through unchanged');\n  return allItems;\n}\n\n// Multiple outputs - pass them all through for Aggregate Data workflow to handle\nconsole.log('📊 Multiple Process Survey outputs detected, passing all through');\nconsole.log('📋 Survey data summary:', allItems.map(item => ({\n  entity_name: item.json?.entity_name,\n  satisfaction_total: item.json?.metrics?.customerSatisfaction?.total,\n  has_survey_details: !!item.json?.metrics?.surveyDetails\n})));\n\n// Pass all survey results through - the Aggregate Data workflow will handle the merging\nreturn allItems;"
+      },
+      "id": "5f091466-ea2d-4aaf-a76a-388238f810f2",
+      "name": "Aggregate Survey Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge case performance data with survey data, ensuring surveyDetails is preserved\nconst allItems = $input.all();\n\nconsole.log('🔄 Merging workflows data:', {\n  totalInputs: allItems.length,\n  rawInputs: allItems,\n  inputTypes: allItems.map((items, inputIndex) => ({\n    inputIndex,\n    isArray: Array.isArray(items),\n    itemCount: Array.isArray(items) ? items.length : 'not array',\n    type: typeof items\n  }))\n});\n\n// Input 0: Case performance data\n// Input 1: Survey data (with surveyDetails)\nconst caseData = Array.isArray(allItems[0]) ? allItems[0] : [];\nconst surveyData = Array.isArray(allItems[1]) ? allItems[1] : [];\n\nconsole.log('📊 Case data summary:', {\n  isArray: Array.isArray(caseData),\n  length: caseData.length,\n  items: caseData.map(item => ({\n    entity_name: item.json?.entity_name,\n    cases_count: item.json?.cases_count,\n    hasMetrics: !!item.json?.metrics\n  }))\n});\n\nconsole.log('📋 Survey data summary:', {\n  isArray: Array.isArray(surveyData),\n  length: surveyData.length,\n  items: surveyData.map(item => ({\n    entity_name: item.json?.entity_name,\n    hasSurveyDetails: !!item.json?.surveyDetails,\n    surveyDetailsCount: item.json?.surveyDetails?.length || 0,\n    hasCustomerSatisfaction: !!item.json?.metrics?.customerSatisfaction\n  }))\n});\n\n// Pass all data through to the Aggregate Data workflow\n// The Aggregate Data workflow will handle the proper merging\nconst allData = [...caseData, ...surveyData];\n\nconsole.log('✅ Passing through all data for Aggregate Data workflow:', {\n  totalItems: allData.length,\n  caseItems: caseData.length,\n  surveyItems: surveyData.length\n});\n\nreturn allData;"
+      },
+      "id": "d1966b96-dbde-4f7c-b5c9-f5c7968011e0",
+      "name": "Wait for Both Workflows Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "AjDfQFdyNwd7hDR7",
+          "mode": "list",
+          "cachedResultName": "Step 4 - Aggregate"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "070debfa-293a-4682-848b-9e2a97ca37f7",
       "name": "Trigger Aggregate Data",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [2368, 256]
+      "position": [
+        2800,
+        320
+      ]
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [2592, 256],
-      "id": "830f9078-4e0c-43db-b5cb-aa1da77c7e3d",
+      "position": [
+        3024,
+        320
+      ],
+      "id": "d65e41a6-1c28-4baa-82dc-0a512042f389",
       "name": "Workflow Complete"
     }
   ],
@@ -624,17 +710,6 @@
         ]
       ]
     },
-    "Aggregate Survey Results": {
-      "main": [
-        [
-          {
-            "node": "Wait for Both Workflows Complete",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
     "Wait for Both Workflows Complete": {
       "main": [
         [
@@ -662,11 +737,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "4e21736a-c7fd-495d-a09f-775fe50e8ef0",
+  "versionId": "c26d7f20-2890-41d8-b4cb-2e9ed080ea5c",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
+    "instanceId": "197030258e5ec4f22da7668edae4c29f9bb02818dd32dfbc6a28b550e0739e49"
   },
-  "id": "W23DBMrR9IOmmFC6",
+  "id": "E0rEuDzh7GYPMpDF",
   "tags": []
 }

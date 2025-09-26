@@ -965,11 +965,29 @@ app.post('/api/squad', async (req, res) => {
 
     const now = new Date();
     
+    // Debug teamID value and type
+    console.log('🔍 teamID check - Value:', teamID, 'Type:', typeof teamID, 'Truthy:', !!teamID);
+    
+    // Validate and convert teamID to ObjectId if provided
+    let validatedTeamID = null;
+    if (teamID) {
+      console.log('🔄 Entering ObjectId conversion block...');
+      try {
+        validatedTeamID = new ObjectId(teamID);
+        console.log('🔄 ObjectId conversion - Input:', teamID, 'Output:', validatedTeamID);
+      } catch (error) {
+        console.log('❌ Invalid team ID format:', teamID, 'Error:', error.message);
+        return res.status(400).json({ error: 'Invalid team ID format' });
+      }
+    } else {
+      console.log('❌ teamID is falsy, skipping ObjectId conversion');
+    }
+    
     const squadData = {
       name: normalizedName,
-      teamID: teamID ? new (require('mongodb').ObjectId)(teamID) : null,
-      created_at: now,
-      updated_at: now
+      teamID: validatedTeamID,    // Use teamID as ObjectId to match schema
+      created_at: now,            // Use created_at with underscore
+      updated_at: now             // Use updated_at with underscore
     };
     console.log('📝 Squad data to insert:', squadData);
 
@@ -1091,10 +1109,22 @@ app.post('/api/dpe', async (req, res) => {
       });
     }
 
+    // Validate and convert squadID to ObjectId if provided
+    let validatedSquadID = null;
+    if (squadID) {
+      try {
+        validatedSquadID = new ObjectId(squadID);
+        console.log('🔄 ObjectId conversion - Input:', squadID, 'Output:', validatedSquadID);
+      } catch (error) {
+        console.log('❌ Invalid squad ID format:', squadID, 'Error:', error.message);
+        return res.status(400).json({ error: 'Invalid squad ID format' });
+      }
+    }
+
     const now = new Date();
     const dpeData = {
       name: normalizedName,
-      squadID: squadID ? new (require('mongodb').ObjectId)(squadID) : null,
+      squadID: validatedSquadID,    // Use squadID as ObjectId to match schema
       created_at: now,
       updated_at: now
     };
