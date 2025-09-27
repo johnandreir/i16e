@@ -21,6 +21,22 @@ export interface PerformanceData {
   closedCases: number;
   openCases: number;
   cases: CaseData[];
+  // New satisfaction fields
+  satisfaction?: {
+    csat: number;
+    neutral: number;
+    dsat: number;
+    total: number;
+    csatPercentage: number;
+    neutralPercentage: number;
+    dsatPercentage: number;
+  };
+  surveyDetails?: Array<{
+    case_id: string;
+    rating: number;
+    feedback?: string;
+    survey_date: string;
+  }>;
 }
 
 export interface CaseStatistics {
@@ -99,7 +115,23 @@ export default class CasePerformanceService {
               totalCases: record.cases_count || 0,
               closedCases: record.metrics?.closedCases || 0,
               openCases: Math.max(0, (record.cases_count || 0) - (record.metrics?.closedCases || 0)),
-              cases: record.sample_cases || []
+              cases: record.sample_cases || [],
+              // Include satisfaction data if available
+              ...(record.metrics?.customerSatisfaction && {
+                satisfaction: {
+                  csat: record.metrics.customerSatisfaction.csat || 0,
+                  neutral: record.metrics.customerSatisfaction.neutral || 0,
+                  dsat: record.metrics.customerSatisfaction.dsat || 0,
+                  total: record.metrics.customerSatisfaction.total || 0,
+                  csatPercentage: record.metrics.customerSatisfaction.csatPercentage || 0,
+                  neutralPercentage: record.metrics.customerSatisfaction.neutralPercentage || 0,
+                  dsatPercentage: record.metrics.customerSatisfaction.dsatPercentage || 0,
+                }
+              }),
+              // Include survey details if available
+              ...(record.surveyDetails && record.surveyDetails.length > 0 && {
+                surveyDetails: record.surveyDetails
+              })
             }));
             
             // Sort by SCT (ascending - better performance first)
@@ -238,7 +270,23 @@ export default class CasePerformanceService {
               totalCases: record.cases_count || 0,
               closedCases: record.metrics?.closedCases || 0,
               openCases: Math.max(0, (record.cases_count || 0) - (record.metrics?.closedCases || 0)),
-              cases: record.sample_cases || []
+              cases: record.sample_cases || [],
+              // Include satisfaction data if available
+              ...(record.metrics?.customerSatisfaction && {
+                satisfaction: {
+                  csat: record.metrics.customerSatisfaction.csat || 0,
+                  neutral: record.metrics.customerSatisfaction.neutral || 0,
+                  dsat: record.metrics.customerSatisfaction.dsat || 0,
+                  total: record.metrics.customerSatisfaction.total || 0,
+                  csatPercentage: record.metrics.customerSatisfaction.csatPercentage || 0,
+                  neutralPercentage: record.metrics.customerSatisfaction.neutralPercentage || 0,
+                  dsatPercentage: record.metrics.customerSatisfaction.dsatPercentage || 0,
+                }
+              }),
+              // Include survey details if available
+              ...(record.surveyDetails && record.surveyDetails.length > 0 && {
+                surveyDetails: record.surveyDetails
+              })
             }));
             
             // Sort by SCT (ascending - better performance first)

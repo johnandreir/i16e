@@ -13,71 +13,91 @@ The DevOps Insight Engine is a comprehensive analytics platform that provides re
 - **AI Chatbot Integration**: N8N-powered intelligent assistant with MongoDB memory
 - **Dark/Light Theme Support**: Responsive design with theme switching
 - **Data Visualization**: Interactive charts and graphs using Recharts
-- **Docker Containerization**: Full containerized deployment with MongoDB, N8N, and API services
+- **Hybrid Architecture**: Docker backend services with local frontend development
 
 ## Architecture
 
 The platform consists of:
 
-- **Frontend**: React/TypeScript dashboard with shadcn/ui components
-- **Backend API**: Node.js MongoDB API server
-- **Database**: MongoDB for data storage and chat memory
-- **AI Workflow**: N8N automation platform with OpenAI integration
-- **Containerization**: Docker Compose orchestration
+- **Frontend**: React/TypeScript dashboard with shadcn/ui components (runs locally)
+- **Backend API**: Node.js MongoDB API server (Docker containerized)
+- **Database**: MongoDB for data storage and chat memory (Docker containerized)
+- **AI Workflow**: N8N automation platform with OpenAI integration (Docker containerized)
+- **Development**: Hot reload frontend with containerized backend services
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- Node.js 18+ and npm (for local development)
+- Node.js 18+ and npm
 - Git
 
-### Using Docker (Recommended)
+### Super Quick Setup (Recommended)
 
 ```sh
 # Clone the repository
 git clone https://github.com/johnandreir/devops-insight-engine.git
-
-# Navigate to project directory
 cd devops-insight-engine
 
-# Start all services with Docker Compose
-docker-compose up -d
+# Windows: Start everything with one command
+start-full-dev.bat
 
-# Access the services:
-# - Dashboard: http://localhost:8082
-# - N8N Workflow: http://localhost:5678
-# - MongoDB API: http://localhost:3001
-# - MongoDB: localhost:27017
+# Or manually:
+# 1. Start backend services (Docker)
+docker-compose -f docker-compose.prod.yml up -d
+
+# 2. Start frontend development server
+npm run dev
+```
+
+**That's it!** 🎉 Everything will be running in under 2 minutes.
+
+### 🌐 Access Your Applications
+
+- **Frontend Dashboard**: http://localhost:8082 (React dev server with hot reload)
+- **Backend API**: http://localhost:3001 (MongoDB API endpoints)
+- **N8N Workflow**: http://localhost:5678 (AI chatbot and automation)
+- **MongoDB**: localhost:27017 (Database server)
+
+### 🛠️ Windows Batch Commands
+
+For Windows users, convenient batch files are provided:
+
+- **`start-full-dev.bat`** - Start everything (backend + frontend) in one command
+- **`start-prod.bat`** - Start only backend services (MongoDB, N8N, API)
+- **`stop-prod.bat`** - Stop backend services
+- **`check-health.bat`** - Check service health status
+- **`view-logs.bat`** - View Docker service logs
+- **`cleanup.bat`** - Clean up Docker containers and images
+
+### 🐧 Linux/Mac Commands
+
+```sh
+# Start backend services only
+docker-compose -f docker-compose.prod.yml up -d
+
+# Start frontend development server
+npm run dev
+
+# Stop backend services
+docker-compose -f docker-compose.prod.yml down
+
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f
 ```
 
 ### Local Development
 
 ```sh
-# Install dependencies
+# Install all dependencies
 npm install
 
-# Start development server
+# Start frontend development server (with hot reload)
 npm run dev
-# or
-node start-dev.js
 
-# Start with monitoring
-npm run start:monitor
-```
-
-### Development Scripts
-
-```sh
-# Start development with API integration
-node start-dev-with-api.js
-
-# Start with enhanced monitoring
-node start-dev-enhanced.js
-
-# Start isolated API server
-npm run start:api
+# Start backend API server locally (alternative to Docker)
+npm run api
 ```
 
 ## Technology Stack
@@ -108,12 +128,28 @@ npm run start:api
 
 ## Services Architecture
 
-| Service               | Port  | Description                  |
-| --------------------- | ----- | ---------------------------- |
-| Frontend Dashboard    | 8082  | React TypeScript application |
-| N8N Workflow Platform | 5678  | AI chatbot and automation    |
-| MongoDB API           | 3001  | RESTful API server           |
-| MongoDB Database      | 27017 | Primary data storage         |
+| Service               | Port  | Description                  | Environment      |
+| --------------------- | ----- | ---------------------------- | ---------------- |
+| Frontend Dashboard    | 8082  | React TypeScript application | Local Dev Server |
+| MongoDB API           | 3001  | RESTful API server           | Docker Container |
+| N8N Workflow Platform | 5678  | AI chatbot and automation    | Docker Container |
+| MongoDB Database      | 27017 | Primary data storage         | Docker Container |
+
+## 🚀 Why This Architecture?
+
+### ✅ **Hybrid Approach Benefits:**
+
+- **Fast Development**: Frontend hot reload without Docker rebuilds
+- **Quick Setup**: Backend services start in ~30 seconds (not 500+ seconds)
+- **Production Ready**: Backend services containerized for consistency
+- **Developer Friendly**: All dependencies auto-installed with `npm install`
+
+### 🔄 **Development Workflow:**
+
+1. **Backend Services** run in Docker containers (isolated, consistent)
+2. **Frontend** runs locally with Vite dev server (fast hot reload)
+3. **Database** persists data in Docker volumes
+4. **Dependencies** automatically managed by npm and Docker
 
 ## Environment Configuration
 
@@ -153,53 +189,126 @@ npm run start:api
 devops-insight-engine/
 ├── src/
 │   ├── components/          # React components
-│   │   └── dashboard/       # Dashboard-specific components
-│   ├── lib/                 # Utility libraries
+│   │   ├── dashboard/       # Dashboard-specific components
+│   │   └── ui/             # Reusable UI components (shadcn/ui)
+│   ├── lib/                # Utility libraries
+│   ├── hooks/              # Custom React hooks
 │   └── pages/              # Application pages
-├── docker-compose.yml       # Container orchestration
+├── docker-compose.prod.yml  # Production backend services
+├── docker-compose.dev.yml   # Development backend services
 ├── Dockerfile.api          # API service container
-├── Chatbot.json           # N8N workflow configuration
-└── package.json           # Node.js dependencies
+├── mongodb-api-server.cjs   # Express.js API server
+├── start-full-dev.bat      # Windows: Start everything
+├── start-prod.bat          # Windows: Start backend only
+├── QUICK_START.md          # Simple setup instructions
+└── package.json           # Frontend dependencies
 ```
 
-### Key Scripts
+### Key Files
 
-- `start-dev.js` - Development server with hot reload
-- `start-dev-enhanced.js` - Development with monitoring
-- `mongodb-api-server.cjs` - Standalone API server
-- `service-monitor.ps1` - Windows service monitoring
+- **`mongodb-api-server.cjs`** - Express.js API server with MongoDB integration
+- **`start-full-dev.bat`** - One-command setup for Windows
+- **`docker-compose.prod.yml`** - Backend services orchestration
+- **`package.json`** - All frontend dependencies (React, Vite, TypeScript, etc.)
+- **`QUICK_START.md`** - Simplified development guide
 
 ## Deployment
+
+### Development Deployment (Recommended)
+
+```sh
+# Windows (One Command)
+start-full-dev.bat
+
+# Manual Steps
+docker-compose -f docker-compose.prod.yml up -d  # Backend services
+npm run dev                                        # Frontend server
+```
 
 ### Production Deployment
 
 ```sh
-# Build and deploy with Docker
-docker-compose up -d --build
+# Build and deploy backend services
+docker-compose -f docker-compose.prod.yml up -d --build
 
-# Check service health
-docker-compose ps
-docker-compose logs
+# Build frontend for production
+npm run build
+
+# Serve built frontend (example with serve)
+npm install -g serve
+serve -s dist -l 8082
 ```
 
-### Development Deployment
+### Health Monitoring
 
 ```sh
-# Start development environment
-npm run dev
+# Check all backend services
+docker ps
+docker-compose -f docker-compose.prod.yml logs
 
-# Or with enhanced monitoring
-node start-dev-enhanced.js
+# Windows health check
+check-health.bat
+
+# Manual endpoint checks
+curl http://localhost:3001/api/health  # API health
+curl http://localhost:5678/healthz     # N8N health
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Docker services won't start:**
+
+```sh
+# Clean up and restart
+cleanup.bat                    # Windows
+docker system prune -f         # Manual cleanup
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+**Frontend won't start:**
+
+```sh
+# Reinstall dependencies
+rm -rf node_modules package-lock.json  # Linux/Mac
+rmdir /s node_modules & del package-lock.json  # Windows
+npm install
+npm run dev
+```
+
+**Port conflicts:**
+
+```sh
+# Check what's using ports
+netstat -ano | findstr :8082   # Windows
+lsof -i :8082                  # Mac/Linux
+
+# Kill process if needed
+taskkill /f /pid <PID>         # Windows
+kill -9 <PID>                 # Mac/Linux
+```
+
+### Logs and Debugging
+
+```sh
+# View specific service logs
+docker logs i16e-api           # API server logs
+docker logs i16e-mongodb       # Database logs
+docker logs i16e-n8n           # N8N workflow logs
+
+# Windows batch helper
+view-logs.bat                  # Interactive log viewer
 ```
 
 ## Monitoring & Health Checks
 
-All services include health checks:
+All backend services include automated health checks:
 
-- **MongoDB**: Connection ping tests
-- **N8N**: HTTP health endpoint monitoring
-- **API**: RESTful health endpoint
-- **Frontend**: Development server status
+- **MongoDB**: Database connection ping tests
+- **N8N**: HTTP health endpoint monitoring (`/healthz`)
+- **API**: RESTful health endpoint (`/api/health`)
+- **Frontend**: Development server auto-reload on file changes
 
 ## Contributing
 
@@ -219,4 +328,10 @@ This project is proprietary software developed for DevOps performance analytics.
 
 ---
 
-_Last updated: September 26, 2025_
+## 📖 Additional Documentation
+
+- **[QUICK_START.md](QUICK_START.md)** - Simplified setup guide
+- **[DOCKER_SETUP.md](DOCKER_SETUP.md)** - Detailed Docker instructions
+- **[PERFORMANCE_DATA_AGGREGATION.md](PERFORMANCE_DATA_AGGREGATION.md)** - Data architecture guide
+
+_Last updated: September 27, 2025 - Simplified Docker architecture with hybrid development approach_

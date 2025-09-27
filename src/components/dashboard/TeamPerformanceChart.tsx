@@ -19,9 +19,6 @@ interface TeamPerformanceChartProps {
 const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title, onBarClick }) => {
   const [hoveredBar, setHoveredBar] = useState<{ type: 'sct' | 'cases' | null; index: number | null }>({ type: null, index: null });
 
-  console.log('TeamPerformanceChart received data:', data);
-  console.log('TeamPerformanceChart title:', title);
-
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const isNoPerformanceData = !hasPerformanceData;
@@ -59,13 +56,6 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
   
   // Check if we have actual performance data or just structure with zero values
   const hasPerformanceData = hasValidData && data.some(item => item.sct > 0 || item.cases > 0);
-  
-  console.log('TeamPerformanceChart validation:', {
-    hasValidData,
-    hasPerformanceData,
-    dataLength: data?.length,
-    firstItem: data?.[0]
-  });
   
   // Use empty placeholder data when no data is available to show chart structure
   const chartData = hasValidData ? data : [

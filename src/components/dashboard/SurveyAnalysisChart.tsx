@@ -23,19 +23,6 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
   totalSurveys,
   onPieClick 
 }) => {
-  // Debug the data being passed to the chart
-  console.log('🔍 SurveyAnalysisChart received:', {
-    title,
-    totalSurveys,
-    data,
-    dataLength: data?.length,
-    dataStructure: data?.map(item => ({
-      name: item?.name,
-      value: item?.value,
-      percentage: item?.percentage,
-      color: item?.color
-    }))
-  });
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -95,18 +82,6 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
   // Always show chart, but use empty data when no valid data exists
   const hasValidData = data && data.length > 0 && data.some(item => item.value > 0) && totalSurveys > 0;
   
-  console.log('🔍 SurveyAnalysisChart validation:', {
-    dataExists: !!data,
-    dataLength: data?.length,
-    hasItemsWithValue: data?.some(item => item.value > 0),
-    totalSurveysValue: totalSurveys,
-    totalSurveysType: typeof totalSurveys,
-    totalSurveysValid: totalSurveys > 0,
-    finalHasValidData: hasValidData,
-    actualDataValues: data?.map(item => ({ name: item?.name, value: item?.value })),
-    filteredDataLength: hasValidData ? data.filter(item => item.value > 0).length : 0
-  });
-  
   // Use empty placeholder data when no data is available to show chart structure
   const chartData = hasValidData ? 
     data.filter(item => item.value > 0) : // Filter out segments with 0 values for cleaner pie chart
@@ -115,18 +90,6 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
       { name: 'Neutral (3)', value: 0, percentage: 0, color: '#f59e0b' },
       { name: 'DSAT (1-2)', value: 0, percentage: 0, color: '#ef4444' }
     ];
-
-  console.log('🎨 Chart rendering data:', {
-    originalDataLength: data?.length || 0,
-    filteredDataLength: chartData.length,
-    chartData: chartData.map(item => ({
-      name: item.name,
-      value: item.value,
-      percentage: item.percentage
-    })),
-    isSingleSegment: chartData.length === 1,
-    hasValidData
-  });
 
   const handleSegmentClick = (data: any, index: number) => {
     if (onPieClick && hasValidData) {

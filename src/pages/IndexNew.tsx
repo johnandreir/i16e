@@ -18,8 +18,18 @@ import BackendStatus from '@/components/dashboard/BackendStatus';
 import Chatbot from '@/components/dashboard/Chatbot';
 import { useEntityDatabase } from '@/hooks/useEntityDatabase';
 import { DashboardData } from '@/lib/entityService';
+import CasePerformanceService from '@/lib/casePerformanceService';
 import CustomerSatisfactionService, { EntitySatisfactionData, ChartSurveyData } from '@/lib/customerSatisfactionService';
 import { useToast } from '@/hooks/use-toast';
+
+// Interface for TeamPerformanceChart data
+interface TeamMember {
+  name: string;
+  sct: number;
+  cases: number;
+  satisfaction: number;
+  detailedCases?: any[];
+}
 
 const IndexNew = () => {
   const { toast } = useToast();
@@ -117,7 +127,10 @@ const IndexNew = () => {
   // Additional state for insights and modals
   const [sctAnalyzed, setSctAnalyzed] = useState<boolean>(false);
   const [cxAnalyzed, setCxAnalyzed] = useState<boolean>(false);
+  const [performanceOverviewData, setPerformanceOverviewData] = useState<TeamMember[]>([]);
   const [isAnalysisEnabled, setIsAnalysisEnabled] = useState<boolean>(false);
+  const [isPerformanceLoading, setIsPerformanceLoading] = useState<boolean>(false);
+  const [isSatisfactionLoading, setIsSatisfactionLoading] = useState<boolean>(false);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [cachedDashboardData, setCachedDashboardData] = useState<DashboardData | null>(null);
   const [reportDashboardData, setReportDashboardData] = useState<DashboardData | null>(null);
@@ -144,10 +157,8 @@ const IndexNew = () => {
   const handleEntityChange = (entity: string) => {
     // Validate entity type
     if (!entity || !['dpe', 'squad', 'team'].includes(entity)) {
-      console.warn('Invalid entity type selected:', entity);
       return;
     }
-    
     setSelectedEntity(entity);
     setSelectedEntityValue(''); // Reset entity value when type changes
     setEntityChanged(true);
@@ -163,7 +174,6 @@ const IndexNew = () => {
   const handleEntityValueChange = (value: string) => {
     // Validate entity value
     if (!value || value.includes('Add New')) {
-      console.warn('Invalid entity value selected:', value);
       setSelectedEntityValue('');
       return;
     }
@@ -172,14 +182,12 @@ const IndexNew = () => {
     const formattedData = formatEntityDataForComponents();
     const entityOptions = formattedData[selectedEntity as 'team' | 'squad' | 'dpe'] || [];
     if (!entityOptions.includes(value)) {
-      console.warn('Selected entity value not found in available options:', value);
       return;
     }
-    
     setSelectedEntityValue(value);
     setEntityChanged(true);
     setReportGenerated(false);
-    setWorkflowCompleted(false); // Reset workflow completion
+    // NO WORKFLOW DEPENDENCY NEEDED
     setGeneratedEntity(''); // Clear generated entity
     setGeneratedEntityValue(''); // Clear generated entity value
     setReportDashboardData(null); // Clear report data
@@ -190,12 +198,10 @@ const IndexNew = () => {
   const handleTimeRangeChange = (range: { from: Date; to: Date }) => {
     // Validate date range
     if (!range.from || !range.to) {
-      console.warn('Invalid date range provided');
       return;
     }
     
     if (range.from > range.to) {
-      console.warn('Start date cannot be after end date');
       return;
     }
     
@@ -203,7 +209,6 @@ const IndexNew = () => {
     const maxFutureDate = new Date();
     maxFutureDate.setFullYear(maxFutureDate.getFullYear() + 1);
     if (range.to > maxFutureDate) {
-      console.warn('End date cannot be more than 1 year in the future');
       return;
     }
     
@@ -214,7 +219,7 @@ const IndexNew = () => {
   const fetchSatisfactionData = async (entityName: string, entityType: string) => {
     try {
       setSatisfactionLoading(true);
-      console.log(`Fetching satisfaction data for ${entityType}: ${entityName}`);
+      setIsSatisfactionLoading(true); // Also set the chart loading state
       
       if (entityType === 'dpe') {
         // Direct DPE satisfaction data
@@ -223,16 +228,13 @@ const IndexNew = () => {
           setSatisfactionData(data);
           const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(data.satisfactionData);
           setChartSurveyData(chartData);
-          console.log(`✅ Loaded satisfaction data for DPE: ${entityName}`, data.satisfactionData);
         } else {
-          console.log(`No satisfaction data found for DPE: ${entityName}`);
           setSatisfactionData(null);
           setChartSurveyData([]);
         }
       } else if (entityType === 'squad') {
         // Aggregate satisfaction data for squad members
         const squadMembers = getSquadMembers();
-        console.log(`🔍 Squad satisfaction fetch - Squad: ${entityName}, Members: [${squadMembers.join(', ')}]`);
         
         if (squadMembers.length > 0) {
           const aggregatedData = await CustomerSatisfactionService.getAggregatedSatisfactionData(squadMembers, entityType);
@@ -248,8 +250,6 @@ const IndexNew = () => {
               .filter(data => data !== null)
               .flatMap(data => data!.surveyDetails || []);
             
-            console.log(`📊 Collected ${allSurveyDetails.length} survey details from ${squadMembers.length} squad members`);
-            
             setSatisfactionData({
               entityName,
               entityType,
@@ -260,14 +260,11 @@ const IndexNew = () => {
             });
             const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(aggregatedData);
             setChartSurveyData(chartData);
-            console.log(`✅ Loaded aggregated satisfaction data for Squad: ${entityName}`, aggregatedData);
           } else {
-            console.log(`❌ No aggregated satisfaction data found for Squad: ${entityName} with members: [${squadMembers.join(', ')}]`);
             setSatisfactionData(null);
             setChartSurveyData([]);
           }
         } else {
-          console.log(`❌ No squad members found for: ${entityName}`);
           setSatisfactionData(null);
           setChartSurveyData([]);
         }
@@ -283,8 +280,6 @@ const IndexNew = () => {
             .map(([dpe]) => dpe)
         );
         
-        console.log(`🔍 Team satisfaction fetch - Team: ${entityName}, Squads: [${teamSquads.join(', ')}], DPEs: [${teamDPEs.join(', ')}]`);
-        
         if (teamDPEs.length > 0) {
           const aggregatedData = await CustomerSatisfactionService.getAggregatedSatisfactionData(teamDPEs, entityType);
           if (aggregatedData) {
@@ -299,8 +294,6 @@ const IndexNew = () => {
               .filter(data => data !== null)
               .flatMap(data => data!.surveyDetails || []);
             
-            console.log(`📊 Collected ${allSurveyDetails.length} survey details from ${teamDPEs.length} team DPEs`);
-            
             setSatisfactionData({
               entityName,
               entityType,
@@ -311,21 +304,17 @@ const IndexNew = () => {
             });
             const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(aggregatedData);
             setChartSurveyData(chartData);
-            console.log(`✅ Loaded aggregated satisfaction data for Team: ${entityName}`, aggregatedData);
           } else {
-            console.log(`❌ No aggregated satisfaction data found for Team: ${entityName} with DPEs: [${teamDPEs.join(', ')}]`);
             setSatisfactionData(null);
             setChartSurveyData([]);
           }
         } else {
-          console.log(`❌ No team members found for: ${entityName} (Squads: [${teamSquads.join(', ')}])`);
           setSatisfactionData(null);
           setChartSurveyData([]);
         }
       }
       
     } catch (error) {
-      console.error(`Error fetching satisfaction data for ${entityType}: ${entityName}`, error);
       setSatisfactionData(null);
       setChartSurveyData([]);
       
@@ -336,6 +325,7 @@ const IndexNew = () => {
       });
     } finally {
       setSatisfactionLoading(false);
+      setIsSatisfactionLoading(false); // Also clear the chart loading state
     }
   };
 
@@ -381,7 +371,7 @@ const IndexNew = () => {
     }
     
     setIsLoading(true);
-    setWorkflowCompleted(false); // Reset workflow completion status
+    // NO WORKFLOW DEPENDENCY - only database polling matters
     
     // Add diagnostic logging
     diagnoseEntityData(selectedEntity, selectedEntityValue);
@@ -421,8 +411,7 @@ const IndexNew = () => {
           
           // Create payload based on entity type and value
           let ownerNames: string[] = [];
-          
-          
+
           if (selectedEntity === 'dpe') {
             ownerNames = [selectedEntityValue];
           } else if (selectedEntity === 'squad') {
@@ -506,20 +495,13 @@ const IndexNew = () => {
         setEntityChanged(false);
         setIsAnalysisEnabled(true);
         
-        // Only fetch satisfaction data separately for squads/teams, not for individual DPEs
-        // (Individual DPE satisfaction data is now extracted directly from performance data)
-        console.log('🔍 [FIRST] Checking if should fetch satisfaction data separately:', {
-          selectedEntity,
-          selectedEntityValue,
-          shouldFetch: selectedEntity === 'squad' || selectedEntity === 'team'
-        });
+        // Set loading states when starting report generation
+        // The 10-minute polling system will handle data fetching and loading state management
+        setIsPerformanceLoading(true);
+        setIsSatisfactionLoading(true);
         
-        if (selectedEntity === 'squad' || selectedEntity === 'team') {
-          console.log('⚡ [FIRST] Fetching satisfaction data separately for squad/team');
-          await fetchSatisfactionData(selectedEntityValue, selectedEntity);
-        } else {
-          console.log('⏭️ [FIRST] Skipping separate satisfaction fetch for DPE (will use performance data)');
-        }
+        // Don't call fetchPerformanceOverviewData or fetchSatisfactionData immediately
+        // Let the 10-minute polling system (useEffect with fetchCalculateMetricsResults) handle all data fetching
       } else {
         // Set empty data structure as fallback
         setCachedDashboardData({
@@ -554,20 +536,13 @@ const IndexNew = () => {
         setEntityChanged(false);
         setIsAnalysisEnabled(true);
         
-        // Only fetch satisfaction data separately for squads/teams, not for individual DPEs
-        // (Individual DPE satisfaction data is now extracted directly from performance data)
-        console.log('🔍 [SECOND] Checking if should fetch satisfaction data separately:', {
-          selectedEntity,
-          selectedEntityValue,
-          shouldFetch: selectedEntity === 'squad' || selectedEntity === 'team'
-        });
+        // Set loading states when starting report generation
+        // The 10-minute polling system will handle data fetching and loading state management
+        setIsPerformanceLoading(true);
+        setIsSatisfactionLoading(true);
         
-        if (selectedEntity === 'squad' || selectedEntity === 'team') {
-          console.log('⚡ [SECOND] Fetching satisfaction data separately for squad/team');
-          await fetchSatisfactionData(selectedEntityValue, selectedEntity);
-        } else {
-          console.log('⏭️ [SECOND] Skipping separate satisfaction fetch for DPE (will use performance data)');
-        }
+        // Don't call fetchPerformanceOverviewData or fetchSatisfactionData immediately
+        // Let the 10-minute polling system (useEffect with fetchCalculateMetricsResults) handle all data fetching
       }
     } catch (error) {
       // Set fallback data on error
@@ -581,75 +556,164 @@ const IndexNew = () => {
     }
   };
 
+  // Function to fetch performance overview data using direct API calls like KPI cards
+  const fetchPerformanceOverviewData = async () => {
+    try {
+      if (!generatedEntity || !generatedEntityValue) {
+        setIsPerformanceLoading(false);
+        return;
+      }
+      
+      setIsPerformanceLoading(true);
+      const startDate = selectedTimeRange.from?.toISOString().split('T')[0];
+      const endDate = selectedTimeRange.to?.toISOString().split('T')[0];
+      
+      if (generatedEntity === 'dpe') {
+        // For DPE, query performance_data collection directly via API (same as KPI cards)
+        const apiUrl = `http://localhost:3001/api/performance-data?entity_name=${encodeURIComponent(generatedEntityValue)}`;
+        const response = await fetch(apiUrl);
+        if (response.ok) {
+          const performanceData = await response.json();
+          if (performanceData.length > 0) {
+            const latestRecord = performanceData[0];
+            const mappedData = [{
+              name: latestRecord.entity_name || latestRecord.owner,
+              sct: latestRecord.metrics?.sct || 0,
+              cases: latestRecord.metrics?.closedCases || 0,
+              satisfaction: latestRecord.metrics?.customerSatisfaction?.csatPercentage || 0,
+              detailedCases: latestRecord.metrics?.cases || []
+            }];
+            setPerformanceOverviewData(mappedData);
+            setIsPerformanceLoading(false);
+            return;
+          }
+        }
+        
+        // No data found - start polling to wait for data
+        let attempts = 0;
+        const maxAttempts = 20; // Poll for up to 1 minute (20 * 3 seconds)
+        
+        const pollForData = async () => {
+          attempts++;
+          try {
+            const pollResponse = await fetch(apiUrl);
+            if (pollResponse.ok) {
+              const pollData = await pollResponse.json();
+              
+              if (pollData.length > 0) {
+                const latestRecord = pollData[0];
+                const mappedData = [{
+                  name: latestRecord.entity_name || latestRecord.owner,
+                  sct: latestRecord.metrics?.sct || 0,
+                  cases: latestRecord.metrics?.closedCases || 0,
+                  satisfaction: latestRecord.metrics?.customerSatisfaction?.csatPercentage || 0,
+                  detailedCases: latestRecord.metrics?.cases || []
+                }];
+                
+                setPerformanceOverviewData(mappedData);
+                setIsPerformanceLoading(false);
+                return;
+              }
+            }
+            
+            if (attempts >= maxAttempts) {
+              setPerformanceOverviewData([]);
+              setIsPerformanceLoading(false);
+              return;
+            }
+            
+            setTimeout(pollForData, 3000); // Poll again in 3 seconds
+            
+          } catch (pollError) {
+            setPerformanceOverviewData([]);
+            setIsPerformanceLoading(false);
+          }
+        };
+        
+        setTimeout(pollForData, 3000); // Start first poll in 3 seconds
+        
+      } else {
+        // For squad/team, use existing service layer approach
+        const performanceData = await CasePerformanceService.getPerformanceOverviewByDateRange(
+          selectedTimeRange.from || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          selectedTimeRange.to || new Date()
+        );
+        
+        const mappedData = performanceData.map(item => ({
+          name: item.owner,
+          sct: item.sct || 0,
+          cases: item.closedCases || 0,
+          satisfaction: 0,
+          detailedCases: item.cases || []
+        }));
+        
+        setPerformanceOverviewData(mappedData);
+        setIsPerformanceLoading(false);
+      }
+    } catch (error) {
+      setPerformanceOverviewData([]);
+      setIsPerformanceLoading(false);
+    }
+  };
+
   // Function to fetch Calculate metrics results from database
   const fetchCalculateMetricsResults = async () => {
     try {
       // Check if we have the entity and time range data needed
       if (!generatedEntity || !generatedEntityValue) {
-        alert(`Missing entity data: generatedEntity=${generatedEntity}, generatedEntityValue=${generatedEntityValue}`);
         return;
       }
 
       // First try to get performance data from the performance_data collection
       const startDate = selectedTimeRange.from?.toISOString().split('T')[0];
       const endDate = selectedTimeRange.to?.toISOString().split('T')[0];
+      // Fix timezone issue by using local date instead of UTC
+      const startDateLocal = selectedTimeRange.from ? 
+        `${selectedTimeRange.from.getFullYear()}-${String(selectedTimeRange.from.getMonth() + 1).padStart(2, '0')}-${String(selectedTimeRange.from.getDate()).padStart(2, '0')}` 
+        : startDate;
+      const endDateLocal = selectedTimeRange.to ? 
+        `${selectedTimeRange.to.getFullYear()}-${String(selectedTimeRange.to.getMonth() + 1).padStart(2, '0')}-${String(selectedTimeRange.to.getDate()).padStart(2, '0')}` 
+        : endDate;
+      // Debug: Get ALL entities from database to see what's available
+      try {
+        const allEntitiesResponse = await fetch('http://localhost:3001/api/performance-data');
+        if (allEntitiesResponse.ok) {
+          const allEntities = await allEntitiesResponse.json();
+        }
+      } catch (error) {
+      }
 
       // For squad selections, we need to fetch individual DPE performance data
       if (generatedEntity === 'squad') {
-        console.log('🔍 Processing squad performance data:', {
-          generatedEntity,
-          generatedEntityValue,
-          selectedTimeRange: {
-            from: selectedTimeRange.from?.toISOString(),
-            to: selectedTimeRange.to?.toISOString()
-          }
-        });
-        
         // Get squad members
-        const squadMembers = getSquadMembers();
-        console.log('Squad members for performance data:', squadMembers);
+        let squadMembers;
+        try {
+          squadMembers = getSquadMembers();
+        } catch (error) {
+          setIsPerformanceLoading(false);
+          setIsSatisfactionLoading(false);
+          return;
+        }
         
         if (squadMembers.length > 0) {
           // Fetch performance data for each DPE in the squad
           const dpePerformancePromises = squadMembers.map(async (dpeName) => {
-            const dpeApiUrl = `http://localhost:3001/api/performance-data?entity_name=${dpeName}&startDate=${startDate}&endDate=${endDate}`;
-            console.log(`🔍 Fetching performance data for DPE: ${dpeName}`);
-            console.log(`🔍 API URL: ${dpeApiUrl}`);
-            
+            // Use corrected local dates for date filtering
+            const dpeApiUrl = `http://localhost:3001/api/performance-data?entity_name=${encodeURIComponent(dpeName)}&start_date=${startDateLocal}&end_date=${endDateLocal}`;
             try {
               const response = await fetch(dpeApiUrl);
-              console.log(`📡 API response for ${dpeName}:`, {
-                status: response.status,
-                ok: response.ok,
-                url: dpeApiUrl
-              });
-              
               if (response.ok) {
                 const data = await response.json();
-                console.log(`📊 Raw performance data for ${dpeName}:`, {
-                  dataLength: data.length,
-                  firstRecord: data.length > 0 ? {
-                    entity_name: data[0].entity_name,
-                    hasMetrics: !!data[0].metrics,
-                    metricsKeys: data[0].metrics ? Object.keys(data[0].metrics) : [],
-                    hasCustomerSatisfaction: !!data[0].metrics?.customerSatisfaction
-                  } : null
-                });
-                
                 return data.length > 0 ? { dpeName, data: data[0] } : null;
               } else {
-                console.error(`❌ API call failed for ${dpeName}:`, response.status, response.statusText);
               }
             } catch (error) {
-              console.error(`❌ Error fetching performance data for DPE ${dpeName}:`, error);
             }
             return null;
           });
           
           const dpePerformanceResults = await Promise.all(dpePerformancePromises);
           const validResults = dpePerformanceResults.filter(result => result !== null);
-          
-          console.log('Individual DPE performance data:', validResults);
           
           if (validResults.length > 0) {
             // Set the individual DPE performance data for the chart
@@ -666,7 +730,6 @@ const IndexNew = () => {
                     }
                   }
                 } catch (error) {
-                  console.warn('Error parsing products for case:', caseItem.case_id, error);
                 }
 
                 return {
@@ -680,7 +743,7 @@ const IndexNew = () => {
                 name: result.dpeName,
                 sct: result.data.metrics?.sct || 0,
                 cases: result.data.metrics?.closedCases || 0,
-                satisfaction: result.data.metrics?.satisfaction || 0,
+                satisfaction: result.data.metrics?.customerSatisfaction?.csatPercentage || 0,
                 detailedCases: dpeDetailedCases // Store individual DPE case data
               };
             });
@@ -690,9 +753,6 @@ const IndexNew = () => {
               ...prev,
               performanceData: performanceData
             }));
-            
-            console.log('Set reportDashboardData for squad with individual DPE data:', performanceData);
-            
             // Calculate aggregated squad metrics for KPI cards
             const squadAggregatedMetrics = {
               sct: Math.round((performanceData.reduce((sum, dpe) => sum + dpe.sct, 0) / performanceData.length) * 100) / 100, // Average SCT rounded to 2 decimal places
@@ -733,9 +793,6 @@ const IndexNew = () => {
               const allSquadSurveyDetails = validSatisfactionData
                 .flatMap(result => result.data.surveyDetails || [])
                 .filter(survey => survey.caseNumber && survey.category); // Filter out invalid entries
-              
-              console.log(`📊 Collected ${allSquadSurveyDetails.length} survey details from ${validSatisfactionData.length} squad DPEs`);
-              
               // Set satisfaction data for the squad
               setSatisfactionData({
                 entityName: generatedEntityValue,
@@ -765,27 +822,31 @@ const IndexNew = () => {
               }];
               
               setChartSurveyData(chartData);
-              console.log('📊 Set squad satisfaction data:', aggregatedSatisfaction);
             }
             
             // Aggregate all detailed cases for the squad
             const allSquadCases = performanceData.reduce((allCases, dpe) => {
               return allCases.concat(dpe.detailedCases || []);
             }, []);
-            
-            console.log('Squad aggregated metrics for KPI cards:', squadAggregatedMetrics);
-            console.log('Total squad cases:', allSquadCases.length);
-            
             setCalculateMetricsData(squadAggregatedMetrics);
             setDetailedCasesData(allSquadCases); // Set aggregated cases for squad-level view
+            
+            // CLEAR LOADING STATES when squad data is found (like KPI cards)
+            setIsPerformanceLoading(false);
+            setIsSatisfactionLoading(false);
             
             setReportGenerated(true);
             setGeneratedEntity(selectedEntity);
             setGeneratedEntityValue(selectedEntityValue);
-            setWorkflowCompleted(true);
+            // NO WORKFLOW DEPENDENCY - only data availability matters
             setIsLoading(false);
             return; // Exit early for squad processing
           }
+        } else {
+          // Since squad has no members, clear loading states and show "no data"
+          setIsPerformanceLoading(false);
+          setIsSatisfactionLoading(false);
+          return; // Don't continue to individual DPE logic for squad names
         }
       }
 
@@ -793,8 +854,6 @@ const IndexNew = () => {
       if (generatedEntity === 'team') {
         // Get team members (squads)
         const teamSquads = getTeamMembers();
-        console.log('Team squads for performance data:', teamSquads);
-        
         if (teamSquads.length > 0) {
           // For each squad, get all DPEs and fetch their performance data
           const allSquadPromises = teamSquads.map(async (squadName) => {
@@ -808,7 +867,8 @@ const IndexNew = () => {
             
             // Fetch performance data for each DPE in this squad
             const dpePromises = squadDPEs.map(async (dpeName) => {
-              const dpeApiUrl = `http://localhost:3001/api/performance-data?entity_name=${dpeName}&startDate=${startDate}&endDate=${endDate}`;
+              // Use corrected local dates for date filtering
+              const dpeApiUrl = `http://localhost:3001/api/performance-data?entity_name=${encodeURIComponent(dpeName)}&start_date=${startDateLocal}&end_date=${endDateLocal}`;
               try {
                 const response = await fetch(dpeApiUrl);
                 if (response.ok) {
@@ -816,7 +876,6 @@ const IndexNew = () => {
                   return data.length > 0 ? { dpeName, data: data[0] } : null;
                 }
               } catch (error) {
-                console.error(`Error fetching performance data for DPE ${dpeName}:`, error);
               }
               return null;
             });
@@ -829,7 +888,7 @@ const IndexNew = () => {
               const squadMetrics = {
                 sct: validDPEResults.reduce((sum, dpe) => sum + (dpe.data.metrics?.sct || 0), 0) / validDPEResults.length,
                 cases: validDPEResults.reduce((sum, dpe) => sum + (dpe.data.metrics?.closedCases || 0), 0),
-                satisfaction: validDPEResults.reduce((sum, dpe) => sum + (dpe.data.metrics?.satisfaction || 0), 0) / validDPEResults.length
+                satisfaction: validDPEResults.reduce((sum, dpe) => sum + (dpe.data.metrics?.customerSatisfaction?.csatPercentage || 0), 0) / validDPEResults.length
               };
               
               // Aggregate all detailed cases for this squad
@@ -845,7 +904,6 @@ const IndexNew = () => {
                       }
                     }
                   } catch (error) {
-                    console.warn('Error parsing products for case:', caseItem.case_id, error);
                   }
                   return {
                     ...caseItem,
@@ -864,9 +922,6 @@ const IndexNew = () => {
           
           const teamSquadResults = await Promise.all(allSquadPromises);
           const validSquadResults = teamSquadResults.filter(result => result.squadMetrics !== null);
-          
-          console.log('Team squad performance data:', validSquadResults);
-          
           if (validSquadResults.length > 0) {
             // Create performance data for chart (show squads as bars)
             const performanceData = validSquadResults.map(result => ({
@@ -882,9 +937,6 @@ const IndexNew = () => {
               ...prev,
               performanceData: performanceData
             }));
-            
-            console.log('Set reportDashboardData for team with squad-level data:', performanceData);
-            
             // Calculate aggregated team metrics for KPI cards
             const teamAggregatedMetrics = {
               sct: Math.round((validSquadResults.reduce((sum, squad) => sum + squad.squadMetrics.sct, 0) / validSquadResults.length) * 100) / 100, // Average SCT
@@ -926,9 +978,6 @@ const IndexNew = () => {
               const allTeamSurveyDetails = validTeamSatisfactionData
                 .flatMap(dpe => dpe.data.surveyDetails || [])
                 .filter(survey => survey.caseNumber && survey.category); // Filter out invalid entries
-              
-              console.log(`📊 Collected ${allTeamSurveyDetails.length} survey details from ${validTeamSatisfactionData.length} team DPEs across all squads`);
-              
               // Set satisfaction data for the team
               setSatisfactionData({
                 entityName: generatedEntityValue,
@@ -958,80 +1007,49 @@ const IndexNew = () => {
               }];
               
               setChartSurveyData(chartData);
-              console.log('📊 Set team satisfaction data:', aggregatedTeamSatisfaction);
             }
             
             // Aggregate all detailed cases for the team
             const allTeamCases = performanceData.reduce((allCases, squad) => {
               return allCases.concat(squad.detailedCases || []);
             }, []);
-            
-            console.log('Team aggregated metrics for KPI cards:', teamAggregatedMetrics);
-            console.log('Total team cases:', allTeamCases.length);
-            
             setCalculateMetricsData(teamAggregatedMetrics);
             setDetailedCasesData(allTeamCases); // Set aggregated cases for team-level view
+            
+            // CLEAR LOADING STATES when team data is found (like KPI cards)
+            setIsPerformanceLoading(false);
+            setIsSatisfactionLoading(false);
             
             setReportGenerated(true);
             setGeneratedEntity(selectedEntity);
             setGeneratedEntityValue(selectedEntityValue);
-            setWorkflowCompleted(true);
+            // NO WORKFLOW DEPENDENCY - only data availability matters
             setIsLoading(false);
             return; // Exit early for team processing
           }
+        } else {
+          // Since team has no squads, clear loading states and show "no data"
+          setIsPerformanceLoading(false);
+          setIsSatisfactionLoading(false);
+          return; // Don't continue to individual DPE logic for team names
         }
       }
 
-      // Query using entity_name instead of entity since we're storing the name directly
-      const apiUrl = `http://localhost:3001/api/performance-data?entity_name=${generatedEntityValue}&startDate=${startDate}&endDate=${endDate}`;
-      
-      console.log('🔍 Fetching performance data from:', apiUrl);
-      console.log('🔍 Query parameters:', {
-        generatedEntityValue,
-        startDate,
-        endDate,
-        selectedTimeRange
-      });
-      
+      // Query using entity_name with corrected local date range
+      let apiUrl = `http://localhost:3001/api/performance-data?entity_name=${encodeURIComponent(generatedEntityValue)}&start_date=${startDateLocal}&end_date=${endDateLocal}`;
       try {
         let performanceResponse = await fetch(apiUrl);
-        
-        console.log('📡 Performance API response status:', performanceResponse.status);
-        
         if (performanceResponse.ok) {
-          const performanceResult = await performanceResponse.json();
-          
-          console.log('📊 Performance API returned:', {
-            count: performanceResult.length,
-            entities: performanceResult.map(r => r.entity_name),
-            sampleRecord: performanceResult[0] ? {
-              entity_name: performanceResult[0].entity_name,
-              date: performanceResult[0].date,
-              hasMetrics: !!performanceResult[0].metrics,
-              metricsKeys: Object.keys(performanceResult[0].metrics || {}),
-              hasSampleCases: !!performanceResult[0].sample_cases
-            } : null
-          });
-          
+          let performanceResult = await performanceResponse.json();
+          // Debug: Compare with known database data
+          // If no data found, entity name doesn't match or no data in date range
+          if (!performanceResult || performanceResult.length === 0) {
+          }
           if (performanceResult && performanceResult.length > 0) {
             const latestMetrics = performanceResult[0];
             
-            console.log('🔍 Performance record structure check:', {
-              entity_name: latestMetrics.entity_name,
-              entity_type: latestMetrics.entity_type,
-              date: latestMetrics.date,
-              hasMetrics: !!latestMetrics.metrics,
-              metricsKeys: latestMetrics.metrics ? Object.keys(latestMetrics.metrics) : [],
-              hasSCT: latestMetrics.metrics?.sct !== undefined,
-              hasClosedCases: latestMetrics.metrics?.closedCases !== undefined,
-              hasCustomerSatisfaction: !!latestMetrics.metrics?.customerSatisfaction,
-              customerSatisfactionKeys: latestMetrics.metrics?.customerSatisfaction ? Object.keys(latestMetrics.metrics.customerSatisfaction) : [],
-              rawCustomerSatisfaction: latestMetrics.metrics?.customerSatisfaction
-            });
-            
             // TEMPORARY: Add mock satisfaction data for testing if missing
             if (!latestMetrics.metrics?.customerSatisfaction && latestMetrics.entity_name) {
-              console.log('🧪 TEMPORARY: Adding mock satisfaction data for testing');
               
               const mockSatisfactionData = {
                 'Mharlee Dela Cruz': { csat: 6, neutral: 1, dsat: 1, total: 8, csatPercentage: 75, neutralPercentage: 12.5, dsatPercentage: 12.5 },
@@ -1042,9 +1060,6 @@ const IndexNew = () => {
               const mockData = mockSatisfactionData[latestMetrics.entity_name];
               if (mockData) {
                 latestMetrics.metrics.customerSatisfaction = mockData;
-                console.log('✅ Added mock satisfaction data:', mockData);
-              } else {
-                console.log('⚠️ No mock data available for:', latestMetrics.entity_name);
               }
             }
             
@@ -1056,13 +1071,25 @@ const IndexNew = () => {
             };
             
             setCalculateMetricsData(metricsToSet);
-            
-            console.log('✅ Found performance data with metrics:', metricsToSet);
 
+            // Also set performance data for DPE entities (same as KPI cards data source)
+            const performanceDataForChart = [{
+              name: latestMetrics.entity_name,
+              sct: latestMetrics.metrics?.sct || 0,
+              cases: latestMetrics.metrics?.closedCases || 0,
+              satisfaction: latestMetrics.metrics?.customerSatisfaction?.csatPercentage || 0,
+              detailedCases: latestMetrics.sample_cases || []
+            }];
+            
+            setReportDashboardData(prev => ({
+              ...prev,
+              performanceData: performanceDataForChart
+            }));
+            
+            // Clear loading states immediately when data is found (like KPI cards)
+            setIsPerformanceLoading(false);
             // Also extract satisfaction data directly from performance data if available
             if (latestMetrics.metrics?.customerSatisfaction) {
-              console.log('📊 Extracting satisfaction data from performance record:', latestMetrics.metrics.customerSatisfaction);
-              
               const satisfactionFromPerformance = {
                 entityName: latestMetrics.entity_name,
                 entityType: latestMetrics.entity_type,
@@ -1072,15 +1099,7 @@ const IndexNew = () => {
                 surveyDetails: latestMetrics.surveyDetails || []  // Fixed: survey details are at root level
               };
               
-              console.log('🔍 Survey details extraction debug:', {
-                hasMetricsSurveyDetails: !!latestMetrics.metrics.surveyDetails,
-                hasRootSurveyDetails: !!latestMetrics.surveyDetails,
-                rootSurveyDetailsLength: latestMetrics.surveyDetails?.length || 0,
-                extractedLength: satisfactionFromPerformance.surveyDetails.length
-              });
-              
               setSatisfactionData(satisfactionFromPerformance);
-              console.log('✅ Set satisfaction data from performance record:', satisfactionFromPerformance);
               
               // Format for chart
               const chartData = [{
@@ -1101,10 +1120,9 @@ const IndexNew = () => {
               }];
               
               setChartSurveyData(chartData);
-              console.log('📈 Set chart survey data from performance record:', chartData);
+              setIsSatisfactionLoading(false); // Clear loading state when satisfaction data is set
             } else {
-              console.log('⚠️ No customerSatisfaction data found in performance record');
-              console.log('Available metrics keys:', Object.keys(latestMetrics.metrics || {}));
+              setIsSatisfactionLoading(false); // Clear loading state even if no satisfaction data
             }
           
           if (latestMetrics.sample_cases) {
@@ -1138,9 +1156,6 @@ const IndexNew = () => {
               };
             });
             setDetailedCasesData(mappedCasesData);
-          } else {
-            console.log('⚠️ Performance data found but no sample_cases field');
-            console.log('Available fields in performance data:', Object.keys(latestMetrics));
           }
           
           // Update reportCurrentData with the actual calculated metrics
@@ -1154,30 +1169,17 @@ const IndexNew = () => {
             hasMetricsData: true
           }));
           
-          // Mark workflow as completed since we have performance data
-          setWorkflowCompleted(true);
+          // NO WORKFLOW DEPENDENCY - only clear loading states when data found
           return;
         } else {
           // Performance data response was empty
-          console.log('📭 No performance data found in response');
-          console.log('🔍 This might mean:');
-          console.log('   - The workflows haven\'t completed yet');
-          console.log('   - The data aggregation workflow didn\'t run');
-          console.log('   - The entity name doesn\'t match stored data');
-          console.log('   - The date range doesn\'t match stored data');
         }
       } else {
         // Performance data response not OK
-        console.error('❌ Performance API request failed:', performanceResponse.status, performanceResponse.statusText);
       }
       } catch (apiError) {
         // Error during API call
-        console.error('❌ Error during performance API call:', apiError);
       }
-
-      console.log('⚠️  No valid performance data found, falling back to cases collection calculation');
-      console.log('📋 This should only happen if workflows haven\'t completed or data aggregation failed');
-
       // Fallback: Calculate metrics from cases data directly
       const casesResponse = await fetch(`http://localhost:3001/api/cases?owner_full_name=${generatedEntityValue}&status=Resolved&startDate=${startDate}&endDate=${endDate}`);
       
@@ -1236,19 +1238,17 @@ const IndexNew = () => {
             description: `Calculated metrics from ${closedCases} resolved cases.`,
           });
           
-          // Mark workflow as completed for fallback calculation
-          setWorkflowCompleted(true);
+          // NO WORKFLOW DEPENDENCY - only time-based polling timeout matters
+          // Clear satisfaction loading state only after polling timeout (not on first attempt)
+          // The polling mechanism will handle clearing loading states when timeout is reached
         } else {
-          // Mark workflow as completed even without data to prevent infinite loading
-          setWorkflowCompleted(true);
+          // No fallback data available - continue polling, don't mark as completed yet
         }
       } else {
-        // Mark workflow as completed even on failure to prevent infinite loading
-        setWorkflowCompleted(true);
+        // API call failed - continue polling, don't mark as completed yet
       }
     } catch (error) {
-      // Mark workflow as completed on error to prevent infinite loading
-      setWorkflowCompleted(true);
+      // Error occurred - continue polling, don't mark as completed yet (unless this is a repeated failure)
     }
   };
 
@@ -1256,22 +1256,22 @@ const IndexNew = () => {
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
     
-    if (reportGenerated && generatedEntity && generatedEntityValue && isLoading === false && !workflowCompleted) {
-      
+    if (reportGenerated && generatedEntity && generatedEntityValue && isLoading === false) {
       // Initial fetch
       fetchCalculateMetricsResults();
       
-      // Poll every 3 seconds for up to 90 seconds
+      // Poll every 3 seconds for up to 10 minutes (NO WORKFLOW DEPENDENCY)
       let pollCount = 0;
-      const maxPolls = 30; // 90 seconds with 3-second intervals
+      const maxPolls = 200; // 600 seconds (10 minutes) with 3-second intervals
       
       pollInterval = setInterval(async () => {
         pollCount++;
-        
         await fetchCalculateMetricsResults();
         
-        // Stop polling if max attempts reached (workflowCompleted is checked in auto-completion effect)
+        // Stop polling if max attempts reached (10 minutes) - ONLY TIME CONDITION
         if (pollCount >= maxPolls) {
+          setIsPerformanceLoading(false);
+          setIsSatisfactionLoading(false);
           clearInterval(pollInterval);
         }
       }, 3000);
@@ -1284,28 +1284,9 @@ const IndexNew = () => {
     };
   }, [reportGenerated, generatedEntity, generatedEntityValue, isLoading]); // Removed workflowCompleted from dependencies
 
-  // Effect to stop polling when workflow is completed
-  useEffect(() => {
-    if (workflowCompleted) {
-      // Note: polling interval is automatically cleared by the auto-completion effect
-    }
-  }, [workflowCompleted]);
+  // NO WORKFLOW DEPENDENCY - Loading states managed purely by database polling
 
-  // Effect to auto-complete workflow if we have valid data
-  useEffect(() => {
-    // Auto-complete if we have calculateMetricsData (primary data source)
-    if (reportGenerated && !workflowCompleted && calculateMetricsData) {
-      setWorkflowCompleted(true);
-    }
-    // Fallback: auto-complete after 90 seconds if we have reportCurrentData but no calculateMetricsData
-    else if (reportGenerated && !workflowCompleted && reportCurrentData && !calculateMetricsData) {
-      const fallbackTimer = setTimeout(() => {
-        setWorkflowCompleted(true);
-      }, 90000); // 90 seconds
-      
-      return () => clearTimeout(fallbackTimer);
-    }
-  }, [reportGenerated, workflowCompleted, calculateMetricsData, reportCurrentData]);
+  // NO WORKFLOW AUTO-COMPLETION - Only database polling controls loading states
 
   const handleEntityDataChange = (entityType: string, data: string[]) => {
     setEntityRefreshKey(prev => prev + 1);
@@ -1322,51 +1303,26 @@ const IndexNew = () => {
   };
 
   const handleSurveySegmentClick = (data: any, segment: string) => {
-    console.log(`🔍 Survey segment clicked: ${segment}`, { data, satisfactionData });
-    
     if (!satisfactionData) {
-      console.log('❌ No satisfaction data available');
       return;
     }
-    
-    console.log('🔍 Satisfaction data structure:', {
-      hasData: !!satisfactionData,
-      hasSurveyDetails: !!satisfactionData.surveyDetails,
-      surveyDetailsLength: satisfactionData.surveyDetails?.length || 0,
-      surveyDetailsType: typeof satisfactionData.surveyDetails,
-      surveyDetailsIsArray: Array.isArray(satisfactionData.surveyDetails),
-      firstSurveyDetail: satisfactionData.surveyDetails?.[0],
-      allKeys: Object.keys(satisfactionData)
-    });
-    
     if (!satisfactionData.surveyDetails) {
-      console.log('❌ No survey details available in satisfaction data');
       return;
     }
     
     if (!Array.isArray(satisfactionData.surveyDetails)) {
-      console.log('❌ Survey details is not an array:', typeof satisfactionData.surveyDetails);
       return;
     }
     
     if (satisfactionData.surveyDetails.length === 0) {
-      console.log('❌ Survey details array is empty');
       return;
     }
-    
-    console.log(`📊 Processing ${satisfactionData.surveyDetails.length} survey details for segment: ${segment}`);
-    
     // Filter survey details by the clicked segment category
     const segmentSurveys = satisfactionData.surveyDetails.filter(survey => {
-      console.log(`🔍 Checking survey: ${survey.caseNumber} | category: "${survey.category}" vs segment: "${segment}"`);
       const category = survey.category?.toLowerCase();
       return category === segment.toLowerCase();
     });
-    
-    console.log(`🔍 Found ${segmentSurveys.length} surveys for ${segment} segment:`, segmentSurveys);
-    
     if (segmentSurveys.length === 0) {
-      console.log(`❌ No survey details found for ${segment} segment`);
       return;
     }
     
@@ -1388,9 +1344,6 @@ const IndexNew = () => {
       priority: 'N/A',
       products: survey.productArea ? `["${survey.productArea}"]` : '[]'
     }));
-    
-    console.log(`🔍 Prepared modal data with ${modalSurveyData.length} survey records:`, modalSurveyData);
-    
     // Open the detailed modal with real survey data
     setModalData(modalSurveyData);
     setModalType('survey');
@@ -1923,46 +1876,23 @@ const IndexNew = () => {
 
   // Get DPEs that belong to the selected squad with validation
   const getSquadMembers = () => {
-    console.log('🔍 getSquadMembers debug:', {
-      generatedEntityValue,
-      generatedEntity,
-      hasEntityMappings: !!entityMappings,
-      hasDpeToSquadMapping: !!(entityMappings?.dpeToSquad),
-      hasEntityData: !!entityData,
-      hasDpes: !!(entityData?.dpes),
-      dpeCount: entityData?.dpes?.length || 0
-    });
-    
     if (!generatedEntityValue || generatedEntity !== 'squad') {
-      console.log('❌ getSquadMembers: Not a squad or no entity value');
       return [];
     }
     
     // Validate entity mappings exist
     if (!entityMappings || !entityMappings.dpeToSquad) {
-      console.log('❌ getSquadMembers: No entity mappings or dpeToSquad mapping');
       return [];
     }
     
     // Validate entity data exists  
     if (!entityData || !entityData.dpes) {
-      console.log('❌ getSquadMembers: No entity data or dpes array');
-      console.log('❌ entityData:', entityData);
-      console.log('❌ entityData.dpes:', entityData?.dpes);
       return [];
     }
-
-    console.log('✅ getSquadMembers: All validations passed, proceeding with filtering');
-    console.log('🔍 DPE to Squad mappings:', entityMappings.dpeToSquad);
-    console.log('🔍 Available DPEs:', entityData.dpes);
-    console.log('🔍 Looking for squad:', generatedEntityValue);
-    
     // Log each DPE and its mapping to debug the filtering
-    console.log('🔍 DPE mapping analysis:');
     entityData.dpes.forEach(dpe => {
       if (!dpe.includes('Add New')) {
         const mappedSquad = entityMappings.dpeToSquad[dpe];
-        console.log(`  - DPE: "${dpe}" → Squad: "${mappedSquad}" (matches: ${mappedSquad === generatedEntityValue})`);
       }
     });
     
@@ -1970,12 +1900,8 @@ const IndexNew = () => {
       !dpe.includes('Add New') && 
       entityMappings.dpeToSquad[dpe] === generatedEntityValue
     );
-    
-    console.log('🔍 Filtered DPEs for squad:', dpeNames);
-    
     // Validate that squad has members
     if (dpeNames.length === 0) {
-      console.log('⚠️ No DPEs found for squad:', generatedEntityValue);
     }
     
     return dpeNames;
@@ -2464,23 +2390,8 @@ const IndexNew = () => {
           entityChanged={entityChanged}
         />
 
-        {/* Workflow Processing Status */}
-        {reportGenerated && !workflowCompleted && (
-          <div className="flex items-center justify-center p-8">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <div className="space-y-2">
-                <p className="text-lg font-medium">Processing workflows...</p>
-                <p className="text-sm text-muted-foreground">
-                  Calculating performance metrics from case data. This may take up to 2 minutes.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Dashboard Content */}
-        {reportGenerated && generatedEntityValue && reportCurrentData && workflowCompleted ? (() => {
+        {reportGenerated && generatedEntityValue ? (() => {
           // Check for entity mapping issues using generated values (not reactive to selection changes)
           const getGeneratedEntityMappingWarning = () => {
             if (!generatedEntity || !generatedEntityValue) {
@@ -2617,14 +2528,18 @@ const IndexNew = () => {
                 <KPICard
                   title="CSAT Score"
                   value={formatKPIValue(
-                    satisfactionData?.satisfactionData?.csatPercentage || 
-                    calculateMetricsData?.satisfaction || 
-                    reportCurrentData?.satisfaction
+                    satisfactionData?.satisfactionData?.csatPercentage !== null && satisfactionData?.satisfactionData?.csatPercentage !== undefined
+                      ? satisfactionData.satisfactionData.csatPercentage
+                      : calculateMetricsData?.satisfaction !== null && calculateMetricsData?.satisfaction !== undefined
+                        ? calculateMetricsData.satisfaction
+                        : reportCurrentData?.satisfaction !== null && reportCurrentData?.satisfaction !== undefined
+                          ? reportCurrentData.satisfaction
+                          : null
                   )}
                   target={
-                    (satisfactionData?.satisfactionData?.csatPercentage !== undefined) ||
-                    (calculateMetricsData?.satisfaction !== undefined) || 
-                    (reportCurrentData?.satisfaction !== undefined) ? 85 : null
+                    (satisfactionData?.satisfactionData?.csatPercentage !== null && satisfactionData?.satisfactionData?.csatPercentage !== undefined) ||
+                    (calculateMetricsData?.satisfaction !== null && calculateMetricsData?.satisfaction !== undefined) || 
+                    (reportCurrentData?.satisfaction !== null && reportCurrentData?.satisfaction !== undefined) ? 85 : null
                   }
                   unit="%"
                   icon={<ThumbsUp className="h-4 w-4" />}
@@ -2633,14 +2548,18 @@ const IndexNew = () => {
                 <KPICard
                   title="DSAT Score"
                   value={formatKPIValue(
-                    satisfactionData?.satisfactionData?.dsatPercentage || 
-                    calculateMetricsData?.dsatPercentage || 
-                    reportCurrentData?.dsatPercentage
+                    satisfactionData?.satisfactionData?.dsatPercentage !== null && satisfactionData?.satisfactionData?.dsatPercentage !== undefined
+                      ? satisfactionData.satisfactionData.dsatPercentage
+                      : calculateMetricsData?.dsatPercentage !== null && calculateMetricsData?.dsatPercentage !== undefined
+                        ? calculateMetricsData.dsatPercentage
+                        : reportCurrentData?.dsatPercentage !== null && reportCurrentData?.dsatPercentage !== undefined
+                          ? reportCurrentData.dsatPercentage
+                          : null
                   )}
                   target={
-                    (satisfactionData?.satisfactionData?.dsatPercentage !== undefined) ||
-                    (calculateMetricsData?.dsatPercentage !== undefined) || 
-                    (reportCurrentData?.dsatPercentage !== undefined) ? 5 : null
+                    (satisfactionData?.satisfactionData?.dsatPercentage !== null && satisfactionData?.satisfactionData?.dsatPercentage !== undefined) ||
+                    (calculateMetricsData?.dsatPercentage !== null && calculateMetricsData?.dsatPercentage !== undefined) || 
+                    (reportCurrentData?.dsatPercentage !== null && reportCurrentData?.dsatPercentage !== undefined) ? 5 : null
                   }
                   unit="%"
                   icon={<ThumbsDown className="h-4 w-4" />}
@@ -2656,80 +2575,24 @@ const IndexNew = () => {
                       <BarChart3 className="h-5 w-5" />
                       <div className="flex-1 min-w-0">
                         <div className="truncate">
-                          {generatedEntity === 'dpe' ? 'DPE Performance Overview' :
-                           generatedEntity === 'squad' ? 'Squad Performance Overview' :
-                           generatedEntity === 'team' ? 'Team Performance Overview' :
-                           'Performance Overview'}
+                          {generatedEntityValue || 'Performance Overview'}
                         </div>
                       </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-2">
-                    <TeamPerformanceChart
-                      data={(() => {
-                        if (!reportDashboardData && !reportCurrentData && !calculateMetricsData) {
-                          return []; // No report generated yet
-                        }
-                        
-                        return reportDashboardData?.performanceData && reportDashboardData.performanceData.length > 0
-                          ? reportDashboardData.performanceData.map(item => ({
-                              name: item.name,
-                              sct: item.sct, // Use individual data (for squad and team views)
-                              cases: item.cases, // Use individual data (for squad and team views)
-                              satisfaction: item.satisfaction, // Use individual data (for squad and team views)
-                              detailedCases: (item as any).detailedCases || [] // Use individual detailed cases
-                            }))
-                          : generatedEntity === 'dpe' ? [
-                              // For DPE, always create entry even if no data
-                              {
-                                name: generatedEntityValue || 'Selected DPE',
-                                sct: calculateMetricsData?.sct || reportCurrentData?.sct || 0, 
-                                cases: calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases || 0,
-                                satisfaction: calculateMetricsData?.satisfaction || reportCurrentData?.satisfaction || 0,
-                                detailedCases: detailedCasesData || [] // Real case data for modal
-                              }
-                            ] : generatedEntity === 'squad' ? (() => {
-                              // For squad members using entity mappings
-                              const squadMembers = getSquadMembers();
-                              if (squadMembers.length === 0) {
-                                return [];
-                              }
-                              // Always show DPE names, use individual performance data if available
-                              return squadMembers.map((dpeName) => {
-                                // Look for individual DPE data in reportDashboardData.performanceData
-                                const dpeData = reportDashboardData?.performanceData?.find(p => p.name === dpeName);
-                                return {
-                                  name: dpeName,
-                                  sct: dpeData?.sct || 0, // Use individual DPE data only
-                                  cases: dpeData?.cases || 0, // Use individual DPE data only
-                                  satisfaction: dpeData?.satisfaction || 0, // Use individual DPE data only
-                                  detailedCases: (dpeData as any)?.detailedCases || [] // Use individual DPE case data
-                                };
-                              });
-                            })() : generatedEntity === 'team' ? (() => {
-                              // For team members (squads) using entity mappings
-                              const teamMembers = getTeamMembers();
-                              if (teamMembers.length === 0) {
-                                // No fallback - let the mapping warning system handle this
-                                return [];
-                              }
-                              // Always show squad names, use individual performance data if available
-                              return teamMembers.map((squadName) => {
-                                // Look for individual squad data in reportDashboardData.performanceData
-                                const squadData = reportDashboardData?.performanceData?.find(p => p.name === squadName);
-                                return {
-                                  name: squadName,
-                                  sct: calculateMetricsData?.sct || squadData?.sct || 0,
-                                  cases: calculateMetricsData?.closedCases || squadData?.cases || 0,
-                                  satisfaction: calculateMetricsData?.satisfaction || squadData?.satisfaction || 0,
-                                  detailedCases: detailedCasesData || [] // Real case data
-                                };
-                              });
-                            })() : [];
-                      })()}
-                      onBarClick={handleIndividualBarClick}
-                      title={generatedEntityValue || 'Performance Overview'}
-                    />
+                    {isPerformanceLoading ? (
+                      <div className="flex items-center justify-center h-64">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <span className="ml-2 text-muted-foreground">Loading performance data...</span>
+                      </div>
+                    ) : (
+                      <TeamPerformanceChart
+                        data={reportDashboardData?.performanceData || []}
+                        title={generatedEntityValue || 'Performance Overview'}
+                        onBarClick={handleIndividualBarClick}
+                      />
+                    )}
                   </CardContent>
                 </Card>
 
@@ -2743,16 +2606,23 @@ const IndexNew = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-2">
-                    <SurveyAnalysisChart
-                      data={chartSurveyData || []}
-                      title={generatedEntityValue || 'Customer Satisfaction'}
-                      totalSurveys={
-                        (chartSurveyData || []).length > 0 
+                    {isSatisfactionLoading ? (
+                      <div className="flex items-center justify-center h-64">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <span className="ml-2 text-muted-foreground">Loading satisfaction data...</span>
+                      </div>
+                    ) : (
+                      <SurveyAnalysisChart
+                        data={chartSurveyData || []}
+                        title={generatedEntityValue || 'Customer Satisfaction'}
+                        totalSurveys={
+                          (chartSurveyData || []).length > 0 
                           ? (chartSurveyData || []).reduce((sum, item) => sum + (item.value || 0), 0)
                           : (satisfactionData?.satisfactionData?.total || 0)
                       }
                       onPieClick={handleSurveySegmentClick}
                     />
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -2831,9 +2701,9 @@ const IndexNew = () => {
                     // Always show the TeamPerformanceChart component, it will handle the "No data available" state internally
                     return (
                       <TeamPerformanceChart
-                        data={performanceData}
+                        data={reportDashboardData?.performanceData || []}
                         onBarClick={handleIndividualBarClick}
-                        title="Performance Overview"
+                        title={generatedEntityValue || 'Performance Overview'}
                       />
                     );
                   })()}
@@ -2859,26 +2729,8 @@ const IndexNew = () => {
                       ? realSurveyData.reduce((sum, item) => sum + (item.value || 0), 0)
                       : (satisfactionData?.satisfactionData?.total || 0);
                     const entityTitle = generatedEntityValue || selectedEntityValue || 'Customer Satisfaction';
-                    
-                    console.log('🔍 Rendering Customer Satisfaction Distribution:', {
-                      hasRealData: realSurveyData.length > 0,
-                      totalSurveys,
-                      entityTitle,
-                      satisfactionLoading,
-                      satisfactionDataExists: !!satisfactionData,
-                      satisfactionDataStructure: satisfactionData,
-                      satisfactionDataTotal: satisfactionData?.satisfactionData?.total,
-                      chartSurveyData: realSurveyData,
-                      chartSurveyDataStructure: realSurveyData.length > 0 ? realSurveyData.map(d => ({ 
-                        name: d.name, 
-                        value: d.value, 
-                        percentage: d.percentage 
-                      })) : []
-                    });
-                    
                     // Show message if no data
                     if (realSurveyData.length === 0 && totalSurveys === 0) {
-                      console.log('📭 No satisfaction data available for chart rendering');
                     }
                     
                     return (

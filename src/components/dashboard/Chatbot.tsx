@@ -57,7 +57,7 @@ const Chatbot: React.FC<ChatbotProps> = ({
           }`}>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
-              Intelliperformance Assistant
+              i16e Assistant
             </CardTitle>
             <div className="flex items-center space-x-1">
               {!isMinimized && (

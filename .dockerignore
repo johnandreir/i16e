@@ -1,0 +1,65 @@
+# Node modules
+node_modules
+npm-debug.log*
+
+# Development files
+*.cjs
+!mongodb-api-server.cjs
+
+# Test and debug files
+*debug*.cjs
+*test*.cjs
+test-*
+debug-*
+*-test.*
+*-debug.*
+
+# Build output
+dist
+build
+
+# IDE and editor files
+.vscode
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs
+*.log
+
+# Documentation
+*.md
+!README.md
+
+# Scripts
+*.ps1
+*.bat
+*.sh
+
+# JSON configs (keep package.json)
+*.json
+!package*.json
+!tsconfig*.json
+!components.json
+
+# Docker files
+Dockerfile*
+docker-compose*
+
+# Temporary files
+tmp/
+temp/

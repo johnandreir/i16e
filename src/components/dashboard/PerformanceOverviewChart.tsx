@@ -26,6 +26,22 @@ export interface PerformanceData {
   closedCases: number;
   openCases: number;
   cases: CaseData[];
+  // New satisfaction fields
+  satisfaction?: {
+    csat: number;
+    neutral: number;
+    dsat: number;
+    total: number;
+    csatPercentage: number;
+    neutralPercentage: number;
+    dsatPercentage: number;
+  };
+  surveyDetails?: Array<{
+    case_id: string;
+    rating: number;
+    feedback?: string;
+    survey_date: string;
+  }>;
 }
 
 interface PerformanceOverviewChartProps {
@@ -197,7 +213,9 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
     closed: item.closedCases,
     open: item.openCases,
     total: item.totalCases,
-    cases: item.cases
+    cases: item.cases,
+    satisfaction: item.satisfaction?.csatPercentage || null,
+    surveyCount: item.surveyDetails?.length || 0
   }));
 
   const handleBarClick = (data: any, index: number) => {
@@ -238,6 +256,16 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
           <p className="text-sm">
             <span className="text-gray-500">● Total: {data.total} cases</span>
           </p>
+          {data.satisfaction !== null && (
+            <p className="text-sm">
+              <span className="text-orange-500">● Satisfaction: {data.satisfaction}%</span>
+            </p>
+          )}
+          {data.surveyCount > 0 && (
+            <p className="text-sm">
+              <span className="text-purple-500">● Surveys: {data.surveyCount}</span>
+            </p>
+          )}
           <p className="text-xs text-muted-foreground mt-1">Click to view details</p>
         </div>
       );
@@ -250,6 +278,12 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
   const totalClosed = data.reduce((sum, item) => sum + item.closedCases, 0);
   const avgSCT = data.length > 0 ? Math.round((data.reduce((sum, item) => sum + item.sct, 0) / data.length) * 100) / 100 : 0;
   const closeRate = totalCases > 0 ? Math.round((totalClosed / totalCases) * 100) : 0;
+  
+  // Calculate satisfaction metrics
+  const satisfactionData = data.filter(item => item.satisfaction && item.satisfaction.total > 0);
+  const avgSatisfaction = satisfactionData.length > 0 ? 
+    Math.round((satisfactionData.reduce((sum, item) => sum + (item.satisfaction?.csatPercentage || 0), 0) / satisfactionData.length) * 100) / 100 : null;
+  const totalSurveys = data.reduce((sum, item) => sum + (item.surveyDetails?.length || 0), 0);
 
   return (
     <>
@@ -261,7 +295,7 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
           </CardTitle>
           
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mt-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{avgSCT}</div>
               <div className="text-xs text-muted-foreground">Avg SCT (days)</div>
@@ -277,6 +311,15 @@ const PerformanceOverviewChart: React.FC<PerformanceOverviewChartProps> = ({
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">{closeRate}%</div>
               <div className="text-xs text-muted-foreground">Close Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {avgSatisfaction !== null ? `${avgSatisfaction}%` : 'N/A'}
+              </div>
+              <div className="text-xs text-muted-foreground">Avg Satisfaction</div>
+              {totalSurveys > 0 && (
+                <div className="text-xs text-muted-foreground mt-1">({totalSurveys} surveys)</div>
+              )}
             </div>
           </div>
         </CardHeader>

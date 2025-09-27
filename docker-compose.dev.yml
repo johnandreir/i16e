@@ -1,7 +1,7 @@
 services:
   mongodb:
     image: mongo:latest
-    container_name: i16e-mongodb
+    container_name: i16e-mongodb-dev
     restart: unless-stopped
     ports:
       - "27017:27017"
@@ -10,10 +10,10 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: N0virus1!
       MONGO_INITDB_DATABASE: i16e-db
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_dev_data:/data/db
       - ./mongodb-init:/docker-entrypoint-initdb.d
     networks:
-      - i16e-network
+      - i16e-dev-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
       interval: 30s
@@ -23,7 +23,7 @@ services:
 
   n8n:
     image: n8nio/n8n:latest
-    container_name: i16e-n8n
+    container_name: i16e-n8n-dev
     restart: unless-stopped
     ports:
       - "5678:5678"
@@ -36,9 +36,9 @@ services:
       - WEBHOOK_URL=http://localhost:5678/
       - GENERIC_TIMEZONE=UTC
     volumes:
-      - n8n_data:/home/node/.n8n
+      - n8n_dev_data:/home/node/.n8n
     networks:
-      - i16e-network
+      - i16e-dev-network
     depends_on:
       mongodb:
         condition: service_healthy
@@ -53,56 +53,30 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    image: i16e-api
-    container_name: i16e-api
+    image: i16e-api-dev
+    container_name: i16e-api-dev
     restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
       - MONGODB_URI=mongodb://admin:N0virus1!@mongodb:27017/i16e-db?authSource=admin
       - PORT=3001
-      - NODE_ENV=production
+      - NODE_ENV=development
     networks:
-      - i16e-network
+      - i16e-dev-network
     depends_on:
       mongodb:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    image: i16e-frontend
-    container_name: i16e-frontend
-    restart: unless-stopped
-    ports:
-      - "8082:80"
-    networks:
-      - i16e-network
-    depends_on:
-      - mongodb-api
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
 volumes:
-  mongodb_data:
+  mongodb_dev_data:
     driver: local
-  n8n_data:
+  n8n_dev_data:
     driver: local
 
 networks:
-  i16e-network:
+  i16e-dev-network:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.21.0.0/16
