@@ -1592,6 +1592,32 @@ app.get('/api/performance-data', async (req, res) => {
   }
 });
 
+// Delete all performance_data documents
+app.delete('/api/performance-data', async (req, res) => {
+  try {
+    // Delete all documents from performance_data collection
+    const deleteOperation = async (db) => {
+      const result = await db.collection('performance_data').deleteMany({});
+      return { deletedCount: result.deletedCount };
+    };
+    
+    const result = await performDatabaseOperation(deleteOperation, 'performance_data', 'delete performance data');
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted ${result.deletedCount} performance_data document(s)`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('❌ Error in DELETE /api/performance-data endpoint:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Internal server error', 
+      message: error.message 
+    });
+  }
+});
+
 app.post('/api/performance-data', async (req, res) => {
   try {
     if (!isConnected || !db) {

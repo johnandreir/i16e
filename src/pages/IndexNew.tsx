@@ -341,6 +341,44 @@ const IndexNew = () => {
       return;
     }
     
+    // Delete all performance_data documents before generating a new report
+    try {
+      // Use the general clear endpoint with DELETE method and body
+      const deleteResponse = await fetch('http://localhost:3001/api/collections/clear', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          collections: ['performance_data']
+        }),
+      });
+      
+      if (deleteResponse && deleteResponse.ok) {
+        const result = await deleteResponse.json();
+        console.log('Deleted performance_data documents', result);
+        
+        toast({
+          title: "Data Cleared",
+          description: "Existing performance data records have been deleted.",
+        });
+      } else {
+        console.error('Failed to delete performance_data documents:', deleteResponse.statusText);
+        toast({
+          title: "Warning",
+          description: "Failed to clear old data. New data may be mixed with old data.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Failed to delete performance_data documents:', error);
+      toast({
+        title: "Warning",
+        description: "Failed to clear old data. New data may be mixed with old data.",
+        variant: "destructive"
+      });
+    }
+    
     // Validate entity type
     if (!['dpe', 'squad', 'team'].includes(selectedEntity)) {
       return;
@@ -1296,6 +1334,19 @@ const IndexNew = () => {
         const currentTime = Date.now();
         const elapsedTime = currentTime - startTime;
         
+        // Stop polling if data is loaded (both performance and satisfaction)
+        if (!isPerformanceLoading && !isSatisfactionLoading) {
+          clearInterval(pollInterval);
+          console.log('Data loaded successfully, polling stopped');
+          
+          toast({
+            title: "Data Loaded",
+            description: "Performance data loaded successfully."
+          });
+          
+          return;
+        }
+        
         // Stop polling if max attempts reached or 10 minutes elapsed
         if (pollCount >= maxPolls || elapsedTime >= 600000) {
           setIsPerformanceLoading(false);
@@ -1306,7 +1357,7 @@ const IndexNew = () => {
           toast({
             title: "Data Loading Timeout",
             description: "Unable to load all data within 10 minutes. Showing available data.",
-            variant: "warning"
+            variant: "destructive"
           });
         }
       }, 3000);
