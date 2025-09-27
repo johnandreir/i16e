@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface KPICardProps {
@@ -11,6 +11,8 @@ interface KPICardProps {
   description?: string;
   variant?: 'default' | 'success' | 'warning' | 'danger';
   icon?: React.ReactNode;
+  isLoading?: boolean;
+  loadingStartTime?: number;
 }
 
 const KPICard: React.FC<KPICardProps> = ({
@@ -20,7 +22,9 @@ const KPICard: React.FC<KPICardProps> = ({
   target,
   description,
   variant = 'default',
-  icon
+  icon,
+  isLoading = false,
+  loadingStartTime
 }) => {
   const getTargetStatus = () => {
     if (!target || value === null || value === undefined) return null;
@@ -63,10 +67,18 @@ const KPICard: React.FC<KPICardProps> = ({
           </div>
           
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-foreground">
-              {value === null || value === undefined ? 'N/A' : (typeof value === 'number' ? value.toLocaleString() : value)}
-            </span>
-            {unit && value !== null && value !== undefined && <span className="text-sm text-muted-foreground">{unit}</span>}
+            {isLoading ? (
+              <div className="flex items-center justify-center w-full py-2">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                <span className="text-2xl font-bold text-foreground">
+                  {value === null || value === undefined ? 'N/A' : (typeof value === 'number' ? value.toLocaleString() : value)}
+                </span>
+                {unit && value !== null && value !== undefined && <span className="text-sm text-muted-foreground">{unit}</span>}
+              </>
+            )}
           </div>
 
           {description && (

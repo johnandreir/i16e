@@ -131,6 +131,8 @@ const IndexNew = () => {
   const [isAnalysisEnabled, setIsAnalysisEnabled] = useState<boolean>(false);
   const [isPerformanceLoading, setIsPerformanceLoading] = useState<boolean>(false);
   const [isSatisfactionLoading, setIsSatisfactionLoading] = useState<boolean>(false);
+  const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
+  const [hasTimedOut, setHasTimedOut] = useState<boolean>(false);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [cachedDashboardData, setCachedDashboardData] = useState<DashboardData | null>(null);
   const [reportDashboardData, setReportDashboardData] = useState<DashboardData | null>(null);
@@ -663,6 +665,14 @@ const IndexNew = () => {
       if (!generatedEntity || !generatedEntityValue) {
         return;
       }
+      
+      // Start loading state if not already loading
+      if (!isPerformanceLoading) {
+        setIsPerformanceLoading(true);
+      }
+      if (!isSatisfactionLoading) {
+        setIsSatisfactionLoading(true);
+      }
 
       // First try to get performance data from the performance_data collection
       const startDate = selectedTimeRange.from?.toISOString().split('T')[0];
@@ -802,6 +812,9 @@ const IndexNew = () => {
                 satisfactionData: aggregatedSatisfaction,
                 surveyDetails: allSquadSurveyDetails // Include all survey details from squad members
               });
+              
+              // End satisfaction loading state since we have data now
+              setIsSatisfactionLoading(false);
               
               // Format for chart
               const chartData = [{
@@ -1101,6 +1114,9 @@ const IndexNew = () => {
               
               setSatisfactionData(satisfactionFromPerformance);
               
+              // End satisfaction loading state since we have data now
+              setIsSatisfactionLoading(false);
+              
               // Format for chart
               const chartData = [{
                 name: 'CSAT (4-5)',
@@ -1233,6 +1249,9 @@ const IndexNew = () => {
             hasMetricsData: true
           }));
           
+          // End loading states since we have data now
+          setIsPerformanceLoading(false);
+          
           toast({
             title: "Metrics Calculated",
             description: `Calculated metrics from ${closedCases} resolved cases.`,
@@ -1257,6 +1276,11 @@ const IndexNew = () => {
     let pollInterval: NodeJS.Timeout;
     
     if (reportGenerated && generatedEntity && generatedEntityValue && isLoading === false) {
+      // Set loading start time when beginning to fetch data
+      const startTime = Date.now();
+      setLoadingStartTime(startTime);
+      setHasTimedOut(false);
+      
       // Initial fetch
       fetchCalculateMetricsResults();
       
@@ -1268,11 +1292,22 @@ const IndexNew = () => {
         pollCount++;
         await fetchCalculateMetricsResults();
         
-        // Stop polling if max attempts reached (10 minutes) - ONLY TIME CONDITION
-        if (pollCount >= maxPolls) {
+        // Check if we've reached 10 minutes (600,000 ms)
+        const currentTime = Date.now();
+        const elapsedTime = currentTime - startTime;
+        
+        // Stop polling if max attempts reached or 10 minutes elapsed
+        if (pollCount >= maxPolls || elapsedTime >= 600000) {
           setIsPerformanceLoading(false);
           setIsSatisfactionLoading(false);
+          setHasTimedOut(true);
           clearInterval(pollInterval);
+          
+          toast({
+            title: "Data Loading Timeout",
+            description: "Unable to load all data within 10 minutes. Showing available data.",
+            variant: "warning"
+          });
         }
       }, 3000);
     }
@@ -2512,6 +2547,8 @@ const IndexNew = () => {
                   unit="days"
                   icon={<Clock className="h-4 w-4" />}
                   description=""
+                  isLoading={isPerformanceLoading && !hasTimedOut}
+                  loadingStartTime={loadingStartTime}
                 />
                 <KPICard
                   title="Closed Cases"
@@ -2524,6 +2561,8 @@ const IndexNew = () => {
                   unit=""
                   icon={<CheckCircle className="h-4 w-4" />}
                   description=""
+                  isLoading={isPerformanceLoading && !hasTimedOut}
+                  loadingStartTime={loadingStartTime}
                 />
                 <KPICard
                   title="CSAT Score"
@@ -2544,6 +2583,8 @@ const IndexNew = () => {
                   unit="%"
                   icon={<ThumbsUp className="h-4 w-4" />}
                   description=""
+                  isLoading={isSatisfactionLoading && !hasTimedOut}
+                  loadingStartTime={loadingStartTime}
                 />
                 <KPICard
                   title="DSAT Score"
@@ -2564,6 +2605,8 @@ const IndexNew = () => {
                   unit="%"
                   icon={<ThumbsDown className="h-4 w-4" />}
                   description=""
+                  isLoading={isSatisfactionLoading && !hasTimedOut}
+                  loadingStartTime={loadingStartTime}
                 />
               </div>
               
@@ -2653,6 +2696,8 @@ const IndexNew = () => {
                 unit="days"
                 icon={<Clock className="h-4 w-4" />}
                 description=""
+                isLoading={isPerformanceLoading && !hasTimedOut}
+                loadingStartTime={loadingStartTime}
               />
               <KPICard
                 title="Closed Cases"
@@ -2661,6 +2706,8 @@ const IndexNew = () => {
                 unit=""
                 icon={<CheckCircle className="h-4 w-4" />}
                 description=""
+                isLoading={isPerformanceLoading && !hasTimedOut}
+                loadingStartTime={loadingStartTime}
               />
               <KPICard
                 title="CSAT Score"
@@ -2669,6 +2716,8 @@ const IndexNew = () => {
                 unit="%"
                 icon={<ThumbsUp className="h-4 w-4" />}
                 description=""
+                isLoading={isSatisfactionLoading && !hasTimedOut}
+                loadingStartTime={loadingStartTime}
               />
               <KPICard
                 title="DSAT Score"
@@ -2677,6 +2726,8 @@ const IndexNew = () => {
                 unit="%"
                 icon={<ThumbsDown className="h-4 w-4" />}
                 description=""
+                isLoading={isSatisfactionLoading && !hasTimedOut}
+                loadingStartTime={loadingStartTime}
               />
             </div>
 
