@@ -7,10 +7,7 @@
       "name": "Aggregate Data Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [
-        256,
-        -96
-      ]
+      "position": [256, -96]
     },
     {
       "parameters": {
@@ -20,10 +17,7 @@
       "name": "Process Aggregate Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        480,
-        -96
-      ]
+      "position": [480, -96]
     },
     {
       "parameters": {
@@ -36,10 +30,7 @@
       "name": "Save Aggregate Data",
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1,
-      "position": [
-        704,
-        -96
-      ],
+      "position": [704, -96],
       "credentials": {
         "mongoDb": {
           "id": "Pl29NJOEfuRbqWf6",
@@ -53,10 +44,7 @@
       "name": "Done",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [
-        928,
-        -96
-      ]
+      "position": [928, -96]
     }
   ],
   "pinData": {},

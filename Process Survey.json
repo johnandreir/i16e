@@ -9,10 +9,7 @@
       "name": "Extract Entity",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        -192,
-        -128
-      ]
+      "position": [-192, -128]
     },
     {
       "parameters": {
@@ -22,10 +19,7 @@
       "name": "Check Input Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        32,
-        -128
-      ]
+      "position": [32, -128]
     },
     {
       "parameters": {
@@ -36,10 +30,7 @@
       "name": "Actually Clear Raw Survey Data",
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1,
-      "position": [
-        256,
-        -128
-      ],
+      "position": [256, -128],
       "credentials": {
         "mongoDb": {
           "id": "Pl29NJOEfuRbqWf6",
@@ -69,10 +60,7 @@
       "name": "Read Survey Google Sheet",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [
-        480,
-        -128
-      ],
+      "position": [480, -128],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "GVsvgXnOvHSwccge",
@@ -88,10 +76,7 @@
       "name": "Transform Raw Survey Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        704,
-        -128
-      ]
+      "position": [704, -128]
     },
     {
       "parameters": {
@@ -104,10 +89,7 @@
       "name": "Save Raw Survey to MongoDB",
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1,
-      "position": [
-        928,
-        -128
-      ],
+      "position": [928, -128],
       "credentials": {
         "mongoDb": {
           "id": "Pl29NJOEfuRbqWf6",
@@ -139,10 +121,7 @@
       "name": "Error - No Data",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        -416,
-        96
-      ]
+      "position": [-416, 96]
     },
     {
       "parameters": {
@@ -153,10 +132,7 @@
       "name": "Error Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        -192,
-        96
-      ]
+      "position": [-192, 96]
     },
     {
       "parameters": {
@@ -166,10 +142,7 @@
       "name": "Prepare Performance Data Updates",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1376,
-        -128
-      ]
+      "position": [1376, -128]
     },
     {
       "parameters": {},
@@ -177,10 +150,7 @@
       "name": "Done",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [
-        1600,
-        -128
-      ]
+      "position": [1600, -128]
     },
     {
       "parameters": {
@@ -190,10 +160,7 @@
       "name": "Process Satisfaction Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1152,
-        -128
-      ]
+      "position": [1152, -128]
     },
     {
       "parameters": {
@@ -201,10 +168,7 @@
       },
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
-      "position": [
-        -416,
-        -128
-      ],
+      "position": [-416, -128],
       "id": "469cac9c-da6c-4ff7-a941-7c61adf91616",
       "name": "When Executed by Another Workflow"
     }

@@ -65,10 +65,7 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [
-        1680,
-        256
-      ],
+      "position": [1680, 256],
       "id": "19b062e3-ab5f-4fde-9502-b591dc575939",
       "name": "onlyDocs"
     },
@@ -100,10 +97,7 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        784,
-        448
-      ],
+      "position": [784, 448],
       "id": "34e1aad7-32d6-455c-987d-2c6fb07548f5",
       "name": "eurekaAPI",
       "credentials": {
@@ -120,10 +114,7 @@
       },
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [
-        1456,
-        256
-      ],
+      "position": [1456, 256],
       "id": "8fb5f735-dcea-4a02-9a42-76cb40678cd5",
       "name": "Split Out"
     },
@@ -131,10 +122,7 @@
       "parameters": {},
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [
-        1008,
-        256
-      ],
+      "position": [1008, 256],
       "id": "e6037ce5-e644-4227-8ea9-2c6b2a7979f9",
       "name": "Merge",
       "executeOnce": true
@@ -145,10 +133,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1232,
-        256
-      ],
+      "position": [1232, 256],
       "id": "b2053a84-1b5f-422f-a2b0-6ed2e44cd161",
       "name": "cleanHTML&PII"
     },
@@ -158,10 +143,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1904,
-        256
-      ],
+      "position": [1904, 256],
       "id": "84ddc50f-e7de-48ec-b50d-6b1f185eeb93",
       "name": "structurizeEmail"
     },
@@ -171,10 +153,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2128,
-        256
-      ],
+      "position": [2128, 256],
       "id": "1ca9afe1-f8b7-4bd8-b5e5-848efaebcda4",
       "name": "calcCaseAgeDay"
     },
@@ -185,10 +164,7 @@
         "width": 1616
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        928,
-        160
-      ],
+      "position": [928, 160],
       "typeVersion": 1,
       "id": "e07a7e2e-8e7a-42f2-b535-6dfaa9cc77e5",
       "name": "Sticky Note"
@@ -202,10 +178,7 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [
-        2352,
-        256
-      ],
+      "position": [2352, 256],
       "id": "928344a8-2296-4c85-b70e-43d13ec3ddba",
       "name": "populateDB",
       "alwaysOutputData": true,
@@ -222,10 +195,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2576,
-        256
-      ],
+      "position": [2576, 256],
       "id": "01b3395d-da9b-4c93-bbc5-5a43b0a79d44",
       "name": "Trigger Entity Processing"
     },
@@ -236,10 +206,7 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [
-        336,
-        448
-      ],
+      "position": [336, 448],
       "id": "bb0f6bef-45bf-4ab9-8ae6-250145eda08b",
       "name": "deleteDB",
       "alwaysOutputData": true,
@@ -258,10 +225,7 @@
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        704,
-        368
-      ],
+      "position": [704, 368],
       "typeVersion": 1,
       "id": "64a7d7d7-0ee3-4b2a-8705-aaf95bcbce10",
       "name": "Sticky Note1"
@@ -272,10 +236,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1232,
-        528
-      ],
+      "position": [1232, 528],
       "id": "04ded2ea-6fcc-455d-a3dc-a34566a1dfe9",
       "name": "Edit Fields"
     },
@@ -305,10 +266,7 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [
-        1008,
-        448
-      ],
+      "position": [1008, 448],
       "id": "b582e375-8581-438f-98b4-4f970c637e05",
       "name": "Pagination Check"
     },
@@ -320,10 +278,7 @@
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [
-        -464,
-        -112
-      ],
+      "position": [-464, -112],
       "typeVersion": 1,
       "id": "55f14672-e5ba-45ea-9d1f-78eb02779bb3",
       "name": "Sticky Note3"
@@ -336,10 +291,7 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [
-        -112,
-        448
-      ],
+      "position": [-112, 448],
       "id": "ba27442c-a2b3-40a4-bb8a-8ab29d54b8c8",
       "name": "Webhook",
       "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
@@ -350,10 +302,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        112,
-        448
-      ],
+      "position": [112, 448],
       "id": "4aaf3380-d81a-45bb-acd6-fcce6b2ef958",
       "name": "ProcessWebhookData"
     },
@@ -365,10 +314,7 @@
       "name": "Prepare Entity Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        2800,
-        256
-      ]
+      "position": [2800, 256]
     },
     {
       "parameters": {
@@ -386,10 +332,7 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [
-        3024,
-        160
-      ],
+      "position": [3024, 160],
       "id": "319fa8b8-b3e7-4a82-a246-0f8cb0420de6",
       "name": "Call 'Calculate metrics'"
     },
@@ -408,10 +351,7 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [
-        3024,
-        352
-      ],
+      "position": [3024, 352],
       "id": "7ce225b2-c38f-4bcd-b936-6d89afab7032",
       "name": "Process Customer Survey"
     },
@@ -421,10 +361,7 @@
       "name": "Wait for Both Workflows Complete",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [
-        3248,
-        256
-      ]
+      "position": [3248, 256]
     },
     {
       "parameters": {
@@ -450,19 +387,13 @@
       "name": "Trigger Aggregate Data",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [
-        3472,
-        256
-      ]
+      "position": [3472, 256]
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [
-        3696,
-        256
-      ],
+      "position": [3696, 256],
       "id": "2df872a2-a424-44d8-81ac-d02227a69a90",
       "name": "Workflow Complete"
     },
@@ -474,10 +405,7 @@
       "name": "BatchOwnerNames",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        336,
-        256
-      ]
+      "position": [336, 256]
     },
     {
       "parameters": {
@@ -487,10 +415,7 @@
       "name": "CreateEurekaPayload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        560,
-        256
-      ]
+      "position": [560, 256]
     },
     {
       "parameters": {
@@ -503,10 +428,7 @@
       "name": "Batching Flow",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [
-        192,
-        160
-      ]
+      "position": [192, 160]
     }
   ],
   "pinData": {},
