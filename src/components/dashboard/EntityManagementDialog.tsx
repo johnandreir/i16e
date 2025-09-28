@@ -349,18 +349,44 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
         });
         return;
       }
+      
+      // Input validations with user-friendly notifications
+      if (!editName.trim()) {
+        toast({
+          title: "Validation Error",
+          description: `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} name cannot be empty.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if ((activeTab === 'squad' || activeTab === 'dpe') && !editMapping) {
+        toast({
+          title: "Validation Error",
+          description: activeTab === 'squad' 
+            ? "Please select a team for this squad" 
+            : "Please select a squad for this DPE",
+          variant: "destructive"
+        });
+        return;
+      }
 
       // Use database update functions with numeric IDs
       const numericId = parseInt(oldEntity.id);
-      let success = false;
+      let updateResult;
 
       if (activeTab === 'team' && updateTeam) {
-        success = await updateTeam(numericId, editName.trim(), oldEntity.description);
+        updateResult = await updateTeam(numericId, editName.trim(), oldEntity.description);
       } else if (activeTab === 'squad' && updateSquad && editMapping) {
-        success = await updateSquad(numericId, editName.trim(), editMapping, oldEntity.description);
+        updateResult = await updateSquad(numericId, editName.trim(), editMapping, oldEntity.description);
       } else if (activeTab === 'dpe' && updateDPE && editMapping) {
-        success = await updateDPE(numericId, editName.trim(), editMapping, oldEntity.email);
+        updateResult = await updateDPE(numericId, editName.trim(), editMapping, oldEntity.email);
       }
+
+      // Handle different response formats (boolean or object with success property)
+      const success = typeof updateResult === 'boolean' 
+        ? updateResult 
+        : (updateResult && updateResult.success);
 
       if (success) {
         // Update local state
@@ -393,21 +419,43 @@ const EntityManagementDialog: React.FC<EntityManagementDialogProps> = ({
         setEditMapping('');
         
         toast({
-          title: "Success",
-          description: `${activeTab.toUpperCase()} updated successfully.`,
+          title: "Update Successful",
+          description: `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} "${editName.trim()}" updated successfully.`,
         });
       } else {
+        // Handle error object format with detailed information
+        const errorMessage = typeof updateResult === 'object' && updateResult && updateResult.error
+          ? updateResult.error
+          : `Failed to update ${activeTab}`;
+          
         toast({
-          title: "Error",
-          description: `Failed to update ${activeTab}`,
+          title: "Update Failed",
+          description: errorMessage,
           variant: "destructive"
         });
       }
     } catch (error) {
       console.error(`Error updating ${activeTab}:`, error);
+      
+      // Extract message from error with fallback
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Unknown error occurred';
+      
+      // Provide a more user-friendly error message based on common error patterns
+      let friendlyMessage = errorMessage;
+      
+      if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+        friendlyMessage = `A ${activeTab} with this name already exists. Please choose a different name.`;
+      } else if (errorMessage.includes('not found')) {
+        friendlyMessage = `The ${editMapping ? editMapping + ' ' : ''}${activeTab === 'squad' ? 'team' : 'squad'} no longer exists. Please refresh and try again.`;
+      } else if (errorMessage.includes('validation')) {
+        friendlyMessage = `The data provided is invalid. Please check your inputs and try again.`;
+      }
+      
       toast({
-        title: "Error",
-        description: `Failed to update ${activeTab}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        title: "Update Error",
+        description: friendlyMessage,
         variant: "destructive"
       });
     }

@@ -1,0 +1,51 @@
+/* Chart alignment styles */
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+}
+
+.chart-container .card-header {
+  flex-shrink: 0;
+  height: 80px; /* Fixed height for card headers to ensure alignment */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.chart-container .card-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+}
+
+.chart-container .chart-wrapper {
+  flex-grow: 1;
+  display: flex;
+  min-height: 400px;
+  align-items: center; /* Center content vertically */
+  justify-content: center; /* Center content horizontally */
+}
+
+/* Ensure both charts have the same fixed height */
+.chart-container .recharts-responsive-container {
+  min-height: 400px !important;
+}
+
+/* Position the No Entity Selected text consistently */
+.card-title {
+  margin-top: 10px;
+  padding-bottom: 5px;
+  height: 28px; /* Fixed height for titles */
+  display: flex;
+  align-items: center;
+}
+
+/* Ensure the loading and no-data states are aligned */
+.chart-wrapper > div {
+  width: 100%;
+  position: relative;
+  top: -20px; /* Adjust vertical position */
+}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { BarChart3 } from 'lucide-react';
+import './charts.css';
 
 interface TeamMember {
   name: string;
@@ -14,9 +15,10 @@ interface TeamPerformanceChartProps {
   data: TeamMember[];
   title: string;
   onBarClick?: (member: TeamMember, metric: 'sct' | 'cases' | 'satisfaction') => void;
+  isLoading?: boolean;
 }
 
-const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title, onBarClick }) => {
+const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title, onBarClick, isLoading = false }) => {
   const [hoveredBar, setHoveredBar] = useState<{ type: 'sct' | 'cases' | null; index: number | null }>({ type: null, index: null });
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -74,20 +76,28 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
   const dynamicTopMargin = calculateTopMargin();
 
   return (
-    <Card className="rounded-lg border bg-card text-card-foreground shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
+    <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container">
+      <CardHeader className="pb-4 card-header">
+        <CardTitle className="text-lg font-semibold text-foreground tracking-tight">{title || 'No Entity Selected'}</CardTitle>
+        <div className="h-5"></div> {/* Empty space to match the survey chart's potential total line */}
       </CardHeader>
-      <CardContent>
-        {(!hasValidData || !hasPerformanceData) ? (
-          <div className="flex items-center justify-center h-80 text-muted-foreground">
-            <div className="text-center">
+      <CardContent className="card-content">
+        {isLoading ? (
+          <div className="flex items-center justify-center chart-wrapper text-muted-foreground">
+            <div className="text-center pt-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <div className="text-lg font-medium">Loading performance data...</div>
+            </div>
+          </div>
+        ) : (!hasValidData || !hasPerformanceData) ? (
+          <div className="flex items-center justify-center chart-wrapper text-muted-foreground">
+            <div className="text-center pt-10"> {/* Added top padding for alignment */}
               <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <div className="text-lg font-medium">No data available</div>
             </div>
           </div>
         ) : (
-          <div className="h-80">
+          <div className="chart-wrapper">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 

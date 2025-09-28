@@ -154,14 +154,28 @@ export const useMongoEntityDatabase = () => {
     try {
       setError(null);
       const numId = parseInt(id, 10);
+      
+      // Validate inputs
+      if (!name || name.trim() === '') {
+        setError('Squad name cannot be empty');
+        return { success: false, error: 'Squad name cannot be empty' };
+      }
+      
+      if (!teamId) {
+        setError('Team selection is required');
+        return { success: false, error: 'Team selection is required' };
+      }
+      
       // For now, use teamId as teamName since EntityData only contains string arrays
       const response = await entityService.updateSquad(numId, name, teamId);
       
       await loadData();
-      return true;
+      return { success: true };
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update squad');
-      return false;
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update squad';
+      console.error('Squad update error:', err);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     }
   };
 
@@ -202,14 +216,28 @@ export const useMongoEntityDatabase = () => {
     try {
       setError(null);
       const numId = parseInt(id, 10);
+      
+      // Validate inputs
+      if (!name || name.trim() === '') {
+        setError('DPE name cannot be empty');
+        return { success: false, error: 'DPE name cannot be empty' };
+      }
+      
+      if (!squadId) {
+        setError('Squad selection is required');
+        return { success: false, error: 'Squad selection is required' };
+      }
+      
       // For now, use squadId as squadName since EntityData only contains string arrays
       const response = await entityService.updateDPE(numId, name, squadId);
       
       await loadData();
-      return true;
+      return { success: true };
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update DPE');
-      return false;
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update DPE';
+      console.error('DPE update error:', err);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     }
   };
 

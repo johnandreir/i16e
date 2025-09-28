@@ -61,6 +61,11 @@ interface ServiceResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  errorCode?: string;
+  errorMessage?: string;
+  errorDetails?: string;
+  errorFields?: Record<string, boolean>;
+  statusCode?: number;
 }
 
 interface MongoTeam {
@@ -114,18 +119,30 @@ class EntityService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Enhanced error response with more details
         return {
           success: false,
           error: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+          errorCode: errorData.code,
+          errorMessage: errorData.message || `Error ${response.status}: ${response.statusText}`,
+          errorDetails: errorData.details,
+          errorFields: errorData.fields,
+          statusCode: response.status
         };
       }
 
       const data = await response.json();
       return { success: true, data };
     } catch (error) {
+      console.error('API Request error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Network error'
+        error: error instanceof Error ? error.message : 'Network error',
+        errorCode: 'NETWORK_ERROR',
+        errorMessage: error instanceof Error 
+          ? `Network error: ${error.message}`
+          : 'Failed to connect to the server',
       };
     }
   }
@@ -294,7 +311,7 @@ class EntityService {
     // Find the team first
     const teams = await this.request<MongoTeam[]>('/team');
     if (!teams.success || !teams.data) {
-      throw new Error('Failed to get teams');
+      throw new Error(teams.errorMessage || 'Failed to get teams');
     }
     
     const team = teams.data.find(t => t.name === teamName);
@@ -310,7 +327,7 @@ class EntityService {
     // Find the squad to update
     const squads = await this.request<MongoSquad[]>('/squad');
     if (!squads.success || !squads.data) {
-      throw new Error('Failed to get squads for update');
+      throw new Error(squads.errorMessage || 'Failed to get squads for update');
     }
     
     const squad = squads.data.find(s => this.mongoIdToNumber(s.id || s._id!) === id);
@@ -333,7 +350,19 @@ class EntityService {
     });
     
     if (!result.success || !result.data) {
-      throw new Error(result.error || 'Failed to update squad');
+      // Enhanced error handling with specific messages based on error code
+      switch(result.errorCode) {
+        case 'DUPLICATE_SQUAD':
+          throw new Error(`Squad "${name}" already exists in this team. Please choose a different name.`);
+        case 'VALIDATION_ERROR':
+          throw new Error(`Invalid data: ${result.errorMessage || result.errorDetails || 'Validation failed'}`);
+        case 'TEAM_NOT_FOUND':
+          throw new Error(`The selected team no longer exists.`);
+        case 'SQUAD_NOT_FOUND':
+          throw new Error(`The squad you're trying to update no longer exists.`);
+        default:
+          throw new Error(result.errorMessage || result.error || 'Failed to update squad');
+      }
     }
     
     return {
@@ -438,7 +467,7 @@ class EntityService {
     // Find the squad first
     const squads = await this.request<MongoSquad[]>('/squad');
     if (!squads.success || !squads.data) {
-      throw new Error('Failed to get squads');
+      throw new Error(squads.errorMessage || 'Failed to get squads');
     }
     
     const squad = squads.data.find(s => s.name === squadName);
@@ -454,7 +483,7 @@ class EntityService {
     // Find the DPE to update
     const dpes = await this.request<MongoDPE[]>('/dpe');
     if (!dpes.success || !dpes.data) {
-      throw new Error('Failed to get DPEs for update');
+      throw new Error(dpes.errorMessage || 'Failed to get DPEs for update');
     }
     
     const dpe = dpes.data.find(d => this.mongoIdToNumber(d.id || d._id!) === id);
@@ -477,7 +506,19 @@ class EntityService {
     });
     
     if (!result.success || !result.data) {
-      throw new Error(result.error || 'Failed to update DPE');
+      // Enhanced error handling with specific messages based on error code
+      switch(result.errorCode) {
+        case 'DUPLICATE_DPE':
+          throw new Error(`DPE "${name}" already exists in this squad. Please choose a different name.`);
+        case 'VALIDATION_ERROR':
+          throw new Error(`Invalid data: ${result.errorMessage || result.errorDetails || 'Validation failed'}`);
+        case 'SQUAD_NOT_FOUND':
+          throw new Error(`The selected squad no longer exists.`);
+        case 'DPE_NOT_FOUND':
+          throw new Error(`The DPE you're trying to update no longer exists.`);
+        default:
+          throw new Error(result.errorMessage || result.error || 'Failed to update DPE');
+      }
     }
     
     return {

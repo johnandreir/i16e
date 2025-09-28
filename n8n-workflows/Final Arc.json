@@ -1,0 +1,869 @@
+{
+  "name": "Get Cases v2",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb5210fa-51f6-4dd1-a15d-904d8f548a57",
+              "name": "owner_full_name",
+              "value": "={{ $json.owner_full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "94c92f61-6090-453b-9d6c-54d77e08f378",
+              "name": "case_id",
+              "value": "={{ $json.case_id }}",
+              "type": "string"
+            },
+            {
+              "id": "2568e5c6-c8b6-4f00-8e67-3f7c75b0c6dc",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "0ac33fb5-85e5-423c-a27d-e09b9b92b20b",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "72efbc20-b9e9-418f-99c2-1e3fe37ca71f",
+              "name": "products",
+              "value": "={{ $json.products }}",
+              "type": "string"
+            },
+            {
+              "id": "41af6b86-74d6-4c73-a76f-bf6c25a60e48",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "6b0b92a4-c9a2-4e5c-a93e-c4d1f1e2b3a4",
+              "name": "created_date",
+              "value": "={{ $json.created_date }}",
+              "type": "string"
+            },
+            {
+              "id": "8d4c6e1f-5a7b-4f9d-b2e8-a9c7e6f4d2b1",
+              "name": "closed_date",
+              "value": "={{ $json.closed_date }}",
+              "type": "string"
+            },
+            {
+              "id": "9e5f7a2c-6b8d-4c1e-a3f9-d7e5c2b4f1a8",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3648,
+        288
+      ],
+      "id": "94e857c3-9b2d-4e9f-a728-23282d8330f6",
+      "name": "onlyDocs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connectone-stg.trendmicro.com:8443/api/eurekasearch/EurekaSearch",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "693e96c64b6b4358be879c161f8e4cf4"
+            },
+            {
+              "name": "Content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2080,
+        208
+      ],
+      "id": "77d31f47-b2d7-4c91-8d3c-ca407062acd5",
+      "name": "eurekaAPI",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LuqOI2Vp6NW9GEzF",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data.results[0].docs",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3424,
+        288
+      ],
+      "id": "1da47763-862d-4e80-9032-a1db81d38902",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized email structuring - adaptive processing based on dataset size and fast_processed flag\nconst items = $input.all();\nconst LARGE_DATASET_THRESHOLD = 50;\n\n// Check if we're in fast mode (large dataset)\nconst useFastMode = items.length > LARGE_DATASET_THRESHOLD || (items[0] && items[0].json.fast_processed);\nconsole.log(`Email structuring: ${items.length} items, fast mode: ${useFastMode}`);\n\nif (useFastMode) {\n  // FAST MODE: Minimal email processing for large datasets\n  console.log('FAST MODE: Skipping complex email thread structuring');\n  \n  const fastResults = items.map(function(item) {\n    const itemData = item.json;\n    \n    // Create simple email thread without complex parsing\n    const emailContent = itemData.content || '';\n    const simpleThread = emailContent \n      ? `EMAIL THREAD - Case ${itemData.case_id}\\n\\n[FAST_PROCESSED] Content: ${emailContent.substring(0, 200)}${emailContent.length > 200 ? '...' : ''}\\n\\n[Note: Full email parsing skipped for performance]`\n      : `EMAIL THREAD - Case ${itemData.case_id}\\n\\nNo email content available`;\n    \n    return {\n      json: {\n        case_id: itemData.case_id,\n        priority: itemData.priority,\n        structured_email_thread: simpleThread,\n        owner_full_name: itemData.owner_full_name,\n        title: itemData.title,\n        products: Array.isArray(itemData.products) ? itemData.products[0] : itemData.products,\n        status: itemData.status,\n        created_date: itemData.created_date,\n        closed_date: itemData.closed_date,\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Structured ${fastResults.length} email threads quickly`);\n  return fastResults;\n  \n} else {\n  // NORMAL MODE: Full email thread processing for smaller datasets\n  console.log('NORMAL MODE: Full email thread structuring');\n  \n  // Original complex email processing functions (condensed for performance)\n  function cleanEmailThread(rawContent) {\n    if (!rawContent) return '';\n    \n    // Simplified cleaning for better performance\n    let cleaned = rawContent\n      .replace(/&nbsp;/g, ' ')\n      .replace(/&amp;/g, '&')\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>');\n    \n    // Quick case ID extraction\n    let caseId = '';\n    const tmIndex = cleaned.indexOf('TM-');\n    if (tmIndex !== -1) {\n      const numEnd = tmIndex + 3;\n      let endIndex = numEnd;\n      while (endIndex < cleaned.length && cleaned.charAt(endIndex) >= '0' && cleaned.charAt(endIndex) <= '9') {\n        endIndex++;\n      }\n      caseId = cleaned.substring(tmIndex, endIndex);\n    }\n    \n    return {\n      case_id: caseId,\n      content: cleaned.replace(/  +/g, ' ').trim(),\n      structured_thread: `EMAIL THREAD - Case ${caseId}\\n\\nProcessed Content: ${cleaned.substring(0, 1000)}${cleaned.length > 1000 ? '...' : ''}`,\n      timestamp: new Date().toISOString()\n    };\n  }\n  \n  const results = [];\n  \n  for (let i = 0; i < items.length; i++) {\n    const item = items[i];\n    const emailContent = item.json.content || item.json.description || item.json.body || '';\n    \n    if (emailContent) {\n      const cleanedEmail = cleanEmailThread(emailContent);\n      \n      results.push({\n        json: {\n          case_id: item.json.case_id,\n          priority: item.json.priority,\n          structured_email_thread: cleanedEmail.structured_thread,\n          owner_full_name: item.json.owner_full_name,\n          title: item.json.title,\n          products: Array.isArray(item.json.products) ? item.json.products[0] : item.json.products,\n          status: item.json.status,\n          created_date: item.json.created_date,\n          closed_date: item.json.closed_date\n        }\n      });\n    }\n  }\n  \n  console.log(`NORMAL MODE: Structured ${results.length} email threads with full processing`);\n  return results;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3872,
+        288
+      ],
+      "id": "c48eb36c-6243-4a5c-8aaa-6a87123b2996",
+      "name": "structurizeEmail"
+    },
+    {
+      "parameters": {
+        "jsCode": "function calculateCaseAge(jsonData) {\n  return jsonData.map(caseItem => {\n    const createdDate = new Date(caseItem.created_date);\n    const closedDate = new Date(caseItem.closed_date);\n    const caseAgeInDays = Math.ceil((closedDate - createdDate) / (1000 * 60 * 60 * 24));\n\n    return {\n      ...caseItem,\n      case_age_days: caseAgeInDays\n    };\n  });\n}\n\n// For n8n usage - process the input items\nconst items = $input.all();\nconst processedData = items.map(item => item.json);\nconst result = calculateCaseAge(processedData);\n\n// Return the processed cases with Case Age field\nreturn result.map(caseData => ({ json: caseData }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4096,
+        288
+      ],
+      "id": "a1462ae2-dd4b-4f9d-a7b6-f5831ee1ac6e",
+      "name": "calcCaseAgeDay"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "cases",
+        "fields": " case_id, priority, owner_full_name, title, products, status, created_date, closed_date, case_age_days, structured_email_thread, fast_processed",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        4320,
+        288
+      ],
+      "id": "e4f0a933-d77c-4ebc-b0dd-2a1c43c80310",
+      "name": "populateDB",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "Pl29NJOEfuRbqWf6",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ENHANCED TRIGGER ENTITY PROCESSING NODE\n// Replace the code in the Trigger Entity Processing node\n// This ensures we only process entities after all pagination is complete\n\n// Trigger entity processing after all data is saved and pagination is complete\ntry {\n  console.log('=== TRIGGERING ENTITY PROCESSING WORKFLOW ===');\n  console.log('All case data has been saved to DB and all pagination is complete.');\n  \n  // Get stats from the Done Pagination node if available\n  let processingStats = {};\n  try {\n    const paginationData = $node['Done Pagination'].json;\n    processingStats = {\n      casesProcessed: paginationData.caseStats?.totalCasesProcessed || 'unknown',\n      batchesCompleted: paginationData.caseStats?.batchesProcessed || 'unknown',\n      completionTime: paginationData.timestamp || new Date().toISOString()\n    };\n    console.log('Pagination statistics available:', JSON.stringify(processingStats, null, 2));\n  } catch (nodeAccessError) {\n    console.log('Could not access pagination statistics:', nodeAccessError.message);\n    processingStats = {\n      casesProcessed: 'unknown',\n      batchesCompleted: 'unknown',\n      completionTime: new Date().toISOString()\n    };\n  }\n  \n  // Small delay to ensure DB operations are complete\n  return new Promise(resolve => {\n    setTimeout(() => {\n      resolve([{ \n        json: { \n          message: 'Ready for entity processing',\n          timestamp: new Date().toISOString(),\n          stats: processingStats,\n          parallelProcessing: true // Enable parallel processing for entity processing\n        } \n      }]);\n    }, 1000);\n  });\n} catch (error) {\n  console.error('Error triggering entity processing:', error);\n  return [{ \n    json: { \n      error: 'Failed to trigger entity processing: ' + error.message,\n      timestamp: new Date().toISOString() \n    } \n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        544
+      ],
+      "id": "5212a44f-9621-4f72-872f-bd06f864d402",
+      "name": "Trigger Entity Processing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "63bec52c-801f-45e9-8616-af1fc55bbecc",
+              "leftValue": "={{ $json.data.start + $json.data.results.length }}",
+              "rightValue": "={{ $json.data.results[0].total }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "pagination-has-results",
+              "leftValue": "={{ $json.data.results.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2304,
+        208
+      ],
+      "id": "97c9cd64-b5a4-410e-af4d-5378a763e3f6",
+      "name": "Pagination Check"
+    },
+    {
+      "parameters": {
+        "content": "## Main Workflow - Dynamic Entity and Date Processing",
+        "height": 1088,
+        "width": 3776,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        912,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "ab61ae0d-83f8-42dd-977b-2b19a51b0b41",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "get-performance",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1184,
+        288
+      ],
+      "id": "6b66c6f5-b276-4597-a6ac-9e71997d7420",
+      "name": "Webhook",
+      "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process webhook data - simplified working version with execution guard\nconst inputData = $input.first();\nconsole.log('=== PROCESSING WEBHOOK DATA ===');\n\n// EXECUTION GUARD: Check if workflow is already running\n// This prevents infinite loops from downstream workflows\nconst currentTime = new Date().getTime();\nconst executionKey = 'get-cases-execution-' + Math.floor(currentTime / 60000); // 1-minute window\n\nconsole.log('Execution guard key:', executionKey);\n\n// Get the actual webhook data from the correct location\nconst webhookJson = $input.first().json;\nlet actualData = null;\n\nif (webhookJson && webhookJson.body) {\n  actualData = webhookJson.body;\n} else if (webhookJson) {\n  actualData = webhookJson;\n} else {\n  actualData = inputData;\n}\n\n// Check if this is a spurious re-execution\nif (actualData && actualData.source === 'internal-workflow') {\n  console.log('GUARD: Detected internal workflow trigger - blocking execution');\n  return [{ json: { \n    blocked: true, \n    reason: 'Internal workflow re-execution prevented',\n    timestamp: new Date().toISOString()\n  }}];\n}\n\nif (actualData) {\n  const entityType = actualData.entityType || '';\n  const entityName = actualData.entityName || '';\n  const ownerNamesRaw = actualData.ownerNames;\n  const eurekaDateRange = actualData.eurekaDateRange || '';\n  const dateRange = actualData.dateRange;\n  \n  // Convert ownerNames\n  let ownerNames = [];\n  if (ownerNamesRaw && typeof ownerNamesRaw === 'object') {\n    ownerNames = Object.values(ownerNamesRaw);\n  }\n  \n  const result = {\n    webhookData: {\n      entityType: entityType,\n      entityName: entityName,\n      ownerNames: ownerNames,\n      eurekaDateRange: eurekaDateRange,\n      dateRange: dateRange,\n      executionId: executionKey\n    }\n  };\n  \n  console.log('ProcessWebhookData SUCCESS:', JSON.stringify(result, null, 2));\n  return [{ json: result }];\n} else {\n  console.log('ERROR - No data found');\n  return [{ json: { error: 'No data found' } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        288
+      ],
+      "id": "bb8526da-c2f7-4df8-b57c-f644446d1acc",
+      "name": "ProcessWebhookData"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare entity data directly from ProcessWebhookData for Execute Workflow\nconsole.log('=== PREPARE ENTITY DATA FOR EXECUTE WORKFLOW ===');\n\n// Get the original webhook data directly from ProcessWebhookData node\nconst processedData = $('ProcessWebhookData').first().json;\nconsole.log('Data from ProcessWebhookData node:', JSON.stringify(processedData, null, 2));\n\nif (!processedData || !processedData.webhookData) {\n  throw new Error('No webhook data found from ProcessWebhookData node');\n}\n\nconst webhookData = processedData.webhookData;\nconsole.log('Extracted webhookData:', JSON.stringify(webhookData, null, 2));\n\n// Extract entity values from webhook data\nlet entityValues = [];\n\n// Try different extraction strategies\nif (webhookData.ownerNames && Array.isArray(webhookData.ownerNames) && webhookData.ownerNames.length > 0) {\n  entityValues = webhookData.ownerNames;\n  console.log('✅ Found entityValues in ownerNames:', entityValues);\n} else if (webhookData.entityValue) {\n  entityValues = [webhookData.entityValue];\n  console.log('✅ Found entityValue in entityValue:', webhookData.entityValue);\n} else if (webhookData.entityName) {\n  entityValues = [webhookData.entityName];\n  console.log('✅ Found entityValue in entityName:', webhookData.entityName);\n}\n\n// FAIL if no entity values - no fallbacks\nif (!entityValues || entityValues.length === 0) {\n  console.error('❌ CRITICAL: No entityValues found in webhook data');\n  console.error('Available webhook data keys:', Object.keys(webhookData));\n  throw new Error('CRITICAL: No entityValues found - cannot execute Calculate Metrics workflow');\n}\n\nconsole.log(`✅ Found ${entityValues.length} entities to process:`, entityValues);\n\n// Create data structure for each entity (multiple outputs for multiple Calculate Metrics executions)\nconst executeDataArray = entityValues.map((entityValue, index) => {\n  return {\n    entityValue: entityValue,\n    owner_full_name: entityValue,\n    source: 'get-cases-workflow',\n    timestamp: new Date().toISOString(),\n    entityIndex: index,\n    totalEntities: entityValues.length,\n    entityType: webhookData.entityType || 'unknown',\n    entityName: webhookData.entityName || 'unknown'\n  };\n});\n\nconsole.log('✅ Entity data prepared for Execute Workflow:', JSON.stringify(executeDataArray, null, 2));\nconsole.log(`✅ Will trigger ${executeDataArray.length} Calculate Metrics workflow executions`);\n\n// Return multiple items, one for each entity\nreturn executeDataArray.map(data => ({ json: data }));"
+      },
+      "id": "14cf5fb0-9dd6-4675-958d-6a42c2b00979",
+      "name": "Prepare Entity Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3424,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "VaX3w979KjLLcgNY",
+          "cachedResultName": "Calculate metrics"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3648,
+        480
+      ],
+      "id": "46d6a8be-be15-4e28-8edf-cfce1ac90deb",
+      "name": "Call 'Calculate metrics'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "dP6H6aWkrIG79yuw",
+          "mode": "list",
+          "cachedResultName": "Process Survey"
+        },
+        "workflowInputs": {
+          "mappingMode": "passthrough"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3648,
+        672
+      ],
+      "id": "d539fbe3-88ad-4917-924d-56e660c45b04",
+      "name": "Process Customer Survey"
+    },
+    {
+      "parameters": {},
+      "id": "0fa433dd-14cd-4a97-8ffc-7a8c2a75248d",
+      "name": "Wait for Both Workflows Complete",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3872,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "QkTL13ss9wmvB2Fm",
+          "mode": "list",
+          "cachedResultName": "Aggregate Data"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "dfbb0b38-2c7b-4abb-9d81-3da0d8828aee",
+      "name": "Trigger Aggregate Data",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4096,
+        544
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        4320,
+        544
+      ],
+      "id": "33fd5e4d-9159-46a4-82e1-4f146a90601d",
+      "name": "Workflow Complete"
+    },
+    {
+      "parameters": {
+        "jsCode": "// BatchOwnerNames Node - Complete Code\n// Copy this entire file into the BatchOwnerNames node\n\n// Create individual batches for true parallel processing - one per owner\ntry {\n  // Get webhook data from ProcessWebhookData node\n  const webhookData = $node['ProcessWebhookData'].json.webhookData;\n  \n  console.log('=== PARALLEL PROCESSING: CREATING INDIVIDUAL OWNER BATCHES ===');\n  console.log('Original webhook data:', JSON.stringify(webhookData, null, 2));\n  \n  if (!webhookData || !webhookData.ownerNames || !Array.isArray(webhookData.ownerNames)) {\n    throw new Error('No owner names found in webhook data');\n  }\n  \n  const ownerNames = webhookData.ownerNames;\n  console.log(`Total owners to process in parallel: ${ownerNames.length}`);\n  \n  // Every owner gets its own independent path through the workflow\n  console.log('Creating individual owner batches for maximum parallel processing');\n  \n  // Map each individual owner to its own batch\n  return ownerNames.map((ownerName, index) => {\n    return {\n      json: {\n        batchIndex: index,\n        totalBatches: ownerNames.length,\n        ownerNames: [ownerName], // SINGLE owner per batch - key for parallelization\n        eurekaDateRange: webhookData.eurekaDateRange,\n        dateRange: webhookData.dateRange,\n        entityType: webhookData.entityType,\n        entityName: webhookData.entityName,\n        processingMode: 'FAST',       // Always fast mode\n        parallelEnabled: true,        // Always parallel\n        singleOwnerMode: true,        // Flag for single owner processing\n        ownerId: `owner-${index}`,    // Unique owner ID\n        batchId: `batch-${Date.now()}-${index}`\n      }\n    };\n  });\n} catch (error) {\n  console.error('Error in parallel batch creation:', error.message);\n  return [{ json: { error: error.message } }];\n}"
+      },
+      "id": "851a5887-822b-4740-b8a9-cd5a58686e78",
+      "name": "BatchOwnerNames",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Edit Fields Node - Complete Code\n// Copy this entire file into the Edit Fields node\n\n// This node handles pagination and API parameters for each individual owner\ntry {\n  // Get input data from previous nodes\n  const batchData = $node[\"BatchOwnerNames\"].json;\n  \n  // Check if Pagination Check node has been executed yet\n  let pageData = null;\n  try {\n    if ($node[\"Pagination Check\"] && $node[\"Pagination Check\"].json) {\n      pageData = $node[\"Pagination Check\"].json.pageData || null;\n    }\n  } catch (e) {\n    // Pagination Check hasn't been executed yet, which is normal for the first run\n    console.log('First run - Pagination Check node has not been executed yet');\n  }\n  \n  console.log('=== EDIT FIELDS - PREPARING API REQUEST ===');\n  \n  let start, num, continuePagination, currentOwnerProgress;\n  let ownerNames = batchData.ownerNames || [];\n  const isSingleOwner = batchData.singleOwnerMode === true;\n  const ownerId = batchData.ownerId || 'unknown';\n  \n  if (pageData && pageData.nextStart !== undefined) {\n    // This is a pagination continuation\n    start = pageData.nextStart;\n    num = pageData.pageSize;\n    continuePagination = true;\n    currentOwnerProgress = pageData.currentOwnerProgress || {};\n  } else {\n    // This is the first API call or there was an error getting pagination data\n    start = 0;\n    // API limit is 30, stay safely within that limit\n    num = 30;\n    continuePagination = false;\n    currentOwnerProgress = {};\n  }\n  \n  // Initialize or update progress tracking for the owner in this parallel path\n  ownerNames.forEach(owner => {\n    if (!currentOwnerProgress[owner]) {\n      currentOwnerProgress[owner] = {\n        retrievedResults: 0,\n        totalResults: 0,\n        complete: false\n      };\n    }\n  });\n  \n  // If no owners, throw error\n  if (!ownerNames.length) {\n    throw new Error('No owners provided for case retrieval');\n  }\n  \n  // Single owner mode logging\n  if (isSingleOwner) {\n    const owner = ownerNames[0]; // In single owner mode, we only have one\n    console.log(`PARALLEL PATH - Processing owner: ${owner} (ID: ${ownerId})`);\n    console.log(`Current progress: ${JSON.stringify(currentOwnerProgress[owner])}`);\n  } else {\n    console.log(`Processing batch with ${ownerNames.length} owners`);\n  }\n  \n  // Build payload\n  // Handle different eurekaDateRange formats\n  let startDate, endDate;\n  \n  if (batchData.eurekaDateRange) {\n    // Check if eurekaDateRange is a string or an object\n    if (typeof batchData.eurekaDateRange === 'string') {\n      // If it's a string, try to extract date range from it (format like \"2023-01-01T00:00:00Z TO 2023-01-31T23:59:59Z\")\n      const dateRangeParts = batchData.eurekaDateRange.split(' TO ');\n      if (dateRangeParts.length === 2) {\n        startDate = dateRangeParts[0].replace('T00:00:00Z', '');\n        endDate = dateRangeParts[1].replace('T23:59:59Z', '');\n        \n        // For the example where user selected July 1 to July 31 but got June 30 to July 30\n        // Fix potential off-by-one errors in date ranges\n        if (batchData.dateRange && batchData.dateRange.startDate && batchData.dateRange.endDate) {\n          const userStartDate = batchData.dateRange.startDate;\n          const userEndDate = batchData.dateRange.endDate;\n          \n          console.log(`Comparing dates - From eurekaDateRange: ${startDate} to ${endDate}`);\n          console.log(`From dateRange object: ${userStartDate} to ${userEndDate}`);\n          \n          // Prefer dateRange over eurekaDateRange if they're both present but different\n          if (startDate !== userStartDate || endDate !== userEndDate) {\n            console.log('Found different date formats between eurekaDateRange and dateRange - using dateRange');\n            startDate = userStartDate;\n            endDate = userEndDate;\n          }\n        }\n      }\n    } else if (batchData.eurekaDateRange.startDate && batchData.eurekaDateRange.endDate) {\n      // If it's an object with startDate and endDate properties\n      startDate = batchData.eurekaDateRange.startDate;\n      endDate = batchData.eurekaDateRange.endDate;\n    }\n  }\n  \n  // If still no dates and we have a dateRange object, try using that\n  if ((!startDate || !endDate) && batchData.dateRange) {\n    if (batchData.dateRange.startDate && batchData.dateRange.endDate) {\n      startDate = batchData.dateRange.startDate;\n      endDate = batchData.dateRange.endDate;\n    }\n  }\n  \n  // Log the date information for debugging\n  console.log(`Date information - startDate: ${startDate}, endDate: ${endDate}`);\n  console.log(`Original eurekaDateRange: ${JSON.stringify(batchData.eurekaDateRange)}`);\n  \n  if (!startDate || !endDate) {\n    throw new Error('Missing date range information');\n  }\n  \n  // Log pagination info\n  console.log(`API Request - start: ${start}, num: ${num}, continuePagination: ${continuePagination}`);\n  \n  // Return the API parameters properly formatted for Eureka API\n  return {\n    json: {\n      action: \"query\",\n      q: \"*\",\n      source: \"corp_cases_en\",\n      lang: \"en-us\",\n      search_type: \"text_text\",\n      filter: {\n        owner_full_name: ownerNames,\n        status: [\"Resolved\", \"Cancelled\"],\n        closed_date: [`${startDate}T00:00:00Z TO ${endDate}T23:59:59Z`]\n      },\n      field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\", \"title\", \"content\"],\n      start: start,\n      num: num,\n      parameters: {\n        querytext: ownerNames.length === 1 ? \n          `DPE:\"${ownerNames[0]}\" AND REPORTEDON>=\"${startDate}\" AND REPORTEDON<=\"${endDate}\"` :\n          `DPE:(${ownerNames.map(name => `\"${name}\"`).join(' OR ')}) AND REPORTEDON>=\"${startDate}\" AND REPORTEDON<=\"${endDate}\"`,\n        start: start,\n        num: num,\n      },\n      pageData: {\n        ownerNames: ownerNames,\n        continuePagination: continuePagination,\n        currentStart: start,\n        pageSize: num,\n        currentOwnerProgress: currentOwnerProgress,\n        eurekaDateRange: batchData.eurekaDateRange,\n        dateRange: batchData.dateRange,\n        entityType: batchData.entityType,\n        entityName: batchData.entityName,\n        processingMode: batchData.processingMode || 'STANDARD',\n        parallelEnabled: batchData.parallelEnabled || false,\n        singleOwnerMode: isSingleOwner,\n        ownerId: ownerId,\n        batchId: batchData.batchId || `batch-${Date.now()}`\n      }\n    }\n  };\n} catch (error) {\n  console.error('Error in Edit Fields node:', error.message);\n  console.error('batchData:', JSON.stringify(batchData));\n  \n  // Provide a more specific error message for troubleshooting\n  let errorMessage = error.message;\n  if (errorMessage.includes(\"Pagination Check\")) {\n    errorMessage = \"Initial workflow run - no pagination data available yet. This is normal for the first execution.\";\n  }\n  \n  // Default date range (last 7 days) for emergency fallback\n  const now = new Date();\n  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);\n  const fallbackStartDate = sevenDaysAgo.toISOString().split('T')[0];\n  const fallbackEndDate = now.toISOString().split('T')[0];\n  \n  // Get owner names from batch data if available\n  const fallbackOwnerNames = batchData && batchData.ownerNames ? batchData.ownerNames : [];\n  \n  return { \n    json: { \n      error: errorMessage,\n      parameters: {\n        querytext: fallbackOwnerNames.length > 0 ? \n          `DPE:\"${fallbackOwnerNames[0]}\" AND REPORTEDON>=\"${fallbackStartDate}\" AND REPORTEDON<=\"${fallbackEndDate}\"` :\n          `REPORTEDON>=\"${fallbackStartDate}\" AND REPORTEDON<=\"${fallbackEndDate}\"`,\n        start: 0,\n        num: 30\n      },\n      pageData: {\n        ownerNames: fallbackOwnerNames,\n        continuePagination: false,\n        currentStart: 0,\n        pageSize: 30,\n        currentOwnerProgress: {},\n        eurekaDateRange: `${fallbackStartDate}T00:00:00Z TO ${fallbackEndDate}T23:59:59Z`,\n        dateRange: {\n          startDate: fallbackStartDate,\n          endDate: fallbackEndDate\n        },\n        parallelEnabled: true,\n        singleOwnerMode: true,\n        batchId: `fallback-batch-${Date.now()}`\n      }\n    } \n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        288
+      ],
+      "id": "e8ea9e9c-0f71-4906-bb59-8a55ffde9dca",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pagination Path Node - Complete Code\n// Copy this entire file into the \"Pagination Path\" node after the Pagination Check\n\n// This node prepares data for pagination continuation\ntry {\n  // Get data from the Pagination Check node\n  const paginationData = $node[\"Pagination Check\"].json;\n  const pageData = paginationData.pageData;\n  \n  // Get owner information\n  const ownerNames = pageData.ownerNames || [];\n  const isSingleOwner = pageData.singleOwnerMode === true;\n  const ownerId = pageData.ownerId || 'unknown';\n  \n  console.log('=== PAGINATION PATH ===');\n  if (isSingleOwner) {\n    const owner = ownerNames[0];\n    const progress = pageData.currentOwnerProgress?.[owner];\n    console.log(`PARALLEL PATH - Continuing pagination for owner: ${owner} (ID: ${ownerId})`);\n    if (progress) {\n      console.log(`Progress: ${progress.retrievedResults}/${progress.totalResults}`);\n    }\n  }\n  \n  // Pass all the necessary data for continuation\n  return {\n    json: {\n      ownerNames: ownerNames,\n      eurekaDateRange: pageData.eurekaDateRange,\n      dateRange: pageData.dateRange,\n      entityType: pageData.entityType,\n      entityName: pageData.entityName,\n      processingMode: pageData.processingMode,\n      parallelEnabled: pageData.parallelEnabled,\n      pageData: pageData,\n      singleOwnerMode: isSingleOwner,\n      ownerId: ownerId,\n      batchId: pageData.batchId\n    }\n  };\n} catch (error) {\n  console.error('Error in Pagination Path node:', error.message);\n  return { json: { error: error.message } };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        208
+      ],
+      "id": "7f5e1b84-f19b-4341-a90a-569b2fd62c90",
+      "name": "Pagination Path"
+    },
+    {
+      "parameters": {
+        "jsCode": "// No Pagination Path Node - Complete Code\n// Copy this entire file into the \"No Pagination Path\" node after the Pagination Check\n\n// This node handles results when there's no need to paginate further\ntry {\n  // Get results from the Pagination Check node\n  const paginationData = $node[\"Pagination Check\"].json;\n  const pageData = paginationData.pageData;\n  const results = paginationData.results;\n  \n  // Get owner information\n  const ownerNames = pageData.ownerNames || [];\n  const isSingleOwner = pageData.singleOwnerMode === true;\n  const ownerId = pageData.ownerId || 'unknown';\n  \n  console.log('=== NO PAGINATION PATH ===');\n  if (isSingleOwner) {\n    const owner = ownerNames[0];\n    console.log(`PARALLEL PATH - Processing complete for owner: ${owner} (ID: ${ownerId})`);\n    console.log(`Total results: ${paginationData.totalHits}`);\n  }\n  \n  // Return with all the necessary metadata for merging\n  return {\n    json: {\n      parallelResults: {\n        ownerNames: ownerNames,\n        results: results || [],\n        totalHits: paginationData.totalHits || 0,\n        ownerId: ownerId,\n        batchId: pageData.batchId,\n        isComplete: true,\n        dateRange: pageData.dateRange,\n        entityType: pageData.entityType,\n        entityName: pageData.entityName\n      }\n    }\n  };\n} catch (error) {\n  console.error('Error in No Pagination Path node:', error.message);\n  return { json: { error: error.message } };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        400
+      ],
+      "id": "f70d8f33-e3aa-4690-804b-b5f3d5a36350",
+      "name": "No Pagination Path"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge Results Node - Complete Code \n// Copy this entire file into the Merge node after all parallel branches\n\n// This node merges results from all parallel owner paths\ntry {\n  // Get all inputs from parallel owner branches\n  const inputItems = $input.all();\n  \n  console.log('=== MERGING PARALLEL RESULTS ===');\n  console.log(`Merging results from ${inputItems.length} parallel owner paths`);\n  \n  // Extract and merge all results\n  let allResults = [];\n  let totalOwnersProcessed = 0;\n  let totalResults = 0;\n  let entityInfo = null;\n  \n  for (const item of inputItems) {\n    // Skip items without parallelResults\n    if (!item.json || !item.json.parallelResults) {\n      console.warn('Skipping invalid item without parallelResults');\n      continue;\n    }\n    \n    const parallelData = item.json.parallelResults;\n    \n    // Increment processed owners count\n    if (parallelData.ownerNames && Array.isArray(parallelData.ownerNames)) {\n      totalOwnersProcessed += parallelData.ownerNames.length;\n    }\n    \n    // Add results\n    if (parallelData.results && Array.isArray(parallelData.results)) {\n      allResults = [...allResults, ...parallelData.results];\n      totalResults += parallelData.results.length;\n    }\n    \n    // Save entity info from any valid response\n    if (!entityInfo && parallelData.entityName && parallelData.entityType) {\n      entityInfo = {\n        entityName: parallelData.entityName,\n        entityType: parallelData.entityType,\n        dateRange: parallelData.dateRange\n      };\n    }\n  }\n  \n  console.log(`Successfully merged ${totalResults} results from ${totalOwnersProcessed} owners`);\n  \n  // Return the combined results\n  return {\n    json: {\n      mergedResults: {\n        results: allResults,\n        totalResults: totalResults,\n        totalOwnersProcessed: totalOwnersProcessed,\n        ...entityInfo,\n        timestamp: new Date().toISOString()\n      }\n    }\n  };\n} catch (error) {\n  console.error('Error in Merge Results node:', error.message);\n  return { json: { error: error.message } };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2752,
+        400
+      ],
+      "id": "4bcedaf5-b9f1-4236-9835-5ede607fb961",
+      "name": "Merge Results Node"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Results Node - Updated Complete Code with PII handling\n// Copy this entire file into the Process Results node\n\n// This node processes all the merged results from parallel paths\n// and formats data for both entity processing and PII removal\ntry {\n  // Get the merged results\n  const mergedData = $node[\"Merge Results Node\"].json.parallelResults;\n  \n  console.log('=== PROCESSING MERGED RESULTS ===');\n  console.log(`Processing ${mergedData.totalHits || 0} total results from parallel owner paths`);\n  console.log(`Entity: ${mergedData.entityName} (${mergedData.entityType})`);\n  \n  // Group results by owner\n  const resultsByOwner = {};\n  \n  if (mergedData.results && Array.isArray(mergedData.results)) {\n    mergedData.results.forEach(result => {\n      const owner = result.DPE || 'unknown';\n      \n      if (!resultsByOwner[owner]) {\n        resultsByOwner[owner] = [];\n      }\n      \n      resultsByOwner[owner].push(result);\n    });\n  }\n  \n  // Count results by owner\n  const ownerCounts = Object.entries(resultsByOwner).map(([owner, results]) => {\n    return {\n      owner,\n      count: results.length\n    };\n  }).sort((a, b) => b.count - a.count);\n  \n  console.log('Results by owner:');\n  console.log(JSON.stringify(ownerCounts, null, 2));\n  \n  // Format data for entity processing (first output)\n  const entityProcessingData = {\n    json: {\n      processedResults: {\n        totalResults: mergedData.totalHits || 0,\n        entityName: mergedData.entityName,\n        entityType: mergedData.entityType,\n        dateRange: mergedData.dateRange,\n        resultsByOwner: resultsByOwner,\n        ownerCounts: ownerCounts,\n        timestamp: new Date().toISOString()\n      }\n    }\n  };\n  \n  // Format for database storage path - with correct fields for cleanHTML&PII\n  const caseItems = [];\n  if (mergedData.results && Array.isArray(mergedData.results)) {\n    mergedData.results.forEach(result => {\n      caseItems.push({\n        json: {\n          // Map fields exactly as cleanHTML&PII expects them\n          case_id: result.CASEID || result.case_id,\n          priority: result.PRIORITY || result.priority,\n          owner_full_name: result.DPE || result.owner_full_name,\n          title: result.TITLE || result.title,\n          products: result.PRODUCT || result.products,\n          status: result.STATUS || result.status,\n          created_date: result.CREATEDON || result.created_date,\n          closed_date: result.CLOSEDON || result.closed_date,\n          content: result.CONTENT || result.content,\n          // Raw content needs to be preserved for PII removal\n          content_needs_pii_removal: true\n        }\n      });\n    });\n  }\n  \n  console.log(`Prepared ${caseItems.length} items for PII removal and database storage`);\n  \n  // First return the metrics item, then all the individual case items that need PII removal\n  return [entityProcessingData, ...caseItems];\n} catch (error) {\n  console.error('Error in Process Results node:', error.message);\n  return { json: { error: error.message } };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2976,
+        400
+      ],
+      "id": "6dd5bfd5-afb6-4f9e-a24b-0788c58ee67b",
+      "name": "Process Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized cleaning - adaptive processing based on dataset size\nconst inputData = $input.all();\nconst LARGE_DATASET_THRESHOLD = 50;\n\n// Determine if we should use fast mode based on dataset size\nconst useFastMode = inputData.length > LARGE_DATASET_THRESHOLD;\nconsole.log(`Processing ${inputData.length} items, using ${useFastMode ? 'FAST' : 'NORMAL'} mode`);\n\nif (useFastMode) {\n  // FAST MODE: Minimal cleaning for large datasets (teams/squads)\n  console.log('FAST MODE: Skipping heavy HTML/PII processing for performance');\n  \n  const fastResults = inputData.map(function(item) {\n    const data = item.json;\n    \n    // Basic cleaning only\n    function quickClean(text) {\n      if (!text || typeof text !== 'string') return text;\n      return text\n        .replace(/&nbsp;/g, ' ')\n        .replace(/&amp;/g, '&')\n        .replace(/&lt;/g, '<')\n        .replace(/&gt;/g, '>')\n        .replace(/\\s+/g, ' ')\n        .trim();\n    }\n    \n    return {\n      json: {\n        case_id: data.case_id,\n        priority: data.priority,\n        owner_full_name: data.owner_full_name,\n        title: quickClean(data.title),\n        products: data.products,\n        status: data.status,\n        created_date: data.created_date,\n        closed_date: data.closed_date,\n        content: quickClean(data.content ? data.content.substring(0, 1000) : ''), // Truncate content\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Processed ${fastResults.length} items in minimal time`);\n  return fastResults;\n  \n} else {\n  // NORMAL MODE: Full cleaning for smaller datasets (individuals)\n  console.log('NORMAL MODE: Full HTML/PII processing');\n  \n  function cleanHtmlContent(text) {\n    if (!text || typeof text !== 'string') return text;\n    return text\n      .replace(/<[^>]*>/g, '') // Remove HTML tags\n      .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces\n      .replace(/&amp;/g, '&') // Replace encoded ampersands\n      .replace(/&lt;/g, '<') // Replace encoded less than\n      .replace(/&gt;/g, '>') // Replace encoded greater than\n      .replace(/&quot;/g, '\"') // Replace encoded quotes\n      .replace(/&#39;/g, \"'\") // Replace encoded apostrophes\n      .replace(/\\s+/g, ' ') // Replace multiple whitespace with single space\n      .trim(); // Remove leading/trailing whitespace\n  }\n\n  function removePII(text) {\n    if (!text || typeof text !== 'string') return text;\n    return text\n      // Remove email addresses\n      .replace(/\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b/g, '[EMAIL_REMOVED]')\n      // Remove US phone numbers with specific formatting\n      .replace(/\\b(\\+?1[-.\\s]?)?\\(?([0-9]{3})\\)?[-.\\s]?([0-9]{3})[-.\\s]?([0-9]{4})\\b/g, '[PHONE_REMOVED]')\n      // Remove international phone numbers with separators\n      .replace(/\\b\\+[1-9]\\d{0,3}[-.\\s][0-9]{1,4}[-.\\s]?[0-9]{1,4}[-.\\s]?[0-9]{1,9}\\b/g, '[PHONE_REMOVED]')\n      // Remove international phone numbers without separators (total 8-15 digits including country code)\n      .replace(/\\+\\d{8,15}\\b/g, '[PHONE_REMOVED]')\n      // Remove standalone 10-11 digit numbers that are likely phone numbers\n      .replace(/\\b(?<![0-9T-])\\d{10,11}(?![0-9T:-])\\b/g, '[PHONE_REMOVED]')\n      // Remove system generated email disclaimers\n      .replace(/\\*\\*\\s*This is a system generated email from our case tracking system\\*\\*\\*.*?message\\.\\s*/gis, '')\n      .replace(/This message was sent from outside of Trend Micro\\.\\s*/gi, '')\n      .replace(/Please do not click links or open attachments unless you recognise the source of this email and know the content is safe\\.\\s*/gi, '')\n      .replace(/This email has been received from an external source\\. Do not click links or open attachments unless you can confirm the sender and know the content is safe\\.\\s*/gi, '')\n      // Remove additional resources section\n      .replace(/Additional Resources.*?Vulnerabilities\\s*/gis, '');\n  }\n\n  function processText(text) {\n    if (!text || typeof text !== 'string') return text;\n    let cleaned = cleanHtmlContent(text);\n    cleaned = removePII(cleaned);\n    return cleaned;\n  }\n\n  function processObject(obj) {\n    if (typeof obj === 'string') {\n      return processText(obj);\n    } else if (Array.isArray(obj)) {\n      return obj.map(function(item) { return processObject(item); });\n    } else if (obj && typeof obj === 'object') {\n      const cleaned = {};\n      for (const key in obj) {\n        if (obj.hasOwnProperty(key)) {\n          cleaned[key] = processObject(obj[key]);\n        }\n      }\n      return cleaned;\n    }\n    return obj;\n  }\n\n  // Process all input items with full cleaning\n  const outputData = inputData.map(function(item) {\n    return {\n      json: processObject(item.json)\n    };\n  });\n  \n  console.log(`NORMAL MODE: Processed ${outputData.length} items with full cleaning`);\n  return outputData;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        288
+      ],
+      "id": "cb54116a-8021-49e5-bb02-1d9b6c4622d6",
+      "name": "cleanHTML&PII"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "ulgP4TQ9fUOcEuWF",
+          "mode": "list",
+          "cachedResultName": "Eureka API"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1808,
+        -64
+      ],
+      "id": "fa13676e-1032-445d-8ad7-b20ebfca7212",
+      "name": "Call 'Eureka API'"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2016,
+        -64
+      ],
+      "id": "9c7582e9-236d-4707-be19-cad1bce86c84",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        2224,
+        -64
+      ],
+      "id": "4b58d410-ffb5-42ea-a286-c583dd12a8a6"
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2432,
+        -64
+      ],
+      "id": "f57d7e66-7919-44b8-83ce-191519d3af38",
+      "name": "Wait",
+      "webhookId": "b39d581e-2118-46d1-ad52-c0d7d8cdf619"
+    },
+    {
+      "parameters": {
+        "resource": "execution",
+        "filters": {},
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        -64
+      ],
+      "id": "fb657332-884a-440f-87ff-fe3086a28bbc",
+      "name": "Get many executions"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "onlyDocs": {
+      "main": [
+        [
+          {
+            "node": "structurizeEmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eurekaAPI": {
+      "main": [
+        [
+          {
+            "node": "Pagination Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "onlyDocs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "structurizeEmail": {
+      "main": [
+        [
+          {
+            "node": "calcCaseAgeDay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "calcCaseAgeDay": {
+      "main": [
+        [
+          {
+            "node": "populateDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pagination Check": {
+      "main": [
+        [
+          {
+            "node": "Pagination Path",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Pagination Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ProcessWebhookData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessWebhookData": {
+      "main": [
+        [
+          {
+            "node": "BatchOwnerNames",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Entity Processing": {
+      "main": [
+        [
+          {
+            "node": "Prepare Entity Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Entity Data": {
+      "main": [
+        [
+          {
+            "node": "Call 'Calculate metrics'",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Process Customer Survey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Calculate metrics'": {
+      "main": [
+        [
+          {
+            "node": "Wait for Both Workflows Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Customer Survey": {
+      "main": [
+        [
+          {
+            "node": "Wait for Both Workflows Complete",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Wait for Both Workflows Complete": {
+      "main": [
+        [
+          {
+            "node": "Trigger Aggregate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Aggregate Data": {
+      "main": [
+        [
+          {
+            "node": "Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BatchOwnerNames": {
+      "main": [
+        [
+          {
+            "node": "Call 'Eureka API'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Pagination Path": {
+      "main": [
+        [
+          {
+            "node": "Merge Results Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results Node": {
+      "main": [
+        [
+          {
+            "node": "Process Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Results": {
+      "main": [
+        [
+          {
+            "node": "Trigger Entity Processing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "cleanHTML&PII",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pagination Path": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cleanHTML&PII": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Eureka API'": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get many executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e5647555-fefc-478d-904b-390575722676",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
+  },
+  "id": "aPpm1uSAqQRetCiJ",
+  "tags": []
+}

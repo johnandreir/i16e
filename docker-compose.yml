@@ -3,23 +3,36 @@ services:
     image: mongo:latest
     container_name: i16e-mongodb
     restart: unless-stopped
+    # Enhanced restart policy
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+        window: 120s
     ports:
       - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: N0virus1!
       MONGO_INITDB_DATABASE: i16e-db
+      # Add this to ensure initialization scripts have enough time to complete
+      MONGO_INITDB_INIT_TIMEOUT: 120
+      # Add a cache buster to prevent validation caching issues
+      MONGODB_VALIDATION_CACHE_BUSTER: 20250928
     volumes:
       - mongodb_data:/data/db
       - ./mongodb-init:/docker-entrypoint-initdb.d
+    # Enhanced MongoDB configuration with improved stability settings
+    command: ["mongod", "--bind_ip_all", "--wiredTigerCacheSizeGB", "1", "--setParameter", "maxTransactionLockRequestTimeoutMillis=5000", "--setParameter", "diagnosticDataCollectionEnabled=false"]
     networks:
       - i16e-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
 
   n8n:
     image: n8nio/n8n:latest
@@ -37,6 +50,7 @@ services:
       - GENERIC_TIMEZONE=UTC
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./n8n-workflows:/home/node/n8n-workflows
     networks:
       - i16e-network
     depends_on:
@@ -52,7 +66,7 @@ services:
   mongodb-api:
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: docker/Dockerfile.api
     image: i16e-api
     container_name: i16e-api
     restart: unless-stopped
@@ -62,6 +76,10 @@ services:
       - MONGODB_URI=mongodb://admin:N0virus1!@mongodb:27017/i16e-db?authSource=admin
       - PORT=3001
       - NODE_ENV=production
+      - IN_DOCKER=true
+      # Add connection retry settings
+      - MAX_RETRY_ATTEMPTS=10
+      - RETRY_DELAY=5000
     networks:
       - i16e-network
     depends_on:
@@ -69,26 +87,6 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3001/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    image: i16e-frontend
-    container_name: i16e-frontend
-    restart: unless-stopped
-    ports:
-      - "8082:80"
-    networks:
-      - i16e-network
-    depends_on:
-      - mongodb-api
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -102,6 +100,7 @@ volumes:
 
 networks:
   i16e-network:
+    name: i16e-network
     driver: bridge
     ipam:
       config:

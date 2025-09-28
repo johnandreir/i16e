@@ -1,5 +1,5 @@
 {
-  "name": "Get cases Final Arc",
+  "name": "Get Cases",
   "nodes": [
     {
       "parameters": {
@@ -65,8 +65,8 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1680, 256],
-      "id": "19b062e3-ab5f-4fde-9502-b591dc575939",
+      "position": [1392, 272],
+      "id": "eaaf184b-3905-421b-85f2-cdb745f68cb0",
       "name": "onlyDocs"
     },
     {
@@ -91,18 +91,16 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ $json }}",
-        "options": {
-          "timeout": 30000
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [784, 448],
-      "id": "34e1aad7-32d6-455c-987d-2c6fb07548f5",
+      "position": [496, 464],
+      "id": "388edf73-86d0-4111-b792-03a48c42232b",
       "name": "eurekaAPI",
       "credentials": {
         "httpBasicAuth": {
-          "id": "LuqOI2Vp6NW9GEzF",
+          "id": "eMnqreoglS3qDWTM",
           "name": "Unnamed credential"
         }
       }
@@ -114,16 +112,16 @@
       },
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [1456, 256],
-      "id": "8fb5f735-dcea-4a02-9a42-76cb40678cd5",
+      "position": [1168, 272],
+      "id": "d49a53a2-3215-413c-8c8c-d4bf57ff8743",
       "name": "Split Out"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [1008, 256],
-      "id": "e6037ce5-e644-4227-8ea9-2c6b2a7979f9",
+      "position": [720, 272],
+      "id": "092afe8e-26c3-4cd9-b47c-c6c6e753b35d",
       "name": "Merge",
       "executeOnce": true
     },
@@ -133,8 +131,8 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1232, 256],
-      "id": "b2053a84-1b5f-422f-a2b0-6ed2e44cd161",
+      "position": [944, 272],
+      "id": "9788a590-de7a-4247-b19c-84b363596520",
       "name": "cleanHTML&PII"
     },
     {
@@ -143,8 +141,8 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1904, 256],
-      "id": "84ddc50f-e7de-48ec-b50d-6b1f185eeb93",
+      "position": [1616, 272],
+      "id": "4344ec3e-6099-4bf0-8e8a-bdf88d5287f7",
       "name": "structurizeEmail"
     },
     {
@@ -153,8 +151,8 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2128, 256],
-      "id": "1ca9afe1-f8b7-4bd8-b5e5-848efaebcda4",
+      "position": [1840, 272],
+      "id": "39fa0d86-ee58-4556-9177-87eeadb4cb08",
       "name": "calcCaseAgeDay"
     },
     {
@@ -164,9 +162,9 @@
         "width": 1616
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [928, 160],
+      "position": [640, 176],
       "typeVersion": 1,
-      "id": "e07a7e2e-8e7a-42f2-b535-6dfaa9cc77e5",
+      "id": "c2609c1d-625a-4e53-8842-e44dc9b909b3",
       "name": "Sticky Note"
     },
     {
@@ -178,25 +176,25 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [2352, 256],
-      "id": "928344a8-2296-4c85-b70e-43d13ec3ddba",
+      "position": [2064, 272],
+      "id": "6ae8645b-6d96-4d19-b3bc-f5a2aedb0003",
       "name": "populateDB",
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "uCCYnpccbmAfY9W9",
           "name": "MongoDB account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Trigger entity processing after all data is saved\nconsole.log('=== TRIGGERING ENTITY PROCESSING WORKFLOW ===');\nconsole.log('All case data has been saved to DB. Ready to trigger entity processing.');\n\n// Small delay to ensure DB operations are complete\nreturn new Promise(resolve => {\n  setTimeout(() => {\n    resolve([{ json: { message: 'Ready for entity processing', timestamp: new Date().toISOString() } }]);\n  }, 1000);\n});"
+        "jsCode": "// Trigger entity processing after all data is saved and pagination is complete\nconsole.log('=== TRIGGERING ENTITY PROCESSING WORKFLOW ===');\nconsole.log('All case data has been saved to DB and pagination is complete. Ready to trigger entity processing.');\n\n// Small delay to ensure DB operations are complete\nreturn new Promise(resolve => {\n  setTimeout(() => {\n    resolve([{ json: { message: 'Ready for entity processing', timestamp: new Date().toISOString() } }]);\n  }, 1000);\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2576, 256],
-      "id": "01b3395d-da9b-4c93-bbc5-5a43b0a79d44",
+      "position": [2288, 272],
+      "id": "4942a112-ec9c-4575-8a39-95a25f682255",
       "name": "Trigger Entity Processing"
     },
     {
@@ -206,28 +204,28 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [336, 448],
-      "id": "bb0f6bef-45bf-4ab9-8ae6-250145eda08b",
+      "position": [48, 464],
+      "id": "2c8b67df-db94-4e3d-82c2-70b1d012ce19",
       "name": "deleteDB",
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "uCCYnpccbmAfY9W9",
           "name": "MongoDB account"
         }
       }
     },
     {
       "parameters": {
-        "content": "## Loop\nIterate through queried cases (Eureka API limit is 30 cases per query)",
+        "content": "## Loop\nIterate through queried cases (Eureka API limit is 30 cases per query)\n\nNOTE: Maximum number of API calls is limited to 30 per execution.",
         "height": 368,
         "width": 704,
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [704, 368],
+      "position": [416, 384],
       "typeVersion": 1,
-      "id": "64a7d7d7-0ee3-4b2a-8705-aaf95bcbce10",
+      "id": "a3bb1157-c7d8-4c77-ba12-2bdbea48b84d",
       "name": "Sticky Note1"
     },
     {
@@ -236,8 +234,8 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1232, 528],
-      "id": "04ded2ea-6fcc-455d-a3dc-a34566a1dfe9",
+      "position": [944, 544],
+      "id": "fb415108-aa22-42d8-94ea-8309356a9441",
       "name": "Edit Fields"
     },
     {
@@ -252,8 +250,8 @@
           "conditions": [
             {
               "id": "63bec52c-801f-45e9-8616-af1fc55bbecc",
-              "leftValue": "={{ $json.data.start }}",
-              "rightValue": "={{ $json.data.results[0].total - 100 }}",
+              "leftValue": "={{ $json.data.start + $json.data.num }}",
+              "rightValue": "={{ $json.data.results[0].total }}",
               "operator": {
                 "type": "number",
                 "operation": "lt"
@@ -266,8 +264,8 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1008, 448],
-      "id": "b582e375-8581-438f-98b4-4f970c637e05",
+      "position": [720, 464],
+      "id": "19a279c5-6dea-4eab-ae8e-3a32d616f310",
       "name": "Pagination Check"
     },
     {
@@ -278,9 +276,9 @@
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [-464, -112],
+      "position": [-752, -112],
       "typeVersion": 1,
-      "id": "55f14672-e5ba-45ea-9d1f-78eb02779bb3",
+      "id": "da55975d-a824-4da0-ba14-4ab0c54975df",
       "name": "Sticky Note3"
     },
     {
@@ -291,8 +289,8 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-112, 448],
-      "id": "ba27442c-a2b3-40a4-bb8a-8ab29d54b8c8",
+      "position": [-400, 464],
+      "id": "112527b8-abe5-480c-98e9-c1f39055b61f",
       "name": "Webhook",
       "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
     },
@@ -302,72 +300,77 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [112, 448],
-      "id": "4aaf3380-d81a-45bb-acd6-fcce6b2ef958",
+      "position": [-176, 464],
+      "id": "2db7ba54-7b01-466e-8f60-0903f54d08d6",
       "name": "ProcessWebhookData"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create complete Eureka API request payload from ProcessWebhookData\ntry {\n  // Get webhook data from ProcessWebhookData node instead of current input\n  const webhookData = $node['ProcessWebhookData'].json.webhookData;\n  \n  console.log('=== CREATING COMPLETE EUREKA API PAYLOAD ===');\n  console.log('Webhook data from ProcessWebhookData:', JSON.stringify(webhookData, null, 2));\n  \n  if (!webhookData) {\n    console.error('ERROR: No webhookData from ProcessWebhookData node');\n    return [{ json: { error: 'No webhookData from ProcessWebhookData node' } }];\n  }\n  \n  // Validate required fields\n  if (!webhookData.ownerNames || !Array.isArray(webhookData.ownerNames) || webhookData.ownerNames.length === 0) {\n    console.error('ERROR: Invalid ownerNames:', webhookData.ownerNames);\n    return [{ json: { error: 'Invalid ownerNames', ownerNames: webhookData.ownerNames } }];\n  }\n  \n  if (!webhookData.eurekaDateRange || typeof webhookData.eurekaDateRange !== 'string') {\n    console.error('ERROR: Invalid eurekaDateRange:', webhookData.eurekaDateRange);\n    return [{ json: { error: 'Invalid eurekaDateRange', eurekaDateRange: webhookData.eurekaDateRange } }];\n  }\n  \n  // Create the complete JSON payload for Eureka API\n  const eurekaPayload = {\n    action: \"query\",\n    q: \"*\",\n    source: \"corp_cases_en\",\n    lang: \"en-us\",\n    search_type: \"text_text\",\n    filter: {\n      owner_full_name: webhookData.ownerNames,\n      status: [\"Resolved\", \"Cancelled\"],\n      closed_date: [webhookData.eurekaDateRange]\n    },\n    field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\"],\n    start: 1,\n    num: 30\n  };\n  \n  console.log('=== SUCCESS: CREATED COMPLETE EUREKA PAYLOAD ===');\n  console.log('Complete payload:', JSON.stringify(eurekaPayload, null, 2));\n  console.log('Payload string length:', JSON.stringify(eurekaPayload).length);\n  console.log('owner_full_name array:', eurekaPayload.filter.owner_full_name);\n  console.log('closed_date array:', eurekaPayload.filter.closed_date);\n  \n  return [{ json: eurekaPayload }];\n  \n} catch (error) {\n  console.error('Error in Edit Fields_declareStart:', error);\n  return [{ json: { error: error.message, stack: error.stack } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [272, 464],
+      "id": "f438b1dc-69d7-4a1f-9118-71027dfa1731",
+      "name": "Edit Fields_declareStart"
     },
     {
       "parameters": {
         "jsCode": "// Prepare entity data directly from ProcessWebhookData for Execute Workflow\nconsole.log('=== PREPARE ENTITY DATA FOR EXECUTE WORKFLOW ===');\n\n// Get the original webhook data directly from ProcessWebhookData node\nconst processedData = $('ProcessWebhookData').first().json;\nconsole.log('Data from ProcessWebhookData node:', JSON.stringify(processedData, null, 2));\n\nif (!processedData || !processedData.webhookData) {\n  throw new Error('No webhook data found from ProcessWebhookData node');\n}\n\nconst webhookData = processedData.webhookData;\nconsole.log('Extracted webhookData:', JSON.stringify(webhookData, null, 2));\n\n// Extract entity values from webhook data\nlet entityValues = [];\n\n// Try different extraction strategies\nif (webhookData.ownerNames && Array.isArray(webhookData.ownerNames) && webhookData.ownerNames.length > 0) {\n  entityValues = webhookData.ownerNames;\n  console.log('✅ Found entityValues in ownerNames:', entityValues);\n} else if (webhookData.entityValue) {\n  entityValues = [webhookData.entityValue];\n  console.log('✅ Found entityValue in entityValue:', webhookData.entityValue);\n} else if (webhookData.entityName) {\n  entityValues = [webhookData.entityName];\n  console.log('✅ Found entityValue in entityName:', webhookData.entityName);\n}\n\n// FAIL if no entity values - no fallbacks\nif (!entityValues || entityValues.length === 0) {\n  console.error('❌ CRITICAL: No entityValues found in webhook data');\n  console.error('Available webhook data keys:', Object.keys(webhookData));\n  throw new Error('CRITICAL: No entityValues found - cannot execute Calculate Metrics workflow');\n}\n\nconsole.log(`✅ Found ${entityValues.length} entities to process:`, entityValues);\n\n// Create data structure for each entity (multiple outputs for multiple Calculate Metrics executions)\nconst executeDataArray = entityValues.map((entityValue, index) => {\n  return {\n    entityValue: entityValue,\n    owner_full_name: entityValue,\n    source: 'get-cases-workflow',\n    timestamp: new Date().toISOString(),\n    entityIndex: index,\n    totalEntities: entityValues.length,\n    entityType: webhookData.entityType || 'unknown',\n    entityName: webhookData.entityName || 'unknown'\n  };\n});\n\nconsole.log('✅ Entity data prepared for Execute Workflow:', JSON.stringify(executeDataArray, null, 2));\nconsole.log(`✅ Will trigger ${executeDataArray.length} Calculate Metrics workflow executions`);\n\n// Return multiple items, one for each entity\nreturn executeDataArray.map(data => ({ json: data }));"
       },
-      "id": "d44f4f2c-5952-4e19-a1b7-bec56d228d4f",
+      "id": "f7494844-fab4-42b0-a75e-b312d08fe558",
       "name": "Prepare Entity Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2800, 256]
+      "position": [2512, 272]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "mode": "list",
-          "value": "VaX3w979KjLLcgNY",
-          "cachedResultName": "Calculate metrics"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {}
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.2,
-      "position": [3024, 160],
-      "id": "319fa8b8-b3e7-4a82-a246-0f8cb0420de6",
-      "name": "Call 'Calculate metrics'"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "dP6H6aWkrIG79yuw",
+          "value": "44b6j3sPpySqjNhf",
           "mode": "list",
           "cachedResultName": "Process Survey"
         },
         "workflowInputs": {
-          "mappingMode": "passthrough"
+          "mappingMode": "passthrough",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
         },
         "options": {}
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [3024, 352],
-      "id": "7ce225b2-c38f-4bcd-b936-6d89afab7032",
+      "position": [2736, 368],
+      "id": "0fd20f77-2508-4ffe-bb0c-9dff4280f548",
       "name": "Process Customer Survey"
     },
     {
+      "parameters": {
+        "jsCode": "// This node waits for pagination to complete\n// It doesn't need to do anything as it's just a pass-through\n// The actual logic to wait for pagination is handled by the Pagination Check node\nconsole.log('Data saved to database, waiting for pagination to complete before triggering entity processing');\nreturn $input.item;\n"
+      },
+      "id": "a7bb21fc-3c4a-48e9-aed1-d2f8f9e0c123",
+      "name": "Wait For Pagination",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [1480, 560]
+    },
+    {
       "parameters": {},
-      "id": "f9966085-12eb-4525-aa44-e7d3f43199cb",
+      "id": "355ed52b-d66a-4e04-9172-3fe49a66e435",
       "name": "Wait for Both Workflows Complete",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [3248, 256]
+      "position": [2960, 272]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "QkTL13ss9wmvB2Fm",
+          "value": "O4mcGfaJBplOoQcm",
           "mode": "list",
           "cachedResultName": "Aggregate Data"
         },
@@ -383,56 +386,46 @@
           "waitForSubWorkflow": true
         }
       },
-      "id": "e2df4a96-6422-434c-9f87-0f2d4ec109fd",
+      "id": "b6fd005d-a720-4499-8c34-4ac2dfaa4b11",
       "name": "Trigger Aggregate Data",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [3472, 256]
+      "position": [3184, 272]
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [3696, 256],
-      "id": "2df872a2-a424-44d8-81ac-d02227a69a90",
+      "position": [3408, 272],
+      "id": "a0c45b2e-8d81-4110-90c6-b44c0c03365a",
       "name": "Workflow Complete"
     },
     {
       "parameters": {
-        "jsCode": "// Create batch chunks from the owner names list\ntry {\n  // Get webhook data from ProcessWebhookData node\n  const webhookData = $node['ProcessWebhookData'].json.webhookData;\n  \n  console.log('=== BATCH PROCESSING: CREATING OWNER NAME BATCHES ===');\n  console.log('Original webhook data:', JSON.stringify(webhookData, null, 2));\n  \n  if (!webhookData || !webhookData.ownerNames || !Array.isArray(webhookData.ownerNames)) {\n    throw new Error('No owner names found in webhook data');\n  }\n  \n  const ownerNames = webhookData.ownerNames;\n  const MAX_BATCH_SIZE = 5; // Maximum number of owners to process in a single batch\n  \n  console.log(`Total owners to process: ${ownerNames.length}`);\n  \n  // Skip batching for small owner lists\n  if (ownerNames.length <= MAX_BATCH_SIZE) {\n    console.log('Small owner list detected, skipping batching');\n    return [{\n      json: {\n        batchIndex: 0,\n        totalBatches: 1,\n        ownerNames: ownerNames,\n        eurekaDateRange: webhookData.eurekaDateRange,\n        dateRange: webhookData.dateRange,\n        entityType: webhookData.entityType,\n        entityName: webhookData.entityName\n      }\n    }];\n  }\n  \n  // Create batches\n  const batches = [];\n  for (let i = 0; i < ownerNames.length; i += MAX_BATCH_SIZE) {\n    const batchOwners = ownerNames.slice(i, i + MAX_BATCH_SIZE);\n    batches.push({\n      json: {\n        batchIndex: Math.floor(i / MAX_BATCH_SIZE),\n        totalBatches: Math.ceil(ownerNames.length / MAX_BATCH_SIZE),\n        ownerNames: batchOwners,\n        eurekaDateRange: webhookData.eurekaDateRange,\n        dateRange: webhookData.dateRange,\n        entityType: webhookData.entityType,\n        entityName: webhookData.entityName\n      }\n    });\n  }\n  \n  console.log(`Created ${batches.length} batches of owner names`);\n  batches.forEach((batch, index) => {\n    console.log(`Batch ${index}: ${batch.json.ownerNames.length} owners`);\n  });\n  \n  return batches;\n  \n} catch (error) {\n  console.error('Error in BatchOwnerNames:', error.message);\n  return [{ json: { error: error.message } }];\n}"
+        "workflowId": {
+          "__rl": true,
+          "value": "LsMBtiNgGrAMrWkR",
+          "mode": "list",
+          "cachedResultName": "Calculate Metrics"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {}
+        },
+        "options": {}
       },
-      "id": "4d60f4a8-3c25-4c24-8f7a-267d4a140f63",
-      "name": "BatchOwnerNames",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [336, 256]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Create complete Eureka API request payload from batch data\ntry {\n  const batchData = $input.first().json;\n  \n  console.log('=== CREATING EUREKA API PAYLOAD FROM BATCH ===');\n  console.log('Batch data:', JSON.stringify(batchData, null, 2));\n  \n  if (!batchData.ownerNames || !Array.isArray(batchData.ownerNames) || batchData.ownerNames.length === 0) {\n    throw new Error('No owner names in batch data');\n  }\n  \n  if (!batchData.eurekaDateRange) {\n    throw new Error('No date range in batch data');\n  }\n  \n  // Create the Eureka API payload for this batch of owners\n  const eurekaPayload = {\n    action: \"query\",\n    q: \"*\",\n    source: \"corp_cases_en\",\n    lang: \"en-us\",\n    search_type: \"text_text\",\n    filter: {\n      owner_full_name: batchData.ownerNames,\n      status: [\"Resolved\", \"Cancelled\"],\n      closed_date: [batchData.eurekaDateRange]\n    },\n    field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\"],\n    start: 1,\n    num: 30,\n    batchInfo: {\n      batchIndex: batchData.batchIndex,\n      totalBatches: batchData.totalBatches\n    }\n  };\n  \n  console.log(`Created Eureka payload for batch ${batchData.batchIndex + 1} of ${batchData.totalBatches}`);\n  console.log(`This batch contains ${batchData.ownerNames.length} owners`);\n  \n  return [{ json: eurekaPayload }];\n  \n} catch (error) {\n  console.error('Error in CreateEurekaPayload:', error.message);\n  return [{ json: { error: error.message } }];\n}"
-      },
-      "id": "cf06a08b-35de-45a0-a878-f729fbc54160",
-      "name": "CreateEurekaPayload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [560, 256]
-    },
-    {
-      "parameters": {
-        "content": "## Optimized Batched Processing\nHandles large entity sets by creating batches of maximum 5 entities",
-        "height": 400,
-        "width": 880,
-        "color": 1
-      },
-      "id": "1c584a79-d6be-467e-97ab-a2612548c582",
-      "name": "Batching Flow",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [192, 160]
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [2736, 176],
+      "id": "c8731396-1925-4712-914d-ac06de5c3cbb",
+      "name": "Call 'Calculate Metrics'"
     }
   ],
   "pinData": {},
   "connections": {
+    "Wait For Pagination": {
+      "main": [[]]
+    },
     "onlyDocs": {
       "main": [
         [
@@ -519,7 +512,18 @@
       "main": [
         [
           {
-            "node": "BatchOwnerNames",
+            "node": "Edit Fields_declareStart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields_declareStart": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI",
             "type": "main",
             "index": 0
           }
@@ -542,6 +546,13 @@
         [
           {
             "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trigger Entity Processing",
             "type": "main",
             "index": 0
           }
@@ -574,7 +585,7 @@
       "main": [
         [
           {
-            "node": "Trigger Entity Processing",
+            "node": "Wait For Pagination",
             "type": "main",
             "index": 0
           }
@@ -596,23 +607,12 @@
       "main": [
         [
           {
-            "node": "Call 'Calculate metrics'",
+            "node": "Call 'Calculate Metrics'",
             "type": "main",
             "index": 0
           },
           {
             "node": "Process Customer Survey",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call 'Calculate metrics'": {
-      "main": [
-        [
-          {
-            "node": "Wait for Both Workflows Complete",
             "type": "main",
             "index": 0
           }
@@ -652,22 +652,11 @@
         ]
       ]
     },
-    "BatchOwnerNames": {
+    "Call 'Calculate Metrics'": {
       "main": [
         [
           {
-            "node": "CreateEurekaPayload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "CreateEurekaPayload": {
-      "main": [
-        [
-          {
-            "node": "eurekaAPI",
+            "node": "Wait for Both Workflows Complete",
             "type": "main",
             "index": 0
           }
@@ -679,9 +668,11 @@
   "settings": {
     "executionOrder": "v1"
   },
+  "versionId": "add1dc26-7268-4ee6-8d85-42505d379297",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
+    "instanceId": "19925d8ea9608c62de932aa1564c2e7236335b0466d69111e1fed356d5342c96"
   },
+  "id": "oIi4NspGLo4y6Spl",
   "tags": []
 }

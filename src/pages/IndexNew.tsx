@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar, FileText, Users, TrendingUp, AlertCircle, CheckCircle2, Clock, Target, BarChart3, PieChart, Activity, ThumbsUp, ThumbsDown, CheckCircle, Lightbulb, Database } from 'lucide-react';
+import { Calendar, FileText, Users, TrendingUp, AlertCircle, CheckCircle2, Clock, Target, BarChart3, PieChart, PieChart as PieChartIcon, Activity, ThumbsUp, ThumbsDown, CheckCircle, Lightbulb, Database } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import KPICard from '@/components/dashboard/KPICard';
 import FilterSection from '@/components/dashboard/FilterSection';
@@ -164,13 +164,18 @@ const IndexNew = () => {
     setSelectedEntity(entity);
     setSelectedEntityValue(''); // Reset entity value when type changes
     setEntityChanged(true);
-    setReportGenerated(false);
+    
+    // Don't reset reportGenerated to ensure loading states are maintained
+    // Don't clear generatedEntity/generatedEntityValue to maintain chart titles
+    // We will update these only when Generate Report is clicked
+    
+    // We should still clear the data since it's no longer valid for the new entity
     setWorkflowCompleted(false); // Reset workflow completion
-    setGeneratedEntity(''); // Clear generated entity
-    setGeneratedEntityValue(''); // Clear generated entity value
     setReportDashboardData(null); // Clear report data
     setReportCurrentData(null); // Clear report current data
     setIsAnalysisEnabled(false); // Disable analysis when entity changes
+    
+    // Keep isPerformanceLoading and isSatisfactionLoading as they are - don't reset them
   };
 
   const handleEntityValueChange = (value: string) => {
@@ -188,13 +193,17 @@ const IndexNew = () => {
     }
     setSelectedEntityValue(value);
     setEntityChanged(true);
-    setReportGenerated(false);
-    // NO WORKFLOW DEPENDENCY NEEDED
-    setGeneratedEntity(''); // Clear generated entity
-    setGeneratedEntityValue(''); // Clear generated entity value
+    
+    // Don't reset reportGenerated to ensure loading states are maintained
+    // Don't clear generatedEntity/generatedEntityValue to maintain chart titles
+    // We will update these only when Generate Report is clicked
+    
+    // We should still clear the data since it's no longer valid for the new entity value
     setReportDashboardData(null); // Clear report data
     setReportCurrentData(null); // Clear report current data
     setIsAnalysisEnabled(false); // Disable analysis when entity value changes
+    
+    // Keep isPerformanceLoading and isSatisfactionLoading as they are - don't reset them
   };
 
   const handleTimeRangeChange = (range: { from: Date; to: Date }) => {
@@ -1099,20 +1108,7 @@ const IndexNew = () => {
           if (performanceResult && performanceResult.length > 0) {
             const latestMetrics = performanceResult[0];
             
-            // TEMPORARY: Add mock satisfaction data for testing if missing
-            if (!latestMetrics.metrics?.customerSatisfaction && latestMetrics.entity_name) {
-              
-              const mockSatisfactionData = {
-                'Mharlee Dela Cruz': { csat: 6, neutral: 1, dsat: 1, total: 8, csatPercentage: 75, neutralPercentage: 12.5, dsatPercentage: 12.5 },
-                'John Andrei Reyes': { csat: 9, neutral: 2, dsat: 1, total: 12, csatPercentage: 75, neutralPercentage: 16.7, dsatPercentage: 8.3 },
-                'Jen Daryll Oller': { csat: 4, neutral: 1, dsat: 1, total: 6, csatPercentage: 66.7, neutralPercentage: 16.7, dsatPercentage: 16.7 }
-              };
-              
-              const mockData = mockSatisfactionData[latestMetrics.entity_name];
-              if (mockData) {
-                latestMetrics.metrics.customerSatisfaction = mockData;
-              }
-            }
+            // No mock satisfaction data - use real data only
             
             const metricsToSet = {
               sct: latestMetrics.metrics?.sct,
@@ -1307,6 +1303,14 @@ const IndexNew = () => {
     } catch (error) {
       // Error occurred - continue polling, don't mark as completed yet (unless this is a repeated failure)
     }
+    
+    // Check if we have data already - if so, stop loading states
+    if ((calculateMetricsData && calculateMetricsData.length > 0) || 
+        (chartSurveyData && chartSurveyData.length > 0)) {
+      setIsPerformanceLoading(false);
+      setIsSatisfactionLoading(false);
+      console.log('Data already loaded, setting loading states to false');
+    }
   };
 
   // Effect to poll for Calculate metrics results after report generation
@@ -1335,9 +1339,17 @@ const IndexNew = () => {
         const elapsedTime = currentTime - startTime;
         
         // Stop polling if data is loaded (both performance and satisfaction)
-        if (!isPerformanceLoading && !isSatisfactionLoading) {
+        if ((!isPerformanceLoading && !isSatisfactionLoading) || 
+            (calculateMetricsData && calculateMetricsData.length > 0) || 
+            (chartSurveyData && chartSurveyData.length > 0)) {
           clearInterval(pollInterval);
           console.log('Data loaded successfully, polling stopped');
+          
+          // Ensure loading states are set to false when data is available
+          if (isPerformanceLoading || isSatisfactionLoading) {
+            setIsPerformanceLoading(false);
+            setIsSatisfactionLoading(false);
+          }
           
           toast({
             title: "Data Loaded",
@@ -2108,40 +2120,45 @@ const IndexNew = () => {
       return [];
     }
     
-    // Calculate survey responses based on performance data
-    const totalCases = performanceData.reduce((sum: number, data: any) => sum + (data?.cases || 0), 0);
-    const totalResponses = Math.max(50, totalCases * 8); // Approximate 8 surveys per case
+    // Calculate survey responses based on ACTUAL data, not fallback data
+    // Get direct values from the performance data metrics if available
+    const totalSatisfaction = performanceData.reduce((sum: {csat: number, neutral: number, dsat: number}, data: any) => {
+      // Extract actual satisfaction metrics if they exist
+      if (data && data.metrics && data.metrics.customerSatisfaction) {
+        const cs = data.metrics.customerSatisfaction;
+        return {
+          csat: sum.csat + (cs.csat || 0),
+          neutral: sum.neutral + (cs.neutral || 0),
+          dsat: sum.dsat + (cs.dsat || 0)
+        };
+      }
+      return sum;
+    }, { csat: 0, neutral: 0, dsat: 0 });
     
-    // Validate total responses
-    if (totalResponses < 10) {
+    const totalResponses = totalSatisfaction.csat + totalSatisfaction.neutral + totalSatisfaction.dsat;
+    
+    // Only generate survey data if we have actual responses
+    if (totalResponses === 0) {
       return [];
     }
     
-    const csatValue = Math.floor(totalResponses * 0.80);
-    const neutralValue = Math.floor(totalResponses * 0.15);
-    const dsatValue = Math.floor(totalResponses * 0.05); // Reduced to align with 5% target
-    
-    // Ensure percentages add up correctly
-    const calculatedTotal = csatValue + neutralValue + dsatValue;
-    const adjustedDsat = dsatValue + (totalResponses - calculatedTotal);
-    
     return [
       { 
-        name: 'CSAT', 
-        value: csatValue, 
-        percentage: Math.round((csatValue / totalResponses) * 100),
+        name: 'CSAT (4-5)', 
+        value: totalSatisfaction.csat, 
+        percentage: Math.round((totalSatisfaction.csat / totalResponses) * 100),
         color: '#4ade80' 
       },
       { 
-        name: 'Neutral', 
-        value: neutralValue, 
-        percentage: Math.round((neutralValue / totalResponses) * 100),
+        name: 'Neutral (3)', 
+        value: totalSatisfaction.neutral, 
+        percentage: Math.round((totalSatisfaction.neutral / totalResponses) * 100),
         color: '#fbbf24' 
       },
       { 
-        name: 'DSAT', 
-        value: adjustedDsat, 
-        percentage: Math.round((adjustedDsat / totalResponses) * 100),
+        name: 'DSAT (1-2)', 
+        value: totalSatisfaction.dsat, 
+        percentage: Math.round((totalSatisfaction.dsat / totalResponses) * 100),
         color: '#ef4444' 
       }
     ];
@@ -2662,35 +2679,37 @@ const IndexNew = () => {
               </div>
               
               {/* Charts Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container h-full">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <BarChart3 className="h-5 w-5" />
                       <div className="flex-1 min-w-0">
                         <div className="truncate">
-                          {generatedEntityValue || 'Performance Overview'}
+                          Performance Overview
                         </div>
                       </div>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-2">
+                  <CardContent className="pt-2 card-content">
                     {isPerformanceLoading ? (
-                      <div className="flex items-center justify-center h-64">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        <span className="ml-2 text-muted-foreground">Loading performance data...</span>
-                      </div>
+                      <TeamPerformanceChart
+                        data={[]}
+                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
+                        onBarClick={handleIndividualBarClick}
+                        isLoading={true}
+                      />
                     ) : (
                       <TeamPerformanceChart
                         data={reportDashboardData?.performanceData || []}
-                        title={generatedEntityValue || 'Performance Overview'}
+                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
                         onBarClick={handleIndividualBarClick}
                       />
                     )}
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container">
+                <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container h-full">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <PieChart className="h-5 w-5" />
@@ -2699,23 +2718,26 @@ const IndexNew = () => {
                       </div>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-2">
+                  <CardContent className="card-content">
                     {isSatisfactionLoading ? (
-                      <div className="flex items-center justify-center h-64">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        <span className="ml-2 text-muted-foreground">Loading satisfaction data...</span>
-                      </div>
-                    ) : (
                       <SurveyAnalysisChart
-                        data={chartSurveyData || []}
-                        title={generatedEntityValue || 'Customer Satisfaction'}
+                        data={[]}
+                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
+                        totalSurveys={0}
+                        isLoading={true}
+                      />
+                    ) : (
+                      // Always use SurveyAnalysisChart component for consistent styling
+                      <SurveyAnalysisChart
+                        data={chartSurveyData && chartSurveyData.length > 0 ? chartSurveyData : []}
+                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
                         totalSurveys={
-                          (chartSurveyData || []).length > 0 
-                          ? (chartSurveyData || []).reduce((sum, item) => sum + (item.value || 0), 0)
-                          : (satisfactionData?.satisfactionData?.total || 0)
-                      }
-                      onPieClick={handleSurveySegmentClick}
-                    />
+                          chartSurveyData && chartSurveyData.length > 0 ? 
+                          (chartSurveyData.reduce((sum, item) => sum + (item.value || 0), 0) ||
+                          (satisfactionData?.satisfactionData?.total || 0)) : 0
+                        }
+                        onPieClick={handleSurveySegmentClick}
+                      />
                     )}
                   </CardContent>
                 </Card>
@@ -2783,9 +2805,9 @@ const IndexNew = () => {
             </div>
 
             {/* Charts Section - Show different charts based on entity type */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {/* Performance Chart - Always show for DPE, Squad, Team */}
-              <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container">
+              <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <BarChart3 className="h-5 w-5" />
@@ -2805,7 +2827,7 @@ const IndexNew = () => {
                       <TeamPerformanceChart
                         data={reportDashboardData?.performanceData || []}
                         onBarClick={handleIndividualBarClick}
-                        title={generatedEntityValue || 'Performance Overview'}
+                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
                       />
                     );
                   })()}
@@ -2813,7 +2835,7 @@ const IndexNew = () => {
               </Card>
 
               {/* Customer Satisfaction Chart - Conditional based on data availability */}
-              <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container">
+              <Card className="rounded-lg border bg-card text-card-foreground shadow-sm chart-container h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <PieChart className="h-5 w-5" />
@@ -2822,7 +2844,7 @@ const IndexNew = () => {
                     </div>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-2">
+                <CardContent className="card-content">
                   {(() => {
                     // Use real satisfaction data if available
                     const realSurveyData = chartSurveyData || [];
@@ -2830,15 +2852,14 @@ const IndexNew = () => {
                     const totalSurveys = realSurveyData.length > 0 
                       ? realSurveyData.reduce((sum, item) => sum + (item.value || 0), 0)
                       : (satisfactionData?.satisfactionData?.total || 0);
-                    const entityTitle = generatedEntityValue || selectedEntityValue || 'Customer Satisfaction';
-                    // Show message if no data
-                    if (realSurveyData.length === 0 && totalSurveys === 0) {
-                    }
+                    const entityTitle = reportGenerated ? generatedEntityValue : 'No Entity Selected';
+                    
+                    // Let the chart component handle the no-data state
                     
                     return (
                       <SurveyAnalysisChart
                         data={realSurveyData}
-                        title={entityTitle}
+                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
                         totalSurveys={totalSurveys}
                         onPieClick={handleSurveySegmentClick}
                       />

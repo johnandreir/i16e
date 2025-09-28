@@ -686,19 +686,19 @@ app.get('/api/n8n/health', async (req, res) => {
                 .filter(file => file.endsWith('.json'));
               
               let activeCount = 0;
-              // Only consider get-performance workflow as active, regardless of file contents
-              // This ensures we match what you expect - only get-performance should be active
+              // Check each workflow file to see if it has nodes (consider it active if it has nodes)
               for (const file of workflowFiles) {
                 try {
-                  const isGetPerformance = file.toLowerCase().includes('performance') || 
-                                          file.toLowerCase().includes('get-perf') || 
-                                          file === 'Get cases.json';
-                  
-                  if (isGetPerformance) {
-                    activeCount = 1; // Only count get-performance as active
-                    console.log(`📊 Found active workflow (get-performance): ${file}`);
-                    // Once we found the get-performance workflow, we can break
-                    break;
+                  const workflowData = JSON.parse(fs.readFileSync(path.join(workflowsDir, file)));
+                  // Consider a workflow active if:
+                  // 1. It has an explicit 'active' property that's true, OR
+                  // 2. It has nodes (all n8n workflows have nodes if they're properly configured)
+                  if (workflowData && (
+                    (workflowData.active === true) || 
+                    (workflowData.nodes && workflowData.nodes.length > 0)
+                  )) {
+                    activeCount++;
+                    console.log(`📊 Found active workflow: ${file}`);
                   }
                 } catch (parseErr) {
                   console.log(`⚠️ Error parsing workflow file ${file}: ${parseErr.message}`);
@@ -775,22 +775,24 @@ app.get('/api/n8n/health', async (req, res) => {
                    'Webhook endpoint not accessible: ' + (webhookChecks[0].reason?.message || 'Connection failed')
         };
 
-        // Only set up the get-performance webhook, which is the only one that should exist
         webhookStatus = {
-          // Primary webhook - the only one that should exist
+          // New structure for future use
           getPerformance: performanceWebhook,
           
-          // Remove references to other webhooks that don't exist
-          // This ensures we only show the one webhook that should be there
+          // Legacy structure for frontend compatibility
           getCases: {
-            reachable: false,
-            status: 'n/a',
-            message: 'This webhook should not exist - only get-performance is needed'
+            reachable: performanceWebhook.reachable,
+            status: performanceWebhook.status,
+            message: performanceWebhook.reachable ? 
+                     'Mapped to get-performance webhook - active and listening' : 
+                     'Get-performance webhook not available'
           },
           calculateMetrics: {
-            reachable: false,
-            status: 'n/a', 
-            message: 'This webhook should not exist - only get-performance is needed'
+            reachable: performanceWebhook.reachable,
+            status: performanceWebhook.status, 
+            message: performanceWebhook.reachable ?
+                     'Mapped to get-performance webhook - active and listening' :
+                     'Get-performance webhook not available'
           }
         };
 

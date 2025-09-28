@@ -9,24 +9,25 @@ This document describes how to run the DevOps Insight Engine using Docker Compos
 
 ## Quick Start
 
-### Production Environment
-
 ```bash
-# Start all services in production mode
-docker-compose -f docker-compose.prod.yml up -d
-
-# Or using make (if available)
-make prod
+# Start all services
+docker-compose up -d
 ```
 
-### Development Environment
+### Docker Commands
 
 ```bash
-# Start all services in development mode with hot reload
-docker-compose -f docker-compose.dev.yml up -d
+# Start services in the background
+docker-compose up -d
 
-# Or using make (if available)
-make dev
+# Stop all services
+docker-compose down
+
+# View logs
+docker-compose logs -f
+
+# Rebuild and start services
+docker-compose up -d --build
 ```
 
 ## Services

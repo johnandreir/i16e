@@ -16,11 +16,15 @@ This will:
 
 1. **Start Backend Services:**
 
-   - Double-click `start-prod.bat`
+   ```cmd
+   docker-compose up -d
+   ```
+
    - Wait about 30 seconds
 
 2. **Start Frontend:**
    ```cmd
+   npm install  # Only needed the first time
    npm run dev
    ```
 
@@ -34,7 +38,7 @@ This will:
 ## 🛑 To Stop Everything
 
 1. **Stop Frontend**: Press `Ctrl+C` in the terminal running `npm run dev`
-2. **Stop Backend**: Double-click `stop-prod.bat`
+2. **Stop Backend**: Double-click `stop.bat` or run `docker-compose down`
 
 ## 🔧 Utility Commands
 

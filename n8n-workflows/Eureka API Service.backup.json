@@ -1,0 +1,317 @@
+{
+  "name": "Eureka API",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Process incoming workflow data\nconst inputData = $input.first().json;\n\n// Extract owner info\nconst ownerName = inputData.ownerName;\n// Ensure dateRange is properly structured\nconst dateRange = inputData.dateRange && typeof inputData.dateRange === 'object' ? \n  {\n    startDate: inputData.dateRange.startDate || '2023-01-01',\n    endDate: inputData.dateRange.endDate || '2023-12-31'\n  } : \n  { startDate: '2023-01-01', endDate: '2023-12-31' };\nconst paginationInfo = inputData.paginationInfo || { start: 0, num: 30 };\nconst batchId = inputData.batchId || `batch-${Date.now()}`;\n\n// Log start of processing with timestamp to verify parallelism\nconsole.log(`[${new Date().toISOString()}] Processing API request for owner: ${ownerName} (Batch ID: ${batchId})`);\n\n// Return data to be used in next nodes\nreturn {\n  json: {\n    ownerName,\n    dateRange,\n    paginationInfo,\n    batchId,\n    processingStartTime: new Date().toISOString()\n  }\n};"
+      },
+      "id": "fc006d16-a92a-417e-a905-262133b9f55a",
+      "name": "Process Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -1952,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Eureka API request\nconst data = $input.first().json;\n\n// Validate dateRange exists and has the correct properties\nif (!data.dateRange || typeof data.dateRange !== 'object') {\n  console.error('dateRange is missing or not an object:', JSON.stringify(data));\n  data.dateRange = { startDate: '2023-01-01', endDate: '2023-12-31' }; // Default fallback dates\n}\n\nif (!data.dateRange.startDate || !data.dateRange.endDate) {\n  console.error('dateRange missing startDate or endDate:', JSON.stringify(data.dateRange));\n  data.dateRange = { \n    startDate: data.dateRange.startDate || '2023-01-01', \n    endDate: data.dateRange.endDate || '2023-12-31' \n  };\n}\n\n// Format the proper API payload\nconst apiPayload = {\n  action: \"query\",\n  q: \"*\",\n  source: \"corp_cases_en\",\n  lang: \"en-us\",\n  search_type: \"text_text\",\n  filter: {\n    owner_full_name: [data.ownerName],\n    status: [\"Resolved\", \"Cancelled\"],\n    closed_date: [`${data.dateRange.startDate}T00:00:00Z TO ${data.dateRange.endDate}T23:59:59Z`]\n  },\n  field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\", \"title\", \"content\"],\n  start: data.paginationInfo.start,\n  num: data.paginationInfo.num\n};\n\nconsole.log(`[${new Date().toISOString()}] Prepared API payload for owner: ${data.ownerName}`);\n\n// Return the prepared API payload\nreturn {\n  json: {\n    apiPayload,\n    ownerData: data,\n    allResults: []\n  }\n};"
+      },
+      "id": "025f89fb-4a9f-4451-9e3d-05b6251cf046",
+      "name": "Prepare API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -1728,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle pagination\nconst apiResponse = $input.first().json;\n\n// Add defensive checks for ownerData and all related properties\nconst ownerData = $input.first().json.ownerData || {};\nconst allResults = $input.first().json.allResults || [];\n\n// Log debug info if we're missing critical data\nif (!ownerData || !ownerData.paginationInfo) {\n  console.error('Missing ownerData or paginationInfo:', JSON.stringify($input.first().json));\n}\n\n// Use safe property access with defaults for everything\nconst currentStart = ownerData?.paginationInfo?.start || 0;\nconst currentResults = apiResponse.data?.results || [];\nconst totalHits = apiResponse.data?.results?.[0]?.total || 0;\n\n// Combine current results with previous ones\nconst combinedResults = [...allResults, ...currentResults];\n\n// Calculate if more results need to be retrieved\nconst nextStart = currentStart + currentResults.length;\nconst needsMorePages = (nextStart < totalHits);\n\nconsole.log(`[${new Date().toISOString()}] Owner: ${ownerData?.ownerName || 'unknown'}, Results: ${currentResults.length}, Total: ${totalHits}, Needs more pages: ${needsMorePages}`);\n\nif (needsMorePages) {\n  // Return data for next pagination request\n  return {\n    json: {\n      apiPayload: {\n        // Same API payload but updated start parameter\n        ...($input.first().json.apiPayload || {}),\n        start: nextStart\n      },\n      ownerData: ownerData || {},\n      allResults: combinedResults,\n      needsMorePages: true\n    }\n  };\n} else {\n  // Return final complete results\n  return {\n    json: {\n      owner: ownerData?.ownerName || 'unknown',\n      batchId: ownerData?.batchId || `fallback-batch-${Date.now()}`,\n      results: combinedResults,\n      totalHits: totalHits,\n      processingStartTime: ownerData?.processingStartTime || new Date().toISOString(),\n      processingEndTime: new Date().toISOString(),\n      needsMorePages: false\n    }\n  };\n}"
+      },
+      "id": "0efac990-a79a-4179-bf80-1f2b99f7e845",
+      "name": "Check Pagination",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.needsMorePages }}",
+              "value2": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "01c1498f-755d-4980-8009-e5dd265d1dd6",
+      "name": "IF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connectone-stg.trendmicro.com:8443/api/eurekasearch/EurekaSearch",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "693e96c64b6b4358be879c161f8e4cf4"
+            },
+            {
+              "name": "Content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.apiPayload }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "99ea938f-fae4-476d-835c-24130df4907c",
+      "name": "Next Page API Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2176,
+        336
+      ],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LuqOI2Vp6NW9GEzF",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connectone-stg.trendmicro.com:8443/api/eurekasearch/EurekaSearch",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "693e96c64b6b4358be879c161f8e4cf4"
+            },
+            {
+              "name": "Content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.apiPayload }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1504,
+        112
+      ],
+      "id": "731ffc2a-133b-4dc2-a8a0-6ed05e059121",
+      "name": "eurekaAPI",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LuqOI2Vp6NW9GEzF",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process next page results\nconst apiResponse = $input.first().json;\nconst ownerData = $input.first().json.ownerData || {};\nconst allResults = $input.first().json.allResults || [];\n\n// Use defensive coding to avoid errors\nconst currentResults = apiResponse.data?.results || [];\nconst totalHits = apiResponse.data?.results?.[0]?.total || 0;\n\n// Combine results\nconst combinedResults = [...allResults, ...currentResults];\n\n// Check if pagination still needed\nconst currentStart = ownerData?.paginationInfo?.start || 0;\nconst nextStart = currentStart + currentResults.length;\nconst needsMorePages = (nextStart < totalHits);\n\nconsole.log(`[${new Date().toISOString()}] Processed next page - Owner: ${ownerData?.ownerName || 'unknown'}, Total results: ${combinedResults.length}, Need more pages: ${needsMorePages}`);\n\nif (needsMorePages) {\n  // Return data for next pagination request\n  return {\n    json: {\n      apiPayload: {\n        // Same API payload but updated start parameter\n        ...($input.first().json.apiPayload || {}),\n        start: nextStart\n      },\n      ownerData: ownerData,\n      allResults: combinedResults,\n      needsMorePages: true\n    }\n  };\n} else {\n  // All pages retrieved\n  return {\n    json: {\n      owner: ownerData?.ownerName || 'unknown',\n      batchId: ownerData?.batchId || `fallback-batch-${Date.now()}`,\n      results: combinedResults,\n      totalHits: totalHits,\n      processingStartTime: ownerData?.processingStartTime || new Date().toISOString(),\n      processingEndTime: new Date().toISOString(),\n      needsMorePages: false\n    }\n  };\n}"
+      },
+      "name": "Process Next Page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -1792,
+        336
+      ],
+      "id": "f2c38a96-7b14-4d5d-b0d8-158a5622c2d3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge results from both paths\n// This replaces the merge node which wasn't triggering the output\nconst data = $input.first().json;\n\n// Ensure consistent format regardless of which path the data came from\nreturn {\n  json: {\n    owner: data?.owner || 'unknown',\n    batchId: data?.batchId || `fallback-batch-${Date.now()}`,\n    results: data?.results || [],\n    totalHits: data?.totalHits || 0,\n    currentStart: data?.currentStart || 0,\n    nextStart: data?.nextStart || 0,\n    processingStartTime: data?.processingStartTime || new Date().toISOString(),\n    processingEndTime: data?.processingEndTime || new Date().toISOString(),\n    needsMorePages: false\n  }\n};"
+      },
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -896,
+        224
+      ],
+      "id": "a9d89532-5e82-4451-a2e3-d4ab893455a6"
+    },
+
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2176,
+        112
+      ],
+      "id": "a89b5788-c2cf-4e81-87d5-64f176b66cc0",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ensure we have proper output format\nconst data = $input.first().json;\n\n// Make sure we have an array\nif (!Array.isArray(data)) {\n  return {\n    json: [data]\n  };\n}\n\nreturn {\n  json: data\n};"
+      },
+      "name": "Output Node",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -750,
+        224
+      ],
+      "id": "94dea1c5-6f7a-4e12-b663-e5662a5c8880"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Process Input": {
+      "main": [
+        [
+          {
+            "node": "Prepare API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Pagination": {
+      "main": [
+        [
+          {
+            "node": "IF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare API Request": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eurekaAPI": {
+      "main": [
+        [
+          {
+            "node": "Check Pagination",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF": {
+      "main": [
+        [
+          {
+            "node": "Next Page API Call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Next Page API Call": {
+      "main": [
+        [
+          {
+            "node": "Process Next Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Next Page": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Process Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Output Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d0693cd5-f2be-4bd4-a6f7-decc6d8a9b05",
+  "meta": {
+    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
+  },
+  "id": "ulgP4TQ9fUOcEuWF",
+  "tags": []
+}

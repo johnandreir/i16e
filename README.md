@@ -6,6 +6,21 @@ AI-Powered Performance Analytics Platform for DevOps Teams
 
 The DevOps Insight Engine is a comprehensive analytics platform that provides real-time insights into team performance, customer satisfaction, and operational metrics. Built with modern web technologies and featuring an integrated AI chatbot for intelligent data analysis.
 
+## Project Structure
+
+The project has been reorganized for better maintainability:
+
+- **`/docker`** - Docker configuration files
+- **`/docs`** - Documentation files
+- **`/mongodb-init`** - MongoDB initialization scripts
+- **`/n8n-workflows`** - n8n workflow definitions
+- **`/scripts`** - Operational scripts
+- **`/server`** - API server code
+- **`/src`** - Frontend source code
+- **`/utils`** - Utility scripts
+
+For detailed information about the project structure, see [Project Structure Documentation](docs/PROJECT_STRUCTURE.md).
+
 ## Key Features
 
 - **Performance Dashboard**: Real-time team performance metrics and KPIs
@@ -23,7 +38,8 @@ The platform consists of:
 - **Backend API**: Node.js MongoDB API server (Docker containerized)
 - **Database**: MongoDB for data storage and chat memory (Docker containerized)
 - **AI Workflow**: N8N automation platform with OpenAI integration (Docker containerized)
-- **Development**: Hot reload frontend with containerized backend services
+- **Development Environment**: Hot reload frontend with containerized backend services
+- **Deployment**: Single docker-compose setup for easy deployment and development
 
 ## 🚀 Quick Start
 
@@ -32,6 +48,33 @@ The platform consists of:
 - Docker and Docker Compose
 - Node.js 18+ and npm
 - Git
+
+### Starting the Application
+
+1. Start the backend services using Docker:
+
+   ```
+   docker-compose up -d
+   ```
+
+2. Install frontend dependencies:
+
+   ```
+   npm install
+   ```
+
+3. Start the frontend development server:
+   ```
+   npm run dev
+   ```
+
+Alternatively, you can use the `start-full-dev.bat` script to start everything at once.
+
+### Accessing the Application
+
+- Frontend: http://localhost:8082
+- API Server: http://localhost:3001
+- N8N: http://localhost:5678
 
 ### Super Quick Setup (Recommended)
 

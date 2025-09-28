@@ -1,0 +1,149 @@
+{
+  "name": "Eureka API",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [-600, 100],
+      "id": "a89b5788-c2cf-4e81-87d5-64f176b66cc0",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process incoming workflow data\nconst input = $input.all();\nconst inputData = input[0].json;\n\n// Log what we received for debugging\nconsole.log('Received input structure:', JSON.stringify(inputData, null, 2));\n\n// Extract owner info with defensive coding - check both array format and direct format\nlet ownerName;\nif (inputData.ownerNames && Array.isArray(inputData.ownerNames) && inputData.ownerNames.length > 0) {\n  // Get owner from the ownerNames array\n  ownerName = inputData.ownerNames[0];\n  console.log(`Found owner in ownerNames array: ${ownerName}`);\n} else if (inputData.ownerName) {\n  // Get owner from direct ownerName property\n  ownerName = inputData.ownerName;\n  console.log(`Found direct ownerName: ${ownerName}`);\n} else {\n  ownerName = 'unknown';\n  console.warn('No owner name found in input data');\n}\n\n// Extract date range\nlet dateRange;\nif (inputData.dateRange && typeof inputData.dateRange === 'object') {\n  // Use provided dateRange object\n  dateRange = {\n    startDate: inputData.dateRange.startDate || '2023-01-01',\n    endDate: inputData.dateRange.endDate || '2023-12-31'\n  };\n} else if (inputData.eurekaDateRange && typeof inputData.eurekaDateRange === 'string') {\n  // Parse from eurekaDateRange string format \"YYYY-MM-DDT00:00:00Z TO YYYY-MM-DDT23:59:59Z\"\n  const dateParts = inputData.eurekaDateRange.split(' TO ');\n  if (dateParts.length === 2) {\n    const startDate = dateParts[0].split('T')[0];\n    const endDate = dateParts[1].split('T')[0];\n    dateRange = { startDate, endDate };\n    console.log(`Parsed date range from eurekaDateRange: ${startDate} to ${endDate}`);\n  } else {\n    dateRange = { startDate: '2023-01-01', endDate: '2023-12-31' };\n  }\n} else {\n  // Fallback to default date range\n  dateRange = { startDate: '2023-01-01', endDate: '2023-12-31' };\n  console.warn('No valid date range found, using default');\n}\n\n// Get pagination and batch ID\nconst paginationInfo = inputData?.paginationInfo || { start: 0, num: 30 };\nconst batchId = inputData?.batchId || `batch-${Date.now()}`;\n\n// Log start of processing with timestamp to verify parallelism\nconsole.log(`[${new Date().toISOString()}] Processing API request for owner: ${ownerName} (Batch ID: ${batchId})`);\n\n// Return data to be used in next nodes\nreturn {\n  json: {\n    ownerName,\n    dateRange,\n    paginationInfo,\n    batchId,\n    processingStartTime: new Date().toISOString()\n  }\n};"
+      },
+      "id": "fc006d16-a92a-417e-a905-262133b9f55a",
+      "name": "Process Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [-400, 100]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Eureka API request with defensive coding\nconst data = $input.first().json || {};\n\n// Log what we received from Process Input\nconsole.log('Preparing API request with data:', JSON.stringify(data, null, 2));\n\n// Validate ownerName and dateRange\nif (!data.ownerName) {\n  console.error('Missing ownerName in data:', JSON.stringify(data));\n}\n\n// Ensure dateRange exists and has required properties\nif (!data.dateRange || !data.dateRange.startDate || !data.dateRange.endDate) {\n  console.error('Missing or invalid dateRange:', JSON.stringify(data));\n  data.dateRange = { \n    startDate: '2023-01-01', \n    endDate: '2023-12-31' \n  };\n}\n\n// Ensure paginationInfo is valid\nif (!data.paginationInfo) {\n  data.paginationInfo = { start: 0, num: 30 };\n}\n\n// Format the proper API payload\nconst apiPayload = {\n  action: \"query\",\n  q: \"*\",\n  source: \"corp_cases_en\",\n  lang: \"en-us\",\n  search_type: \"text_text\",\n  filter: {\n    owner_full_name: [data.ownerName],\n    status: [\"Resolved\", \"Cancelled\"],\n    closed_date: [`${data.dateRange.startDate}T00:00:00Z TO ${data.dateRange.endDate}T23:59:59Z`]\n  },\n  field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\", \"title\", \"content\"],\n  start: data.paginationInfo.start,\n  num: data.paginationInfo.num\n};\n\n// Log the prepared API payload for debugging\nconsole.log(`[${new Date().toISOString()}] Prepared API payload for owner: ${data.ownerName}`);\nconsole.log('API Payload Details:', JSON.stringify({\n  owner: data.ownerName,\n  dateFilter: apiPayload.filter.closed_date[0],\n  start: apiPayload.start,\n  num: apiPayload.num\n}, null, 2));\n\n// Return the prepared API payload\nreturn {\n  json: {\n    apiPayload,\n    ownerData: data,\n    allResults: [],\n    requestTimestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "9d0c661b-fd39-4237-9382-53bb42c88360",
+      "name": "Prepare API Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [-200, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connectone-stg.trendmicro.com:8443/api/eurekasearch/EurekaSearch",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "693e96c64b6b4358be879c161f8e4cf4"
+            },
+            {
+              "name": "Content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.apiPayload }}",
+        "options": {
+          "timeout": 60000,
+          "redirect": {
+            "redirect": true,
+            "followAllRedirects": true
+          },
+          "response": {
+            "fullResponse": true
+          },
+          "retry": {
+            "maxRetries": 3,
+            "retryOnResponseCode": true,
+            "retryDelay": 1000
+          }
+        }
+      },
+      "id": "731ffc2a-133b-4dc2-a8a0-6ed05e059121",
+      "name": "eurekaAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 100],
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "LuqOI2Vp6NW9GEzF",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process and format the API response with strong defensive coding\nconst inputItem = $input.first();\nconst apiResponse = inputItem?.json;\nconst ownerData = inputItem?.json?.ownerData || {};\nconst allResults = inputItem?.json?.allResults || [];\n\n// Detailed logging of the API response for debugging\nconsole.log(`[EUREKA API SERVICE] Processing owner: ${ownerData?.ownerName || 'unknown'}, batchId: ${ownerData?.batchId || 'unknown'}`);\nconsole.log('API RESPONSE STRUCTURE:', JSON.stringify({\n  hasResponse: !!apiResponse,\n  responseType: typeof apiResponse,\n  hasData: !!apiResponse?.data,\n  hasResults: !!apiResponse?.data?.results,\n  resultsType: Array.isArray(apiResponse?.data?.results) ? 'array' : typeof apiResponse?.data?.results,\n  owner: ownerData?.ownerName || 'unknown',\n  batchId: ownerData?.batchId || 'unknown'\n}, null, 2));\n\n// Add more extensive logging for debugging\nif (!apiResponse) {\n  console.error('API response is undefined or null');\n}\nif (!ownerData) {\n  console.error('ownerData is undefined or null');\n}\n\n// Use defensive coding throughout to prevent errors\nconst currentStart = ownerData?.paginationInfo?.start || 0;\nlet currentResults = [];\nlet docsArray = [];\n\n// The structure of the API response can vary - try to handle different formats\ntry {\n  // Case 1: Array directly in results\n  if (apiResponse?.data?.results && Array.isArray(apiResponse.data.results)) {\n    currentResults = apiResponse.data.results;\n    console.log(`Found ${currentResults.length} results as direct array`);\n  } \n  // Case 2: Results array has objects with docs array\n  else if (apiResponse?.data?.results?.[0]?.docs && Array.isArray(apiResponse.data.results[0].docs)) {\n    docsArray = apiResponse.data.results[0].docs;\n    currentResults = docsArray.map(doc => ({\n      ...doc,\n      owner_full_name: ownerData.ownerName // Ensure owner is added to each result\n    }));\n    console.log(`Found ${currentResults.length} results in docs array`);\n  } \n  // Case 3: Empty results but with structure\n  else if (apiResponse?.data?.results && !Array.isArray(apiResponse.data.results)) {\n    currentResults = [apiResponse.data.results]; // Wrap in array for consistency\n    console.log('Found single result object, wrapped in array');\n  } \n  // Case 4: Fallback\n  else {\n    console.warn('No recognizable results structure found in API response');\n    currentResults = [];\n  }\n} catch (error) {\n  console.error(`Error processing API results: ${error.message}`);\n  currentResults = [];\n}\n\n// Often the results structure can be complex - ensure we're handling it correctly\nlet totalHits = 0;\ntry {\n  // Try different paths to find total hits\n  if (apiResponse?.data?.results?.[0]?.total !== undefined) {\n    totalHits = apiResponse.data.results[0].total;\n    console.log(`Total hits found in results[0].total: ${totalHits}`);\n  } else if (apiResponse?.data?.total !== undefined) {\n    totalHits = apiResponse.data.total;\n    console.log(`Total hits found in data.total: ${totalHits}`);\n  } else if (currentResults.length > 0) {\n    totalHits = currentResults.length;\n    console.log(`Using results length as total hits: ${totalHits}`);\n  }\n} catch (error) {\n  console.error('Error extracting totalHits:', error.message);\n}\n\n// Combine results safely\nconst combinedResults = [...allResults, ...currentResults];\n\n// Calculate next steps\nconst nextStart = currentStart + currentResults.length;\nconst needsMorePages = (nextStart < totalHits);\n\nconsole.log(`[${new Date().toISOString()}] Owner: ${ownerData?.ownerName || 'unknown'}, Results: ${currentResults.length}, Total: ${totalHits}, Need more: ${needsMorePages}`);\n\n// Add owner_full_name to any results that don't have it\nconst resultsWithOwner = currentResults.map(result => {\n  if (!result.owner_full_name && ownerData.ownerName) {\n    return { ...result, owner_full_name: ownerData.ownerName };\n  }\n  return result;\n});\n\n// Return a consistent output format for the parent workflow\nreturn {\n  json: {\n    owner: ownerData?.ownerName || 'unknown',\n    ownerName: ownerData?.ownerName || 'unknown', // Add both formats for compatibility\n    batchId: ownerData?.batchId || `fallback-batch-${Date.now()}`,\n    results: resultsWithOwner,\n    totalHits: totalHits,\n    currentStart: currentStart,\n    nextStart: nextStart,\n    needsMorePages: needsMorePages,\n    processingStartTime: ownerData?.processingStartTime || new Date().toISOString(),\n    processingEndTime: new Date().toISOString(),\n    sourceData: ownerData, // Include original data for reference\n    apiResponseSummary: {\n      hasData: !!apiResponse?.data,\n      hasResults: !!apiResponse?.data?.results,\n      resultsCount: resultsWithOwner.length\n    }\n  }\n};"
+      },
+      "id": "0efac990-a79a-4179-bf80-1f2b99f7e845",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [200, 100]
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Process Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Input": {
+      "main": [
+        [
+          {
+            "node": "Prepare API Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare API Request": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eurekaAPI": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d0693cd5-f2be-4bd4-a6f7-decc6d8a9b05",
+  "meta": {
+    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
+  },
+  "id": "ulgP4TQ9fUOcEuWF",
+  "tags": []
+}

@@ -188,57 +188,8 @@ export default class CustomerSatisfactionService {
       if (validResults.length === 0) {
         console.log(`❌ No satisfaction data found for any ${entityType} members`);
         
-        // TEMPORARY: Add mock satisfaction data for testing squad/team aggregation
-        console.log(`🧪 TEMPORARY: Creating mock satisfaction data for ${entityType} aggregation testing`);
-        
-        const mockSatisfactionData = {
-          'Mharlee Dela Cruz': { csat: 6, neutral: 1, dsat: 1, total: 8, csatPercentage: 75, neutralPercentage: 12.5, dsatPercentage: 12.5 },
-          'John Andrei Reyes': { csat: 9, neutral: 2, dsat: 1, total: 12, csatPercentage: 75, neutralPercentage: 16.7, dsatPercentage: 8.3 },
-          'Jen Daryll Oller': { csat: 4, neutral: 1, dsat: 1, total: 6, csatPercentage: 66.7, neutralPercentage: 16.7, dsatPercentage: 16.7 }
-        };
-        
-        // Create mock results for entities that have mock data
-        const mockResults = entityNames
-          .filter(name => mockSatisfactionData[name])
-          .map(name => ({
-            entityName: name,
-            entityType: 'dpe',
-            entityId: name,
-            owner_full_name: name,
-            satisfactionData: mockSatisfactionData[name],
-            surveyDetails: []
-          }));
-        
-        if (mockResults.length > 0) {
-          console.log(`🧪 Created ${mockResults.length} mock satisfaction records for aggregation`);
-          // Use mock results for aggregation
-          const totalCsat = mockResults.reduce((sum, result) => sum + result.satisfactionData.csat, 0);
-          const totalNeutral = mockResults.reduce((sum, result) => sum + result.satisfactionData.neutral, 0);
-          const totalDsat = mockResults.reduce((sum, result) => sum + result.satisfactionData.dsat, 0);
-          const total = totalCsat + totalNeutral + totalDsat;
-          
-          console.log(`📊 Mock aggregated totals: CSAT=${totalCsat}, Neutral=${totalNeutral}, DSAT=${totalDsat}, Total=${total}`);
-          
-          if (total > 0) {
-            const csatPercentage = Math.round((totalCsat / total) * 100);
-            const neutralPercentage = Math.round((totalNeutral / total) * 100);
-            const dsatPercentage = Math.round((totalDsat / total) * 100);
-            
-            console.log(`📊 Mock aggregated percentages: CSAT=${csatPercentage}%, Neutral=${neutralPercentage}%, DSAT=${dsatPercentage}%`);
-            
-            return {
-              csat: totalCsat,
-              neutral: totalNeutral,
-              dsat: totalDsat,
-              total,
-              csatPercentage,
-              neutralPercentage,
-              dsatPercentage,
-              lastUpdated: new Date().toISOString(),
-              source: 'mock-aggregated-satisfaction-data'
-            };
-          }
-        }
+        console.log(`No satisfaction data found for ${entityType} - returning null`);
+        return null;
         
         return null;
       }

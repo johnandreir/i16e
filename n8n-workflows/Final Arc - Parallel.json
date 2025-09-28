@@ -1,0 +1,206 @@
+{
+  "name": "Get Cases v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "get-performance",
+        "options": {}
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [816, 96],
+      "webhookId": "f9d94c12-da38-42e3-8a7a-bdb2ffc708eb",
+      "id": "28435fa2-5831-45cc-8889-cc8fa204ba0e"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process webhook data - simplified working version with execution guard\nconst inputData = $input.first();\nconsole.log('=== PROCESSING WEBHOOK DATA ===');\n\n// EXECUTION GUARD: Check if workflow is already running\n// This prevents infinite loops from downstream workflows\nconst currentTime = new Date().getTime();\nconst executionKey = 'get-cases-execution-' + Math.floor(currentTime / 60000); // 1-minute window\n\nconsole.log('Execution guard key:', executionKey);\n\n// Get the actual webhook data from the correct location\nconst webhookJson = $input.first().json;\nlet actualData = null;\n\nif (webhookJson && webhookJson.body) {\n  actualData = webhookJson.body;\n} else if (webhookJson) {\n  actualData = webhookJson;\n} else {\n  actualData = inputData;\n}\n\n// Check if this is a spurious re-execution\nif (actualData && actualData.source === 'internal-workflow') {\n  console.log('GUARD: Detected internal workflow trigger - blocking execution');\n  return [{ json: { \n    blocked: true, \n    reason: 'Internal workflow re-execution prevented',\n    timestamp: new Date().toISOString()\n  }}];\n}\n\nif (actualData) {\n  const entityType = actualData.entityType || '';\n  const entityName = actualData.entityName || '';\n  const ownerNamesRaw = actualData.ownerNames;\n  const eurekaDateRange = actualData.eurekaDateRange || '';\n  const dateRange = actualData.dateRange;\n  \n  // Convert ownerNames\n  let ownerNames = [];\n  if (ownerNamesRaw && typeof ownerNamesRaw === 'object') {\n    ownerNames = Object.values(ownerNamesRaw);\n  }\n  \n  const result = {\n    webhookData: {\n      entityType: entityType,\n      entityName: entityName,\n      ownerNames: ownerNames,\n      eurekaDateRange: eurekaDateRange,\n      dateRange: dateRange,\n      executionId: executionKey\n    }\n  };\n  \n  console.log('ProcessWebhookData SUCCESS:', JSON.stringify(result, null, 2));\n  return [{ json: result }];\n} else {\n  console.log('ERROR - No data found');\n  return [{ json: { error: 'No data found' } }];\n}"
+      },
+      "name": "ProcessWebhookData",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 96],
+      "id": "2c470137-8f46-4476-bf88-ba88df35ff68"
+    },
+    {
+      "parameters": {
+        "jsCode": "// BatchOwnerNames Node - Complete Code\n\n// Create individual batches for true parallel processing - one per owner\ntry {\n  // Get webhook data from ProcessWebhookData node\n  const webhookData = $node['ProcessWebhookData'].json.webhookData;\n  \n  console.log('=== PARALLEL PROCESSING: CREATING INDIVIDUAL OWNER BATCHES ===');\n  console.log('Original webhook data:', JSON.stringify(webhookData, null, 2));\n  \n  if (!webhookData || !webhookData.ownerNames || !Array.isArray(webhookData.ownerNames)) {\n    throw new Error('No owner names found in webhook data');\n  }\n  \n  const ownerNames = webhookData.ownerNames;\n  console.log(`Total owners to process in parallel: ${ownerNames.length}`);\n  \n  // Every owner gets its own independent path through the workflow\n  console.log('Creating individual owner batches for maximum parallel processing');\n  \n  // Map each individual owner to its own batch\n  return ownerNames.map((ownerName, index) => {\n    return {\n      json: {\n        batchIndex: index,\n        totalBatches: ownerNames.length,\n        ownerNames: [ownerName], // SINGLE owner per batch - key for parallelization\n        eurekaDateRange: webhookData.eurekaDateRange,\n        dateRange: webhookData.dateRange,\n        entityType: webhookData.entityType,\n        entityName: webhookData.entityName,\n        processingMode: 'FAST',       // Always fast mode\n        parallelEnabled: true,        // Always parallel\n        singleOwnerMode: true,        // Flag for single owner processing\n        ownerId: `owner-${index}`,    // Unique owner ID\n        batchId: `batch-${Date.now()}-${index}`\n      }\n    };\n  });\n} catch (error) {\n  console.error('Error in parallel batch creation:', error.message);\n  return [{ json: { error: error.message } }];\n}"
+      },
+      "name": "BatchOwnerNames",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1264, 96],
+      "id": "67f66b35-762c-4a63-a2fa-813475098a52"
+    },
+    {
+      "parameters": {
+        "amount": 60,
+        "unit": "seconds"
+      },
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1712, 96],
+      "webhookId": "wait-1695832188917",
+      "id": "c9d325e5-242c-4c4c-a96b-ac5bc59368a9"
+    },
+    {
+      "parameters": {
+        "resource": "executions",
+        "requestOptions": {}
+      },
+      "name": "n8n",
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [1936, 96],
+      "id": "01a9b2a0-bd36-4e8e-9fc3-50c37b15fccd",
+      "credentials": {
+        "n8nApi": {
+          "id": "TF6n4HQ5rnEOTmwf",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process workflow execution results\nconst executionResults = $input.first().json || [];\nconsole.log(`PARALLEL PROCESSING: Found ${executionResults.length} Eureka API workflow executions`);\n\n// Log the raw structure to better understand the API response format\nconsole.log('n8n API response structure:', JSON.stringify({\n  hasData: typeof executionResults === 'object',\n  isArray: Array.isArray(executionResults),\n  firstKeys: Array.isArray(executionResults) ? Object.keys(executionResults[0] || {}) : 'N/A'\n}, null, 2));\n\n// Log details about executions to help troubleshoot parallelism\nconst executionDetails = (Array.isArray(executionResults) ? executionResults : []).map(exec => {\n  try {\n    // Handle the n8n execution API response format\n    // Try different possible paths to extract owner information\n    let ownerName = 'unknown';\n    \n    // Check all possible locations for the owner name\n    if (exec.data?.resultData?.runData?.main?.[0]?.[0]?.json?.ownerName) {\n      ownerName = exec.data.resultData.runData.main[0][0].json.ownerName;\n    } else if (exec.data?.resultData?.runData?.[\"Format Results\"]?.[0]?.[0]?.json?.owner) {\n      ownerName = exec.data.resultData.runData[\"Format Results\"][0][0].json.owner;\n    } else if (exec.data?.resultData?.runData?.Start?.[0]?.[0]?.json?.ownerName) {\n      ownerName = exec.data.resultData.runData.Start[0][0].json.ownerName;\n    }\n    \n    return {\n      id: exec.id,\n      startedAt: exec.startedAt || exec.finished,\n      owner: ownerName\n    };\n  } catch (e) {\n    return { id: exec.id || 'no-id', startedAt: exec.startedAt || 'no-time', owner: 'error-extracting' };\n  }\n});\nconsole.log('Execution details:', JSON.stringify(executionDetails, null, 2));\n\n// Extract data from workflow executions\nlet allResults = [];\nlet totalOwnersProcessed = 0;\nlet totalHits = 0;\nlet failedOwners = [];\nlet batchIdsProcessed = new Set();\n\n// Function to safely extract data from different possible paths in execution result\nfunction extractExecutionData(execution) {\n  try {\n    // Try different paths to find the data\n    let data, nodeName;\n    \n    // Path 1: Check Format Results node output (most likely to contain our data)\n    if (execution.data?.resultData?.runData?.[\"Format Results\"]?.[0]?.[0]?.json) {\n      data = execution.data.resultData.runData[\"Format Results\"][0][0].json;\n      nodeName = 'Format Results';\n    }\n    // Path 2: Check main output\n    else if (execution.data?.resultData?.runData?.main?.[0]?.[0]?.json) {\n      data = execution.data.resultData.runData.main[0][0].json;\n      nodeName = 'main';\n    }\n    // Path 3: Check other node outputs - common output nodes\n    else {\n      const possibleOutputNodes = ['Return Results', 'Output Node', 'End', 'Last Node'];\n      for (const node of possibleOutputNodes) {\n        if (execution.data?.resultData?.runData?.[node]?.[0]?.[0]?.json) {\n          data = execution.data.resultData.runData[node][0][0].json;\n          nodeName = node;\n          break;\n        }\n      }\n      \n      // Path 4: Try to find any node with output data\n      if (!data && execution.data?.resultData?.runData) {\n        const nodes = Object.keys(execution.data.resultData.runData);\n        for (const node of nodes) {\n          if (execution.data.resultData.runData[node]?.[0]?.[0]?.json) {\n            data = execution.data.resultData.runData[node][0][0].json;\n            nodeName = node;\n            break;\n          }\n        }\n      }\n    }\n    \n    if (!data) {\n      throw new Error('Could not find data in execution result');\n    }\n    \n    console.log(`Found data in node: ${nodeName}`);\n    return data;\n  } catch (error) {\n    console.error(`Error extracting data: ${error.message}`);\n    throw error;\n  }\n}\n\n// Process each workflow execution result\n(Array.isArray(executionResults) ? executionResults : []).forEach(execution => {\n  try {\n    // Extract data from the workflow result using our helper function\n    const data = extractExecutionData(execution);\n    \n    // Check if we have valid data (could be owner or ownerName)\n    const ownerName = data.owner || data.ownerName || 'unknown';\n    const batchId = data.batchId || `execution-${execution.id}`;\n    \n    console.log(`Processing execution for owner: ${ownerName}, batchId: ${batchId}`);\n    console.log('Data structure:', JSON.stringify({\n      hasOwner: !!data.owner,\n      hasOwnerName: !!data.ownerName,\n      hasBatchId: !!data.batchId,\n      hasResults: !!data.results && Array.isArray(data.results),\n      resultsCount: data.results ? data.results.length : 0,\n      totalHits: data.totalHits || 0\n    }, null, 2));\n    \n    // Skip duplicates (in case we get multiple executions for same batch)\n    if (batchIdsProcessed.has(batchId)) {\n      console.log(`Skipping duplicate execution for batchId: ${batchId}`);\n      return;\n    }\n    \n    batchIdsProcessed.add(batchId);\n    \n    // Add results from this execution\n    if (data.results && Array.isArray(data.results)) {\n      const resultCount = data.results.length;\n      console.log(`Adding ${resultCount} results for owner: ${ownerName}`);\n      allResults = [...allResults, ...data.results];\n      totalOwnersProcessed++;\n      totalHits += data.totalHits || 0;\n    } else {\n      console.warn(`No valid results for owner: ${ownerName}`);\n    }\n  } catch (error) {\n    console.error(`Error processing execution result: ${error.message}`);\n    failedOwners.push({\n      executionId: execution.id,\n      error: error.message\n    });\n  }\n});\n\nconsole.log(`Successfully merged ${allResults.length} results from ${totalOwnersProcessed} owners`);\nif (failedOwners.length > 0) {\n  console.warn(`${failedOwners.length} executions had errors:`, JSON.stringify(failedOwners));\n}\n\n// Return the combined results in the expected format\nreturn {\n  json: {\n    mergedResults: {\n      results: allResults,\n      totalResults: allResults.length,\n      totalHits: totalHits,\n      totalOwnersProcessed: totalOwnersProcessed,\n      failedOwners: failedOwners,\n      timestamp: new Date().toISOString()\n    }\n  }\n};"
+      },
+      "name": "Process Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2160, 96],
+      "id": "92f8f39e-f1b6-46f2-a511-33c74679d432"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process combined case data - original code from Process Results node\nconst caseData = $input.first().json.mergedResults;\n\nif (!caseData || !caseData.results || !Array.isArray(caseData.results)) {\n  throw new Error('No case data or invalid format');\n}\n\nconsole.log(`Processing ${caseData.results.length} cases`);\n\n// Get basic stats\nconst ownerCounts = {};\nconst priorityCounts = {};\nconst productCounts = {};\nconst statusCounts = {};\nlet casesWithoutContent = 0;\n\n// Process each case\nlet cleanedCases = [];\n\ncaseData.results.forEach(caseItem => {\n  // Count owners\n  const owner = caseItem.owner_full_name;\n  ownerCounts[owner] = (ownerCounts[owner] || 0) + 1;\n  \n  // Count priorities\n  const priority = caseItem.priority || 'Unknown';\n  priorityCounts[priority] = (priorityCounts[priority] || 0) + 1;\n  \n  // Count products\n  if (caseItem.products) {\n    if (Array.isArray(caseItem.products)) {\n      caseItem.products.forEach(product => {\n        productCounts[product] = (productCounts[product] || 0) + 1;\n      });\n    } else {\n      productCounts[caseItem.products] = (productCounts[caseItem.products] || 0) + 1;\n    }\n  }\n  \n  // Count statuses\n  const status = caseItem.status || 'Unknown';\n  statusCounts[status] = (statusCounts[status] || 0) + 1;\n  \n  // Check for missing content\n  if (!caseItem.content) {\n    casesWithoutContent++;\n  }\n  \n  // Add to cleaned cases\n  cleanedCases.push(caseItem);\n});\n\n// Prepare result\nconst processedResults = {\n  cleanedCases,\n  statistics: {\n    totalCases: cleanedCases.length,\n    ownerCounts,\n    priorityCounts,\n    productCounts,\n    statusCounts,\n    casesWithoutContent\n  },\n  timestamp: new Date().toISOString()\n};\n\nconsole.log(`Processed ${cleanedCases.length} cases, found ${casesWithoutContent} cases without content`);\n\nreturn { json: processedResults };"
+      },
+      "name": "Process Cases",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2384, 96],
+      "id": "fc5555d4-11e3-40ef-a89f-3654a93b910e"
+    },
+    {
+      "parameters": {
+        "workflowId": "ulgP4TQ9fUOcEuWF",
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ownerName": "={{ $json[\"ownerNames\"][0] }}",
+            "dateRange": {
+              "startDate": "={{ $json.dateRange ? $json.dateRange.startDate : \"2025-08-31\" }}",
+              "endDate": "={{ $json.dateRange ? $json.dateRange.endDate : \"2025-09-06\" }}"
+            },
+            "paginationInfo": { "start": 0, "num": 30 },
+            "batchId": "={{ $json[\"batchId\"] || 'batch-' + Date.now() }}",
+            "executionStartTime": "={{ new Date().toISOString() }}"
+          }
+        },
+        "options": {
+          "waitForResponse": false,
+          "executeOnce": false,
+          "runWithInputData": "allItems"
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1488, 96],
+      "id": "15fb3c93-6d18-4346-827f-a697961de9d5",
+      "name": "Call 'Eureka API'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ProcessWebhookData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessWebhookData": {
+      "main": [
+        [
+          {
+            "node": "BatchOwnerNames",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BatchOwnerNames": {
+      "main": [
+        [
+          {
+            "node": "Call 'Eureka API'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "n8n",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "n8n": {
+      "main": [
+        [
+          {
+            "node": "Process Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Results": {
+      "main": [
+        [
+          {
+            "node": "Process Cases",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Eureka API'": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2cc82d15-c483-44df-8a91-0a3d634714ca",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
+  },
+  "id": "aPpm1uSAqQRetCiJ",
+  "tags": []
+}
