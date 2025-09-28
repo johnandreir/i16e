@@ -1,0 +1,180 @@
+{
+  "name": "Analyze Survey",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Email Scrubber (P1/DSAT-NEUT Cases)",
+        "height": 432,
+        "width": 624,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-768, -96],
+      "typeVersion": 1,
+      "id": "ad18099b-3eea-49b0-9f99-c393ba8035b4",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "operation": "aggregate",
+        "collection": "cases",
+        "query": "=  [\n    {\n      \"$match\": {\n        \"$or\": [\n          { \"dsat_survey\": true },\n          { \"neut_survey\": true }\n        ]\n      }\n    },\n    {\n      \"$sort\": {\n        \"case_age_days\": -1\n      }\n    },\n    {\n      \"$limit\": 3\n    }\n  ]"
+      },
+      "type": "n8n-nodes-base.mongoDbTool",
+      "typeVersion": 1.2,
+      "position": [-368, 192],
+      "id": "5dc17a55-0aa8-4d6c-8a97-e9b5975a6e1d",
+      "name": "surveyDB",
+      "credentials": {
+        "mongoDb": {
+          "id": "uCCYnpccbmAfY9W9",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "  // Get the AI output\n  const aiResponse = $input.first().json.output;\n\n  // Parse the JSON string\n  let parsedOutput;\n  try {\n    parsedOutput = JSON.parse(aiResponse);\n  } catch (error) {\n    // If parsing fails, return error info\n    return [{ json: { error: \"Failed to parse JSON\", raw_output: aiResponse } }];\n  }\n\n  // Return the parsed JSON\n  return [{ json: parsedOutput }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-160, -32],
+      "id": "ba1ff2a0-1283-44f0-a024-460c6e60703d",
+      "name": "JSONizer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-624, 192],
+      "id": "42bf5780-9e7b-4ead-8806-b98366031e42",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "sNYSwlaVIlldj1f2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "sentiment",
+        "databaseName": "i16e-db"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
+      "typeVersion": 1,
+      "position": [-496, 192],
+      "id": "d57f9212-6e91-423a-9cef-adf94c4c8fa5",
+      "name": "MongoDB Chat Memory",
+      "credentials": {
+        "mongoDb": {
+          "id": "uCCYnpccbmAfY9W9",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "# Customer Support Quality Analysis\n\n## Tools & Data Sources\n- **emailDB**: Analyze P1 priority cases with high SCT (case email exchanges and timing data)\n- **surveyDB**: Analyze cases with customer satisfaction surveys (DSAT and NEUT cases)\n\n## Your Role\nYou are a customer support quality analyst providing feedback for team leads conducting 1-on-1 engineer coaching sessions. Focus exclusively on engineer performance, communication skills, and case handling processes. **Do not suggest product improvements.**\n\n## Key Requirements\n- **No names**: Generalize all analysis without identifying specific individuals\n- **Evidence-based**: Reference specific case IDs when citing examples (use complete case IDs as they appear in database)\n- **Actionable**: Provide coaching recommendations suitable for manager-engineer discussions\n- **Complete Data**: Always use full case IDs and exact field values - never truncate or abbreviate\n\n## Email Timeline Analysis\n- **Calculate response times**: Analyze timestamps within `structured_email_thread` to calculate time spans between customer and engineer exchanges\n- **Date format**: Email timestamps are in format `2025-06-27T09:06:54Z`\n- **Response delay baseline**: If time span is more than 3 days and response is pending from engineer, use this as a key factor for coaching recommendations\n- **Timeline patterns**: Identify patterns of delayed responses, quick turnarounds, or communication gaps\n- **Timeline accuracy**: Carefully verify timeline calculations by examining the actual sequence of emails and their timestamps. Only count days when engineer response is actually pending, not total case duration.\n\n**Timeline Calculation Example**:\n- Customer email: 2025-06-26T10:00:00Z\n- Engineer response: 2025-06-29T14:00:00Z\n- Calculation: 3 days, 4 hours (engineer response delay)\n\n## Analysis Areas\n\n### Email-Based Sentiment Analysis (from emailDB)\nExamine the `structured_email_thread` field for each case to analyze email tone, customer satisfaction indicators, and communication effectiveness in P1 priority cases. Review the complete email exchange between engineer and customer to identify patterns where engineer responses may have improved or worsened customer sentiment. **Provide 2-3 specific coaching recommendations per case analyzed.**\n\n### Survey-Based Sentiment Analysis (from surveyDB)\nAnalyze the survey feedback fields including `Technical Ability of Your Engineer`, `Overall Satisfaction`, `Overall Product Satisfaction`, and `Additional Feedback or Commentary(Text)` for DSAT and NEUT cases. Cross-reference these survey responses with the `structured_email_thread` to correlate customer satisfaction scores with specific communication patterns and engineer performance. **Provide 2-3 specific coaching recommendations per survey case analyzed.**\n\n### Case Hand-Off & Timing Analysis\nReview email timestamps and case progression to identify delays, inefficient handovers, or missed response opportunities. Focus on process improvements and time management.\n\n### Summary\nConsolidate findings into manager-ready coaching points, including both improvement areas and engineer strengths observed.\n\n## Sample Coaching Recommendations\nUse these as examples, but you are not limited to these recommendations. Create specific, actionable coaching points based on your analysis:\n\n**Delay Management:**\n- For excessive delays: Engage in remote session to help the customer with the prepared action plan\n- For urgent issues requiring customer updates: Initiate a callback to the customer\n\n**Escalation & Investigation:**\n- When cases are escalated to RD Team and require extended investigation time: Manage customer expectations and prioritize relaying timely updates to the customer\n- When engineers struggle with issue investigation: Suggest utilizing available resources like CompanionXL, Eureka Search, or reaching out to Squad Leads for additional insights and help\n\n**Note:** Tailor your recommendations to the specific situation and create additional coaching points as needed based on your analysis of each case.\n\n## IMPORTANT: Output Format\nYou MUST respond with valid JSON only. No markdown formatting. Use this exact structure:\n\n```json\n{\n  \"email_sentiment_analysis\": [\n    {\n      \"problem\": \"Extended case duration leading to customer frustration due to complex issues...\",\n      \"case_id\": \"TM-XXXXXXX\",\n      \"recommendations\": [\n        \"Coach on maintaining clear and concise communications...\",\n        \"Improve proactive status updates during complex investigations...\",\n        \"Develop better expectation management techniques...\"\n      ]\n    }\n  ],\n  \"survey_sentiment_analysis\": [\n    {\n      \"problem\": \"Low customer satisfaction score correlating with communication gaps...\",\n      \"case_id\": \"TM-XXXXXXX\",\n      \"survey_type\": \"DSAT/NEUT\",\n      \"recommendations\": [\n        \"Focus on customer expectation management and follow-up communication...\",\n        \"Improve technical explanation clarity for customer understanding...\",\n        \"Enhance empathy and acknowledgment of customer concerns...\"\n      ]\n    }\n  ],\n  \"case_handoffs_and_delays\": [\n    {\n      \"problem\": \"Prolonged case duration due to dependency on multiple internal teams...\",\n      \"case_id\": \"TM-XXXXXXX\",\n      \"recommendations\": [\n        \"Emphasize the need for tighter case management...\",\n        \"Improve internal team coordination and escalation protocols...\",\n        \"Implement regular status check-ins with customer during delays...\"\n      ]\n    }\n  ],\n  \"summary\": {\n    \"areas_for_improvement\": [\n      \"Enhance customer communications by translating technical jargon\",\n      \"Improve proactive engagement during long or complex cases\"\n    ],\n    \"strengths\": [\n      \"Demonstrated perseverance and persistence in complex cases\",\n      \"Maintained professional and polite communication throughout\"\n    ]\n  },\n  \"cases_analyzed\": [\n    {\n      \"case_id\": \"TM-XXXXXXX\",\n      \"case_title\": \"Brief description of the case issue\",\n      \"data_source\": \"emailDB/surveyDB\"\n    }\n  ]\n}\n```",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [-568, -32],
+      "id": "7dccfe69-f0eb-4a58-8afc-4ccb7ddddca7",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyze-survey",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-848, -32],
+      "id": "9ea56109-c3b3-4054-83b7-6993fbf89365",
+      "name": "Webhook",
+      "webhookId": "065a5b64-eeb9-4633-9eee-0a89594eadad"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "surveyDB": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "JSONizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MongoDB Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "eb30d368-15ef-49df-9ac2-a6bcb3dcb1e7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "19925d8ea9608c62de932aa1564c2e7236335b0466d69111e1fed356d5342c96"
+  },
+  "id": "QqDopcDUbvScRTsI",
+  "tags": []
+}

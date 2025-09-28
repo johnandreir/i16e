@@ -28,12 +28,43 @@ export interface SCTReport {
 
 export class N8nWorkflowService {
   private baseUrl: string;
+  private n8nDirectUrl: string;
   private workflowId: string;
 
   constructor() {
     // Use backend API proxy endpoints to avoid CORS issues
     this.baseUrl = 'http://localhost:3001/api/n8n';
+    // Direct URL to n8n for direct webhook calls
+    this.n8nDirectUrl = 'http://localhost:5678';
     this.workflowId = import.meta.env.VITE_N8N_WORKFLOW_ID || 'phJFt9t02Ssy2ADE';
+  }
+
+  /**
+   * Process the result from the webhook call and format it as expected by the UI
+   * Only uses data directly from the workflow response without auto-generating content
+   */
+  private processResult(result: any, totalItems: number): any {
+    // Extract metrics directly from workflow response
+    const workflowMetrics = result.data?.metrics || {};
+    
+    // Determine which insight formatter to use based on result content
+    const insights = result.data?.survey_sentiment_analysis || result.data?.survey_data
+      ? this.formatInsightsFromSurveyResults(result)
+      : this.formatInsightsFromSCTResults(result);
+    
+    return {
+      success: true,
+      data: {
+        insights: insights,
+        metrics: {
+          totalCases: workflowMetrics.totalCases || totalItems,
+          averageSCT: workflowMetrics.averageSCT || result.data?.sct_metrics?.[0]?.sct || 0,
+          trend: workflowMetrics.trend || '',
+          insight: workflowMetrics.insight || result.data?.summary?.areas_for_improvement?.[0] || ''
+        },
+        cases: result.data?.cases_analyzed || []
+      }
+    };
   }
 
   /**
@@ -136,9 +167,12 @@ export class N8nWorkflowService {
       }
 
       const result = await response.json();
-
-      // For now, return mock data structure until n8n integration is fully configured
-      return this.getMockCaseData(ownerNames, params.dateRange);
+      
+      // Process and return the real data from n8n
+      return {
+        cases: result.data?.cases_analyzed || [],
+        sctReport: result.data?.sct_metrics || []
+      };
 
     } catch (error) {
       console.error('Error generating case report:', error);
@@ -147,57 +181,284 @@ export class N8nWorkflowService {
   }
 
   /**
-   * Mock data for testing until n8n integration is complete
+   * This method used to contain mock data but has been removed as we're now using real data from n8n
+   * If mock data is needed for testing, it should be implemented in a separate testing module
    */
-  private getMockCaseData(ownerNames: string[], dateRange: { from: Date; to: Date }): {
-    cases: CaseData[];
-    sctReport: SCTReport[];
-  } {
-    const mockCases: CaseData[] = ownerNames.flatMap((owner, index) => [
-      {
-        case_id: `TM-${12345 + index}01`,
-        priority: 'High',
-        owner_full_name: owner,
-        title: 'Sample Case 1 - Security Issue',
-        products: ['Trend Micro Apex One'],
-        status: 'Resolved',
-        created_date: new Date(dateRange.from.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-        closed_date: new Date(dateRange.from.getTime() + Math.random() * 15 * 24 * 60 * 60 * 1000).toISOString(),
-        case_age_days: Math.floor(Math.random() * 10) + 1,
-        structured_email_thread: 'Mock email thread data...'
-      },
-      {
-        case_id: `TM-${12345 + index}02`,
-        priority: 'Medium',
-        owner_full_name: owner,
-        title: 'Sample Case 2 - Configuration Help',
-        products: ['Trend Micro Deep Security'],
-        status: 'Resolved',
-        created_date: new Date(dateRange.from.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-        closed_date: new Date(dateRange.from.getTime() + Math.random() * 20 * 24 * 60 * 60 * 1000).toISOString(),
-        case_age_days: Math.floor(Math.random() * 15) + 1,
-        structured_email_thread: 'Mock email thread data...'
-      }
-    ]);
+  // Mock data implementation removed
 
-    // Calculate SCT report
-    const sctReport: SCTReport[] = ownerNames.map(owner => {
-      const ownerCases = mockCases.filter(c => c.owner_full_name === owner);
-      const avgSct = ownerCases.reduce((sum, c) => sum + c.case_age_days, 0) / ownerCases.length;
+  /**
+   * Trigger the Analyze SCT workflow directly in n8n
+   */
+  async analyzeSCT(entityType: string, entityName: string, casesData: CaseData[]): Promise<any> {
+    try {
+      console.log('Triggering Analyze SCT workflow directly on n8n...');
       
-      return {
-        owner_full_name: owner,
-        sct: Math.round(avgSct * 100) / 100,
-        case_count: ownerCases.length
+      // Prepare payload for the Analyze SCT workflow
+      const workflowPayload = {
+        entity_type: entityType,
+        entity_name: entityName,
+        cases_data: casesData
       };
-    });
 
-    return { cases: mockCases, sctReport };
+      // Try to call n8n webhook directly first
+      try {
+        console.log('Attempting direct connection to n8n webhook...');
+        const directResponse = await fetch(`${this.n8nDirectUrl}/webhook-test/analyze-sct`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(workflowPayload),
+          // Set a timeout to fail fast if n8n is not responding
+          signal: AbortSignal.timeout(3000)
+        });
+
+        if (!directResponse.ok) {
+          throw new Error(`Direct n8n webhook returned status: ${directResponse.status}`);
+        }
+        
+        console.log('Direct n8n webhook call successful!');
+        return this.processResult(await directResponse.json(), casesData.length);
+      } catch (directError) {
+        // If direct call fails, fall back to API proxy
+        console.warn(`Direct n8n webhook call failed: ${directError.message}`);
+        console.log('Falling back to API server proxy...');
+        
+        const response = await fetch(`${this.baseUrl}/webhook/analyze-sct`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(workflowPayload),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Analyze SCT workflow execution failed: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        return this.processResult(result, casesData.length);
+      }
+
+      // This should never be reached now as both paths return directly
+      throw new Error('No response from either direct webhook or API proxy');
+    } catch (error) {
+      console.error('Error triggering Analyze SCT workflow:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Trigger the Analyze Survey workflow directly in n8n
+   */
+  async analyzeSurvey(entityType: string, entityName: string, surveyData: any[]): Promise<any> {
+    try {
+      console.log('Triggering Analyze Survey workflow directly on n8n...');
+
+      // Prepare payload for the Analyze Survey workflow
+      const workflowPayload = {
+        entity_type: entityType,
+        entity_name: entityName,
+        survey_data: surveyData
+      };
+
+      // Try to call n8n webhook directly first
+      try {
+        console.log('Attempting direct connection to n8n webhook...');
+        const directResponse = await fetch(`${this.n8nDirectUrl}/webhook-test/analyze-survey`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(workflowPayload),
+          // Set a timeout to fail fast if n8n is not responding
+          signal: AbortSignal.timeout(3000)
+        });
+
+        if (!directResponse.ok) {
+          throw new Error(`Direct n8n webhook returned status: ${directResponse.status}`);
+        }
+        
+        console.log('Direct n8n webhook call successful!');
+        return this.processResult(await directResponse.json(), surveyData.length);
+      } catch (directError) {
+        // If direct call fails, fall back to API proxy
+        console.warn(`Direct n8n webhook call failed: ${directError.message}`);
+        console.log('Falling back to API server proxy...');
+        
+        const response = await fetch(`${this.baseUrl}/webhook/analyze-survey`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(workflowPayload),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Analyze Survey workflow execution failed: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        return this.processResult(result, surveyData.length);
+      }
+    } catch (error) {
+      console.error('Error triggering Analyze Survey workflow:', error);
+      throw error;
+    }
   }
 
   /**
    * Get workflow status by testing webhook availability
    */
+  /**
+   * Format insights from SCT workflow results
+   */
+  private formatInsightsFromSCTResults(result: any): any[] {
+    // Use only insights directly provided by the workflow
+    // No auto-generated fallbacks or default insights
+    
+    // Check if result contains insights directly
+    if (result.data?.insights && Array.isArray(result.data.insights)) {
+      return result.data.insights;
+    }
+    
+    const insights = [];
+    
+    // If workflow provided specific analysis sections, convert them to insights
+    
+    // Add email sentiment analysis insights if available
+    if (result.data?.email_sentiment_analysis && result.data.email_sentiment_analysis.length > 0) {
+      result.data.email_sentiment_analysis.forEach((item: any, index: number) => {
+        insights.push({
+          id: `email-${index + 1}`,
+          title: `Email Communication Analysis: Case ${item.case_id}`,
+          description: item.problem,
+          impact: 'High',
+          category: 'communication',
+          type: 'warning',
+          recommendation: item.recommendations?.join('\n') || ''
+        });
+      });
+    }
+
+    // Add case handoffs and delays insights if available
+    if (result.data?.case_handoffs_and_delays && result.data.case_handoffs_and_delays.length > 0) {
+      result.data.case_handoffs_and_delays.forEach((item: any, index: number) => {
+        insights.push({
+          id: `delay-${index + 1}`,
+          title: `Case Delay Analysis: Case ${item.case_id}`,
+          description: item.problem,
+          impact: 'Medium',
+          category: 'process',
+          type: 'error',
+          recommendation: item.recommendations?.join('\n') || ''
+        });
+      });
+    }
+    
+    // Use workflow-provided summary if available, but don't create artificial one
+    if (result.data?.summary && insights.length > 0) {
+      insights.unshift({
+        id: 'summary-1',
+        title: 'SCT Analysis Summary',
+        description: result.data.summary.overview || '',
+        impact: 'High',
+        category: 'process',
+        type: 'info',
+        recommendation: result.data.summary.areas_for_improvement?.join('\n') || ''
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Format insights from Survey workflow results
+   */
+  private formatInsightsFromSurveyResults(result: any): any[] {
+    // Use only insights directly provided by the workflow
+    // No auto-generated fallbacks or default insights
+    
+    // Check if result contains insights directly
+    if (result.data?.insights && Array.isArray(result.data.insights)) {
+      return result.data.insights;
+    }
+    
+    const insights = [];
+    
+    // If workflow provided specific analysis sections, convert them to insights
+    
+    // Add survey sentiment analysis insights if available
+    if (result.data?.survey_sentiment_analysis && result.data.survey_sentiment_analysis.length > 0) {
+      result.data.survey_sentiment_analysis.forEach((item: any, index: number) => {
+        insights.push({
+          id: `survey-${index + 1}`,
+          title: `Customer Feedback: ${item.survey_type} Survey, Case ${item.case_id}`,
+          description: item.problem,
+          impact: 'High',
+          category: 'satisfaction',
+          type: item.survey_type === 'DSAT' ? 'error' : 'warning',
+          recommendation: item.recommendations?.join('\n') || ''
+        });
+      });
+    }
+    
+    // Use workflow-provided summary if available, but don't create artificial one
+    if (result.data?.summary && Object.keys(result.data.summary).length > 0) {
+      insights.unshift({
+        id: 'summary-1',
+        title: 'Survey Analysis Summary',
+        description: result.data.summary.overview || '',
+        impact: 'Medium',
+        category: 'satisfaction',
+        type: 'info',
+        recommendation: result.data.summary.areas_for_improvement?.join('\n') || ''
+      });
+    }
+
+    return insights;
+  }
+
+  /**
+   * Calculate average SCT from case data
+   */
+  private calculateAverageSCT(casesData: CaseData[]): number {
+    if (!casesData || casesData.length === 0) return 0;
+    
+    const sctValues = casesData
+      .map(c => c.case_age_days)
+      .filter(sct => sct !== undefined && sct > 0);
+    
+    if (sctValues.length === 0) return 0;
+    
+    return Math.round((sctValues.reduce((a, b) => a + b, 0) / sctValues.length) * 10) / 10;
+  }
+
+  /**
+   * Calculate average rating from survey data
+   */
+  private calculateAverageRating(surveyData: any[]): string {
+    if (!surveyData || surveyData.length === 0) return 'N/A';
+    
+    const ratings = surveyData
+      .map(s => s.overallSatisfaction)
+      .filter(r => r !== undefined && r > 0);
+    
+    if (ratings.length === 0) return 'N/A';
+    
+    return ((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1));
+  }
+
+  /**
+   * Calculate percentage of surveys in a specific category
+   */
+  private calculatePercentage(surveyData: any[], category: string): number {
+    if (!surveyData || surveyData.length === 0) return 0;
+    
+    const count = surveyData.filter(s => s.category === category).length;
+    return Math.round((count / surveyData.length) * 100);
+  }
+
   async getWorkflowStatus(): Promise<{ isActive: boolean; lastExecution?: string }> {
     try {
       // Use backend health endpoint to check N8N status

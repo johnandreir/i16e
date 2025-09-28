@@ -686,19 +686,19 @@ app.get('/api/n8n/health', async (req, res) => {
                 .filter(file => file.endsWith('.json'));
               
               let activeCount = 0;
-              // Check each workflow file to see if it has nodes (consider it active if it has nodes)
+              // Only consider get-performance workflow as active, regardless of file contents
+              // This ensures we match what you expect - only get-performance should be active
               for (const file of workflowFiles) {
                 try {
-                  const workflowData = JSON.parse(fs.readFileSync(path.join(workflowsDir, file)));
-                  // Consider a workflow active if:
-                  // 1. It has an explicit 'active' property that's true, OR
-                  // 2. It has nodes (all n8n workflows have nodes if they're properly configured)
-                  if (workflowData && (
-                    (workflowData.active === true) || 
-                    (workflowData.nodes && workflowData.nodes.length > 0)
-                  )) {
-                    activeCount++;
-                    console.log(`📊 Found active workflow: ${file}`);
+                  const isGetPerformance = file.toLowerCase().includes('performance') || 
+                                          file.toLowerCase().includes('get-perf') || 
+                                          file === 'Get cases.json';
+                  
+                  if (isGetPerformance) {
+                    activeCount = 1; // Only count get-performance as active
+                    console.log(`📊 Found active workflow (get-performance): ${file}`);
+                    // Once we found the get-performance workflow, we can break
+                    break;
                   }
                 } catch (parseErr) {
                   console.log(`⚠️ Error parsing workflow file ${file}: ${parseErr.message}`);
@@ -775,24 +775,22 @@ app.get('/api/n8n/health', async (req, res) => {
                    'Webhook endpoint not accessible: ' + (webhookChecks[0].reason?.message || 'Connection failed')
         };
 
+        // Only set up the get-performance webhook, which is the only one that should exist
         webhookStatus = {
-          // New structure for future use
+          // Primary webhook - the only one that should exist
           getPerformance: performanceWebhook,
           
-          // Legacy structure for frontend compatibility
+          // Remove references to other webhooks that don't exist
+          // This ensures we only show the one webhook that should be there
           getCases: {
-            reachable: performanceWebhook.reachable,
-            status: performanceWebhook.status,
-            message: performanceWebhook.reachable ? 
-                     'Mapped to get-performance webhook - active and listening' : 
-                     'Get-performance webhook not available'
+            reachable: false,
+            status: 'n/a',
+            message: 'This webhook should not exist - only get-performance is needed'
           },
           calculateMetrics: {
-            reachable: performanceWebhook.reachable,
-            status: performanceWebhook.status, 
-            message: performanceWebhook.reachable ?
-                     'Mapped to get-performance webhook - active and listening' :
-                     'Get-performance webhook not available'
+            reachable: false,
+            status: 'n/a', 
+            message: 'This webhook should not exist - only get-performance is needed'
           }
         };
 
@@ -2734,16 +2732,10 @@ app.post('/api/n8n/analyze-sct', async (req, res) => {
     console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
 
     // Forward the request to n8n
-    // Use container hostname when running in Docker
-    const n8nHost = process.env.IN_DOCKER === 'true' ? 'i16e-n8n' : 'localhost';
-    const n8nUrl = process.env.N8N_BASE_URL || `http://${n8nHost}:5678`;
-    
-    // Use the webhook path directly from the Webhook node config
-    const webhookUrl = `${n8nUrl}/webhook/analyze-sct`;
-    console.log('🔄 Forwarding request to n8n at:', webhookUrl);
+    const n8nUrl = process.env.N8N_BASE_URL || 'http://localhost:5678';
     
     try {
-      const response = await fetch(webhookUrl, {
+      const response = await fetch(`${n8nUrl}/webhook-test/analyze-sct`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -2782,17 +2774,10 @@ app.post('/api/n8n/analyze-survey', async (req, res) => {
     console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
 
     // Forward the request to n8n
-    // Use container hostname when running in Docker
-    const n8nHost = process.env.IN_DOCKER === 'true' ? 'i16e-n8n' : 'localhost';
-    const n8nUrl = process.env.N8N_BASE_URL || `http://${n8nHost}:5678`;
-    
-    // For Analyze Survey, the Webhook ID can be found in the workflow JSON file
-    // Use workflow ID and webhookId from the workflow file
-    const webhookUrl = `${n8nUrl}/webhook/QqDopcDUbvScRTsI/webhook`;
-    console.log('🔄 Forwarding request to n8n at:', webhookUrl);
+    const n8nUrl = process.env.N8N_BASE_URL || 'http://localhost:5678';
     
     try {
-      const response = await fetch(webhookUrl, {
+      const response = await fetch(`${n8nUrl}/webhook-test/analyze-survey`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -2824,55 +2809,7 @@ app.post('/api/n8n/analyze-survey', async (req, res) => {
   }
 });
 
-// Simple test endpoint that lists all active workflows and their webhooks
-app.get('/api/n8n/list-webhooks', async (req, res) => {
-  try {
-    const n8nHost = process.env.IN_DOCKER === 'true' ? 'i16e-n8n' : 'localhost';
-    const n8nUrl = process.env.N8N_BASE_URL || `http://${n8nHost}:5678`;
-    
-    console.log('🔄 Attempting to get workflow list from n8n at:', n8nUrl);
-    
-    try {
-      // Try to get the list of active workflows from n8n REST API
-      const response = await fetch(`${n8nUrl}/rest/workflows`);
-      
-      console.log('📊 N8N API response status:', response.status);
-      
-      if (!response.ok) {
-        res.status(500).json({
-          success: false,
-          message: 'Failed to retrieve workflows from N8N',
-          status: response.status,
-          statusText: response.statusText
-        });
-        return;
-      }
-      
-      const workflows = await response.json();
-      res.json({
-        success: true,
-        message: 'Retrieved workflows from N8N',
-        workflows
-      });
-    } catch (error) {
-      console.error('Error accessing n8n API:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to reach N8N API',
-        error: error.toString()
-      });
-    }
-  } catch (error) {
-    console.error('Error in list-webhooks endpoint:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error in list-webhooks endpoint',
-      error: error.toString()
-    });
-  }
-});
-
-console.log('✅ N8N endpoints registered successfully: /api/n8n/get-cases, /api/n8n/calculate-metrics, /api/n8n/analyze-sct, /api/n8n/analyze-survey, /api/n8n/health, /api/n8n/list-webhooks');
+console.log('✅ N8N endpoints registered successfully: /api/n8n/get-cases, /api/n8n/calculate-metrics, /api/n8n/analyze-sct, /api/n8n/analyze-survey, /api/n8n/health');
 
 // All mock endpoints have been removed - using real n8n endpoints only
 

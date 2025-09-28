@@ -13,7 +13,7 @@ COPY package*.json ./
 RUN npm install --only=production
 
 # Copy application files
-COPY mongodb-api-server.cjs ./mongodb-api-server.cjs
+COPY server/mongodb-api-server.cjs ./mongodb-api-server.cjs
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

@@ -20,6 +20,7 @@ import { useEntityDatabase } from '@/hooks/useEntityDatabase';
 import { DashboardData } from '@/lib/entityService';
 import CasePerformanceService from '@/lib/casePerformanceService';
 import CustomerSatisfactionService, { EntitySatisfactionData, ChartSurveyData } from '@/lib/customerSatisfactionService';
+import { n8nWorkflowService } from '@/lib/n8nWorkflowService';
 import { useToast } from '@/hooks/use-toast';
 
 // Interface for TeamPerformanceChart data
@@ -126,6 +127,8 @@ const IndexNew = () => {
 
   // Additional state for insights and modals
   const [sctAnalyzed, setSctAnalyzed] = useState<boolean>(false);
+  const [isSurveyAnalyzed, setIsSurveyAnalyzed] = useState<boolean>(false);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState<boolean>(false);
   const [cxAnalyzed, setCxAnalyzed] = useState<boolean>(false);
   const [performanceOverviewData, setPerformanceOverviewData] = useState<TeamMember[]>([]);
   const [isAnalysisEnabled, setIsAnalysisEnabled] = useState<boolean>(false);
@@ -1568,8 +1571,184 @@ const IndexNew = () => {
     }
   };
 
-  const handleAnalyzeSCT = () => {
+  // Helper function for local SCT analysis
+  const performLocalSCTAnalysis = (entityLabel: string, entityName: string, realCaseData: any[], currentSCT: number) => {
+    // Analyze real case data locally
+    const localInsights: any[] = [];
+    const caseList = realCaseData.map(caseItem => ({
+      case_id: caseItem.case_id,
+      title: caseItem.title,
+      sct_days: caseItem.case_age_days,
+      status: caseItem.status,
+      created_date: caseItem.created_date,
+      closed_date: caseItem.closed_date
+    }));
+    
+    // Calculate actual metrics from real data
+    const sctValues = realCaseData.map(c => c.case_age_days).filter(sct => sct > 0);
+    const avgSCT = sctValues.length > 0 ? Math.round(sctValues.reduce((a, b) => a + b, 0) / sctValues.length * 10) / 10 : currentSCT;
+    const minSCT = sctValues.length > 0 ? Math.min(...sctValues) : 0;
+    const maxSCT = sctValues.length > 0 ? Math.max(...sctValues) : 0;
+    const targetSCT = 15;
+    
+    // Performance analysis
+    if (avgSCT <= targetSCT) {
+      localInsights.push({
+        id: '1',
+        title: `${entityLabel} SCT Performance Above Target`,
+        description: `${entityName} achieves ${avgSCT} days average SCT, meeting the ≤${targetSCT} days target. Best case: ${minSCT} days, Longest case: ${maxSCT} days.`,
+        impact: 'High',
+        category: 'performance',
+        type: 'success',
+        recommendation: `Continue current practices. Share successful techniques with team members.`
+      });
+    } else {
+      localInsights.push({
+        id: '1',
+        title: `${entityLabel} SCT Performance Below Target`,
+        description: `${entityName} averages ${avgSCT} days SCT, ${Math.round((avgSCT - targetSCT) * 10) / 10} days above the ${targetSCT} days target. Improvement needed.`,
+        impact: 'High',
+        category: 'performance',
+        type: 'warning',
+        recommendation: `Focus on reducing case resolution time. Analyze longest cases (${maxSCT} days) for process improvements.`
+      });
+    }
+    
+    // Case complexity analysis
+    const complexCases = realCaseData.filter(c => c.case_age_days > 30);
+    if (complexCases.length > 0) {
+      localInsights.push({
+        id: '2',
+        title: `Complex Cases Identified`,
+        description: `${complexCases.length} of ${realCaseData.length} cases took over 30 days to resolve. These include: ${complexCases.map(c => c.case_id).join(', ')}.`,
+        impact: 'Medium',
+        category: 'process',
+        type: 'warning',
+        recommendation: `Review complex cases for common patterns. Consider breaking down large cases or improving estimation.`
+      });
+    }
+    
+    // Set the analysis results using local analysis
+    const sctAnalysis = {
+      insights: localInsights,
+      metrics: {
+        averageSCT: avgSCT,
+        targetSCT: targetSCT,
+        improvement: avgSCT <= targetSCT ? 'Meeting target' : 'Needs improvement',
+        bottleneck: avgSCT > targetSCT ? 'Case resolution time' : 'None identified',
+        efficiency: avgSCT <= targetSCT ? 'Good' : 'Needs improvement',
+        trend: realCaseData.length > 3 ? 'Stable' : 'Insufficient Data'
+      },
+      cases: caseList
+    };
+    
+    setSctAnalysisResults(sctAnalysis);
+  };
+
+  // Helper function for local survey analysis
+  const performLocalSurveyAnalysis = (entityLabel: string, entityName: string, surveyData: any[], realSatisfactionData: any) => {
+    // Analyze real survey data locally
+    const localInsights: any[] = [];
+    const surveys = surveyData.length > 0 ? surveyData : (realSatisfactionData.surveyDetails || []);
+    
+    // Calculate metrics from survey data
+    const totalSurveys = surveys.length;
+    const ratings = surveys.map((s: any) => s.overallSatisfaction).filter((r: number) => r > 0);
+    const averageRating = ratings.length > 0 ? Math.round((ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length) * 10) / 10 : 0;
+    
+    const csatCount = surveys.filter((s: any) => s.category === 'csat').length;
+    const neutralCount = surveys.filter((s: any) => s.category === 'neutral').length;
+    const dsatCount = surveys.filter((s: any) => s.category === 'dsat').length;
+    
+    const csatPercentage = totalSurveys > 0 ? Math.round((csatCount / totalSurveys) * 100) : 0;
+    const neutralPercentage = totalSurveys > 0 ? Math.round((neutralCount / totalSurveys) * 100) : 0;
+    const dsatPercentage = totalSurveys > 0 ? Math.round((dsatCount / totalSurveys) * 100) : 0;
+    
+    // Overall satisfaction analysis
+    if (csatPercentage >= 80) {
+      localInsights.push({
+        id: '1',
+        title: `Excellent Customer Satisfaction Performance`,
+        description: `${entityName} achieves ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${csatCount} satisfied customers out of ${totalSurveys} total surveys.`,
+        impact: 'High',
+        category: 'satisfaction',
+        type: 'success',
+        recommendation: 'Continue the excellent customer service practices. Consider documenting successful approaches for training materials.'
+      });
+    } else if (csatPercentage >= 60) {
+      localInsights.push({
+        id: '1',
+        title: `Good Customer Satisfaction Performance`,
+        description: `${entityName} achieves ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${dsatCount} dissatisfied customers out of ${totalSurveys} total surveys.`,
+        impact: 'Medium',
+        category: 'satisfaction',
+        type: 'success',
+        recommendation: 'Maintain current satisfaction levels while focusing on addressing areas that received neutral ratings.'
+      });
+    } else {
+      localInsights.push({
+        id: '1',
+        title: `Customer Satisfaction Needs Improvement`,
+        description: `${entityName} has a ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${dsatCount} dissatisfied customers out of ${totalSurveys} total surveys.`,
+        impact: 'High',
+        category: 'satisfaction',
+        type: 'warning',
+        recommendation: 'Review DSAT cases to identify common issues. Implement targeted training on addressing specific customer concerns.'
+      });
+    }
+    
+    // DSAT analysis
+    if (dsatCount > 0) {
+      const dsatFeedback = surveys.filter((s: any) => s.category === 'dsat');
+      const commonIssues = dsatFeedback.filter((s: any) => s.feedback && s.feedback !== '');
+      
+      localInsights.push({
+        id: '2',
+        title: `DSAT Feedback Analysis`,
+        description: `${dsatCount} customers expressed dissatisfaction (${dsatPercentage}% of total). ${commonIssues.length} provided specific feedback.`,
+        impact: 'High',
+        category: 'improvement',
+        type: 'warning',
+        recommendation: `Review detailed feedback from dissatisfied customers. Address common themes in training and process improvements.`
+      });
+    } else {
+      localInsights.push({
+        id: '2',
+        title: `Zero DSAT Rate - Excellent Performance`,
+        description: `No DSAT feedback received from ${totalSurveys} survey responses. This indicates consistent service quality.`,
+        impact: 'High',
+        category: 'satisfaction',
+        type: 'success',
+        recommendation: `Maintain current service quality standards. Document and share successful approaches with other teams.`
+      });
+    }
+    
+    // Set the analysis results using local analysis
+    const surveyAnalysis = {
+      insights: localInsights,
+      metrics: {
+        totalSurveys: totalSurveys,
+        averageRating: averageRating,
+        csatPercentage: csatPercentage,
+        neutralPercentage: neutralPercentage,
+        dsatPercentage: dsatPercentage,
+        trend: totalSurveys > 3 ? 'Stable' : 'Insufficient Data',
+        sentiment: csatPercentage >= 70 ? 'Positive' : csatPercentage >= 50 ? 'Neutral' : 'Needs Improvement'
+      },
+      surveys: surveys.map((s: any) => ({
+        case_id: s.case_id,
+        rating: s.overallSatisfaction,
+        category: s.category,
+        feedback: s.feedback || ''
+      }))
+    };
+    
+    setSurveyAnalysisResults(surveyAnalysis);
+  };
+
+  const handleAnalyzeSCT = async () => {
     setSctAnalyzed(true);
+    setIsAnalysisLoading(true);
     
     // Get entity-specific terminology
     const entityType = generatedEntity || selectedEntity;
@@ -1605,90 +1784,240 @@ const IndexNew = () => {
         cases: []
       };
       setSctAnalysisResults(sctAnalysis);
+      setIsAnalysisLoading(false);
       return;
     }
     
-    // Analyze real case data
-    const insights = [];
-    const caseList = realCaseData.map(caseItem => ({
-      case_id: caseItem.case_id,
-      title: caseItem.title,
-      sct_days: caseItem.case_age_days,
-      status: caseItem.status,
-      created_date: caseItem.created_date,
-      closed_date: caseItem.closed_date
-    }));
-    
-    // Calculate actual metrics from real data
-    const sctValues = realCaseData.map(c => c.case_age_days).filter(sct => sct > 0);
-    const avgSCT = sctValues.length > 0 ? Math.round(sctValues.reduce((a, b) => a + b, 0) / sctValues.length * 10) / 10 : currentSCT;
-    const minSCT = sctValues.length > 0 ? Math.min(...sctValues) : 0;
-    const maxSCT = sctValues.length > 0 ? Math.max(...sctValues) : 0;
-    const targetSCT = 15;
-    
-    // Performance analysis
-    if (avgSCT <= targetSCT) {
-      insights.push({
-        id: '1',
-        title: `${entityLabel} SCT Performance Above Target`,
-        description: `${entityName} achieves ${avgSCT} days average SCT, meeting the ≤${targetSCT} days target. Best case: ${minSCT} days, Longest case: ${maxSCT} days.`,
-        impact: 'High',
-        category: 'performance',
-        type: 'success',
-        recommendation: `Continue current practices. Share successful techniques with team members.`
+    try {
+      // Use n8n workflow service to analyze SCT
+      const workflowResults = await n8nWorkflowService.analyzeSCT(entityType, entityName, realCaseData);
+      
+      if (workflowResults && workflowResults.success && workflowResults.data) {
+        // Use the workflow analysis results
+        setSctAnalysisResults(workflowResults.data);
+        
+        toast({
+          title: `${entityLabel} SCT Analysis Complete`,
+          description: `Analysis completed for ${entityName} with insights generated.`,
+          variant: "default"
+        });
+      } else {
+        // Fall back to local analysis if workflow fails
+        performLocalSCTAnalysis(entityLabel, entityName, realCaseData, currentSCT);
+        toast({
+          description: "Using local analysis due to workflow service error.",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.error("Error analyzing SCT data:", error);
+      // Fall back to local analysis if there's an error
+      performLocalSCTAnalysis(entityLabel, entityName, realCaseData, currentSCT);
+      toast({
+        description: "Using local analysis due to workflow service error.",
+        variant: "default"
       });
-    } else {
-      insights.push({
-        id: '1',
-        title: `${entityLabel} SCT Performance Below Target`,
-        description: `${entityName} averages ${avgSCT} days SCT, ${Math.round((avgSCT - targetSCT) * 10) / 10} days above the ${targetSCT} days target. Improvement needed.`,
-        impact: 'High',
-        category: 'performance',
-        type: 'warning',
-        recommendation: `Focus on reducing case resolution time. Analyze longest cases (${maxSCT} days) for process improvements.`
-      });
+    } finally {
+      setIsAnalysisLoading(false);
     }
     
-    // Case complexity analysis
-    const complexCases = realCaseData.filter(c => c.case_age_days > 30);
-    if (complexCases.length > 0) {
-      insights.push({
-        id: '2',
-        title: `Complex Cases Identified`,
-        description: `${complexCases.length} of ${realCaseData.length} cases took over 30 days to resolve. These include: ${complexCases.map(c => c.case_id).join(', ')}.`,
-        impact: 'Medium',
-        category: 'process',
-        type: 'warning',
-        recommendation: `Review complex cases for common patterns. Consider breaking down large cases or improving estimation.`
+    try {
+      // Trigger the n8n workflow for SCT analysis
+      const workflowResults = await n8nWorkflowService.analyzeSCT(entityType, entityName, realCaseData);
+      
+      // If we got results from the workflow, use them
+      if (workflowResults) {
+        console.log('SCT Analysis workflow results:', workflowResults);
+        
+        // Process the AI analysis results
+        const aiInsights = [];
+        
+        // Map email sentiment analysis to insights
+        if (workflowResults.email_sentiment_analysis && workflowResults.email_sentiment_analysis.length > 0) {
+          workflowResults.email_sentiment_analysis.forEach((item: any, index: number) => {
+            aiInsights.push({
+              id: `email-${index + 1}`,
+              title: `Email Communication Issue: Case ${item.case_id}`,
+              description: item.problem,
+              impact: 'Medium',
+              category: 'communication',
+              type: 'warning',
+              recommendation: item.recommendations.join('\n')
+            });
+          });
+        }
+        
+        // Map case handoffs and delays to insights
+        if (workflowResults.case_handoffs_and_delays && workflowResults.case_handoffs_and_delays.length > 0) {
+          workflowResults.case_handoffs_and_delays.forEach((item: any, index: number) => {
+            aiInsights.push({
+              id: `delay-${index + 1}`,
+              title: `Process Delay: Case ${item.case_id}`,
+              description: item.problem,
+              impact: 'High',
+              category: 'process',
+              type: 'warning',
+              recommendation: item.recommendations.join('\n')
+            });
+          });
+        }
+        
+        // Use the workflow results as our analysis
+        const sctAnalysis = {
+          insights: aiInsights.length > 0 ? aiInsights : [
+            {
+              id: '1',
+              title: `${entityLabel} SCT Analysis Complete`,
+              description: `Analysis completed for ${entityName}. ${workflowResults.cases_analyzed?.length || 0} cases were analyzed.`,
+              impact: 'Medium',
+              category: 'performance',
+              type: 'info',
+              recommendation: workflowResults.summary?.areas_for_improvement?.join('\n') || 'No specific recommendations found.'
+            }
+          ],
+          metrics: {
+            averageSCT: currentSCT,
+            targetSCT: 15,
+            improvement: workflowResults.summary?.strengths?.length > 0 ? workflowResults.summary.strengths[0] : 'N/A',
+            bottleneck: workflowResults.summary?.areas_for_improvement?.length > 0 ? workflowResults.summary.areas_for_improvement[0] : 'N/A',
+            efficiency: 'Analyzing...',
+            trend: workflowResults.cases_analyzed?.length > 0 ? 'Analysis Complete' : 'Insufficient Data'
+          },
+          cases: workflowResults.cases_analyzed || []
+        };
+        
+        setSctAnalysisResults(sctAnalysis);
+      } else {
+        // Fall back to local analysis if workflow didn't return results
+    
+        // Analyze real case data locally
+        const insights = [];
+        const caseList = realCaseData.map(caseItem => ({
+          case_id: caseItem.case_id,
+          title: caseItem.title,
+          sct_days: caseItem.case_age_days,
+          status: caseItem.status,
+          created_date: caseItem.created_date,
+          closed_date: caseItem.closed_date
+        }));
+        
+        // Calculate actual metrics from real data
+        const sctValues = realCaseData.map(c => c.case_age_days).filter(sct => sct > 0);
+        const avgSCT = sctValues.length > 0 ? Math.round(sctValues.reduce((a, b) => a + b, 0) / sctValues.length * 10) / 10 : currentSCT;
+        const minSCT = sctValues.length > 0 ? Math.min(...sctValues) : 0;
+        const maxSCT = sctValues.length > 0 ? Math.max(...sctValues) : 0;
+        const targetSCT = 15;
+        
+        // Performance analysis
+        if (avgSCT <= targetSCT) {
+          insights.push({
+            id: '1',
+            title: `${entityLabel} SCT Performance Above Target`,
+            description: `${entityName} achieves ${avgSCT} days average SCT, meeting the ≤${targetSCT} days target. Best case: ${minSCT} days, Longest case: ${maxSCT} days.`,
+            impact: 'High',
+            category: 'performance',
+            type: 'success',
+            recommendation: `Continue current practices. Share successful techniques with team members.`
+          });
+        } else {
+          insights.push({
+            id: '1',
+            title: `${entityLabel} SCT Performance Below Target`,
+            description: `${entityName} averages ${avgSCT} days SCT, ${Math.round((avgSCT - targetSCT) * 10) / 10} days above the ${targetSCT} days target. Improvement needed.`,
+            impact: 'High',
+            category: 'performance',
+            type: 'warning',
+            recommendation: `Focus on reducing case resolution time. Analyze longest cases (${maxSCT} days) for process improvements.`
+          });
+        }
+        
+        // Set the analysis results using local analysis
+        const sctAnalysis = {
+          insights: insights,
+          metrics: {
+            averageSCT: avgSCT,
+            targetSCT: targetSCT,
+            improvement: avgSCT <= targetSCT ? 'Meeting target' : 'Needs improvement',
+            bottleneck: avgSCT > targetSCT ? 'Case resolution time' : 'None identified',
+            efficiency: avgSCT <= targetSCT ? 'Good' : 'Needs improvement',
+            trend: realCaseData.length > 3 ? 'Stable' : 'Insufficient Data'
+          },
+          cases: caseList
+        };
+        
+        setSctAnalysisResults(sctAnalysis);
+      }
+    } catch (error) {
+      console.error('Error analyzing SCT with workflow:', error);
+      
+      // Fallback to local analysis if workflow failed
+      // (Using the same code as the 'else' block above)
+      
+      // Analyze real case data locally
+      const insights = [];
+      const caseList = realCaseData.map(caseItem => ({
+        case_id: caseItem.case_id,
+        title: caseItem.title,
+        sct_days: caseItem.case_age_days,
+        status: caseItem.status,
+        created_date: caseItem.created_date,
+        closed_date: caseItem.closed_date
+      }));
+      
+      // Calculate actual metrics from real data
+      const sctValues = realCaseData.map(c => c.case_age_days).filter(sct => sct > 0);
+      const avgSCT = sctValues.length > 0 ? Math.round(sctValues.reduce((a, b) => a + b, 0) / sctValues.length * 10) / 10 : currentSCT;
+      const minSCT = sctValues.length > 0 ? Math.min(...sctValues) : 0;
+      const maxSCT = sctValues.length > 0 ? Math.max(...sctValues) : 0;
+      const targetSCT = 15;
+      
+      // Performance analysis
+      if (avgSCT <= targetSCT) {
+        insights.push({
+          id: '1',
+          title: `${entityLabel} SCT Performance Above Target`,
+          description: `${entityName} achieves ${avgSCT} days average SCT, meeting the ≤${targetSCT} days target. Best case: ${minSCT} days, Longest case: ${maxSCT} days.`,
+          impact: 'High',
+          category: 'performance',
+          type: 'success',
+          recommendation: `Continue current practices. Share successful techniques with team members.`
+        });
+      } else {
+        insights.push({
+          id: '1',
+          title: `${entityLabel} SCT Performance Below Target`,
+          description: `${entityName} averages ${avgSCT} days SCT, ${Math.round((avgSCT - targetSCT) * 10) / 10} days above the ${targetSCT} days target. Improvement needed.`,
+          impact: 'High',
+          category: 'performance',
+          type: 'warning',
+          recommendation: `Focus on reducing case resolution time. Analyze longest cases (${maxSCT} days) for process improvements.`
+        });
+      }
+      
+      // Set the analysis results using local analysis
+      const sctAnalysis = {
+        insights: insights,
+        metrics: {
+          averageSCT: avgSCT,
+          targetSCT: targetSCT,
+          improvement: avgSCT <= targetSCT ? 'Meeting target' : 'Needs improvement',
+          bottleneck: avgSCT > targetSCT ? 'Case resolution time' : 'None identified',
+          efficiency: avgSCT <= targetSCT ? 'Good' : 'Needs improvement',
+          trend: realCaseData.length > 3 ? 'Stable' : 'Insufficient Data'
+        },
+        cases: caseList
+      };
+      
+      setSctAnalysisResults(sctAnalysis);
+      toast({
+        title: "AI Analysis Issue",
+        description: "Could not connect to AI analysis service. Using basic analysis instead.",
+        variant: "destructive"
       });
+    } finally {
+      setIsAnalysisLoading(false);
     }
     
-    // Case variety analysis
-    const uniqueTitles = [...new Set(realCaseData.map(c => c.title.toLowerCase()))];
-    insights.push({
-      id: '3',
-      title: `Case Variety Analysis`,
-      description: `${realCaseData.length} cases resolved with ${uniqueTitles.length} unique case types. Most common areas: ${realCaseData.map(c => c.title).slice(0, 3).join(', ')}.`,
-      impact: 'Medium',
-      category: 'process',
-      type: 'info',
-      recommendation: `Consider creating templates or knowledge base articles for recurring case types to improve resolution speed.`
-    });
-    
-    const sctAnalysis = {
-      insights,
-      metrics: {
-        averageSCT: avgSCT,
-        targetSCT: targetSCT,
-        improvement: avgSCT <= targetSCT ? 'Target Met' : `${Math.round((avgSCT - targetSCT) * 10) / 10} days over target`,
-        bottleneck: maxSCT > 60 ? 'Complex Cases' : 'Standard Process',
-        efficiency: Math.round((targetSCT / avgSCT) * 100) + '%',
-        trend: avgSCT <= targetSCT ? 'On Target' : 'Needs Improvement'
-      },
-      cases: caseList
-    };
-    
-    setSctAnalysisResults(sctAnalysis);
   };
 
   const handleCXInsight = () => {
@@ -1786,7 +2115,10 @@ const IndexNew = () => {
     setCxInsightResults(cxInsights);
   };
 
-  const handleAnalyzeSurvey = () => {
+  const handleAnalyzeSurvey = async () => {
+    setIsSurveyAnalyzed(true);
+    setIsAnalysisLoading(true);
+    
     // Get entity-specific terminology
     const entityType = generatedEntity || selectedEntity;
     const entityName = generatedEntityValue || selectedEntityValue;
@@ -1822,137 +2154,159 @@ const IndexNew = () => {
         surveys: []
       };
       setSurveyAnalysisResults(fallbackAnalysis);
+      setIsAnalysisLoading(false);
       return;
     }
     
-    // Analyze real survey data
-    const insights = [];
-    const surveys = surveyData.length > 0 ? surveyData : (realSatisfactionData.surveyDetails || []);
-    
-    // Calculate metrics from survey data
-    const totalSurveys = surveys.length;
-    const ratings = surveys.map(s => s.overallSatisfaction).filter(r => r > 0);
-    const averageRating = ratings.length > 0 ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : 0;
-    
-    const csatCount = surveys.filter(s => s.category === 'csat').length;
-    const neutralCount = surveys.filter(s => s.category === 'neutral').length;
-    const dsatCount = surveys.filter(s => s.category === 'dsat').length;
-    
-    const csatPercentage = totalSurveys > 0 ? Math.round((csatCount / totalSurveys) * 100) : 0;
-    const neutralPercentage = totalSurveys > 0 ? Math.round((neutralCount / totalSurveys) * 100) : 0;
-    const dsatPercentage = totalSurveys > 0 ? Math.round((dsatCount / totalSurveys) * 100) : 0;
-    
-    // Overall satisfaction analysis
-    if (csatPercentage >= 80) {
-      insights.push({
-        id: '1',
-        title: `Excellent Customer Satisfaction Performance`,
-        description: `${entityName} achieves ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${csatCount} satisfied customers out of ${totalSurveys} total surveys.`,
-        impact: 'High',
-        category: 'performance',
-        type: 'success',
-        recommendation: `Continue current practices and share successful strategies with other team members.`
-      });
-    } else if (csatPercentage >= 60) {
-      insights.push({
-        id: '1',
-        title: `Good Customer Satisfaction with Room for Improvement`,
-        description: `${entityName} has ${csatPercentage}% CSAT rate (${csatCount}/${totalSurveys} surveys). Average rating: ${averageRating}/5. Target: 80%+ CSAT.`,
-        impact: 'Medium',
-        category: 'performance',
-        type: 'warning',
-        recommendation: `Focus on converting neutral feedback to positive. Analyze DSAT cases for improvement opportunities.`
-      });
-    } else {
-      insights.push({
-        id: '1',
-        title: `Customer Satisfaction Needs Immediate Attention`,
-        description: `${entityName} has ${csatPercentage}% CSAT rate (${csatCount}/${totalSurveys} surveys). Average rating: ${averageRating}/5. This is below acceptable standards.`,
-        impact: 'High',
-        category: 'performance',
-        type: 'error',
-        recommendation: `Urgent action required. Review DSAT feedback patterns and implement service improvements immediately.`
-      });
-    }
-    
-    // DSAT analysis
-    if (dsatCount > 0) {
-      const dsatFeedback = surveys.filter(s => s.category === 'dsat');
-      const commonIssues = dsatFeedback.map(s => s.feedback).filter(f => f && f !== 'No feedback provided');
+    try {
+      // Use n8n workflow service to analyze surveys
+      const workflowResults = await n8nWorkflowService.analyzeSurvey(entityType, entityName, surveyData);
       
+      if (workflowResults && workflowResults.success && workflowResults.data) {
+        // Use the workflow analysis results
+        setSurveyAnalysisResults(workflowResults.data);
+        
+        toast({
+          title: `${entityLabel} Survey Analysis Complete`,
+          description: `Analysis completed for ${entityName} with ${workflowResults.data.insights.length} insights generated.`,
+          variant: "default"
+        });
+      } else {
+        // Fall back to local analysis if workflow fails
+        const insights = [];
+        const surveys = surveyData.length > 0 ? surveyData : (realSatisfactionData.surveyDetails || []);
+        
+        // Calculate metrics from survey data
+        const totalSurveys = surveys.length;
+        const ratings = surveys.map(s => s.overallSatisfaction).filter(r => r !== undefined && r > 0);
+        const averageRating = ratings.length > 0 ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : 0;
+        
+        const csatCount = surveys.filter(s => s.category === 'csat').length;
+        const neutralCount = surveys.filter(s => s.category === 'neutral').length;
+        const dsatCount = surveys.filter(s => s.category === 'dsat').length;
+        
+        const csatPercentage = totalSurveys > 0 ? Math.round((csatCount / totalSurveys) * 100) : 0;
+        const neutralPercentage = totalSurveys > 0 ? Math.round((neutralCount / totalSurveys) * 100) : 0;
+        const dsatPercentage = totalSurveys > 0 ? Math.round((dsatCount / totalSurveys) * 100) : 0;
+        
+        // Overall satisfaction analysis
+        if (csatPercentage >= 80) {
+          insights.push({
+            id: '1',
+            title: `Excellent Customer Satisfaction Performance`,
+            description: `${entityName} achieves ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${csatCount} satisfied customers out of ${totalSurveys} total surveys.`,
+            impact: 'High',
+            category: 'satisfaction',
+            type: 'success',
+            recommendation: 'Continue the excellent customer service practices. Consider documenting successful approaches for training materials.'
+          });
+        } else if (csatPercentage >= 60) {
+          insights.push({
+            id: '1',
+            title: `Good Customer Satisfaction Performance`,
+            description: `${entityName} achieves ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${dsatCount} dissatisfied customers out of ${totalSurveys} total surveys.`,
+            impact: 'Medium',
+            category: 'satisfaction',
+            type: 'success',
+            recommendation: 'Maintain current satisfaction levels while focusing on addressing areas that received neutral ratings.'
+          });
+        } else {
+          insights.push({
+            id: '1',
+            title: `Customer Satisfaction Needs Improvement`,
+            description: `${entityName} has a ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${dsatCount} dissatisfied customers out of ${totalSurveys} total surveys.`,
+            impact: 'High',
+            category: 'satisfaction',
+            type: 'warning',
+            recommendation: 'Review DSAT cases to identify common issues. Implement targeted training on addressing specific customer concerns.'
+          });
+        }
+        
+        // Set the analysis results using local analysis
+        const surveyAnalysis = {
+          insights: insights,
+          metrics: {
+            totalSurveys: totalSurveys,
+            averageRating: averageRating,
+            csatPercentage: csatPercentage,
+            neutralPercentage: neutralPercentage,
+            dsatPercentage: dsatPercentage,
+            trend: totalSurveys > 3 ? 'Stable' : 'Insufficient Data',
+            sentiment: csatPercentage >= 70 ? 'Positive' : csatPercentage >= 50 ? 'Neutral' : 'Needs Improvement'
+          },
+          surveys: surveys.map(s => ({
+            case_id: s.case_id,
+            rating: s.overallSatisfaction,
+            category: s.category,
+            feedback: s.feedback || ''
+          }))
+        };
+        
+        setSurveyAnalysisResults(surveyAnalysis);
+        
+        toast({
+          description: "Using local analysis due to workflow service error.",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.error("Error analyzing survey data:", error);
+      // Fall back to local analysis if there's an error
+      const insights = [];
+      const surveys = surveyData.length > 0 ? surveyData : (realSatisfactionData.surveyDetails || []);
+      
+      // Calculate metrics from survey data
+      const totalSurveys = surveys.length;
+      const ratings = surveys.map(s => s.overallSatisfaction).filter(r => r !== undefined && r > 0);
+      const averageRating = ratings.length > 0 ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : 0;
+      
+      const csatCount = surveys.filter(s => s.category === 'csat').length;
+      const neutralCount = surveys.filter(s => s.category === 'neutral').length;
+      const dsatCount = surveys.filter(s => s.category === 'dsat').length;
+      
+      const csatPercentage = totalSurveys > 0 ? Math.round((csatCount / totalSurveys) * 100) : 0;
+      const neutralPercentage = totalSurveys > 0 ? Math.round((neutralCount / totalSurveys) * 100) : 0;
+      const dsatPercentage = totalSurveys > 0 ? Math.round((dsatCount / totalSurveys) * 100) : 0;
+      
+      // Simple analysis based on percentages
       insights.push({
-        id: '2',
-        title: `Dissatisfied Customer Feedback Analysis`,
-        description: `${dsatCount} customers expressed dissatisfaction (${dsatPercentage}% of total). ${commonIssues.length} provided specific feedback.`,
-        impact: 'High',
-        category: 'feedback',
-        type: 'warning',
-        recommendation: `Review DSAT feedback for common themes. Address recurring issues and follow up with dissatisfied customers.`
-      });
-    } else {
-      insights.push({
-        id: '2',
-        title: `Zero Dissatisfied Customers`,
-        description: `No DSAT feedback received from ${totalSurveys} survey responses. This indicates consistent service quality.`,
-        impact: 'High',
-        category: 'feedback',
-        type: 'success',
-        recommendation: `Maintain current service standards. Continue monitoring to ensure sustained customer satisfaction.`
-      });
-    }
-    
-    // Feedback quality analysis
-    const surveysWithFeedback = surveys.filter(s => s.feedback && s.feedback !== 'No feedback provided');
-    const feedbackRate = totalSurveys > 0 ? Math.round((surveysWithFeedback.length / totalSurveys) * 100) : 0;
-    
-    insights.push({
-      id: '3',
-      title: `Customer Feedback Engagement`,
-      description: `${surveysWithFeedback.length} of ${totalSurveys} customers provided detailed feedback (${feedbackRate}%). This provides valuable insights for improvement.`,
-      impact: 'Medium',
-      category: 'engagement',
-      type: feedbackRate >= 50 ? 'success' : 'info',
-      recommendation: feedbackRate >= 50 ? 
-        `Great feedback engagement! Use these insights to drive continuous improvement.` :
-        `Consider improving feedback collection methods to gather more detailed customer insights.`
-    });
-    
-    // Case variety in surveys
-    const uniqueCases = [...new Set(surveys.map(s => s.case_id || s.caseNumber).filter(Boolean))];
-    if (uniqueCases.length > 0) {
-      insights.push({
-        id: '4',
-        title: `Case Coverage Analysis`,
-        description: `Surveys collected for ${uniqueCases.length} unique cases. This provides comprehensive coverage of service interactions.`,
+        id: '1',
+        title: `Customer Satisfaction Analysis`,
+        description: `Analysis for ${entityName}. ${totalSurveys} surveys were analyzed.`,
         impact: 'Medium',
-        category: 'coverage',
+        category: 'satisfaction',
         type: 'info',
-        recommendation: `Continue collecting surveys across all case types to maintain comprehensive feedback coverage.`
+        recommendation: 'Review customer feedback and address key issues.'
       });
+      
+      const surveyAnalysis = {
+        insights: insights,
+        metrics: {
+          totalSurveys: totalSurveys,
+          averageRating: averageRating,
+          csatPercentage: csatPercentage,
+          neutralPercentage: neutralPercentage,
+          dsatPercentage: dsatPercentage,
+          trend: totalSurveys > 3 ? 'Stable' : 'Insufficient Data',
+          sentiment: csatPercentage >= 70 ? 'Positive' : csatPercentage >= 50 ? 'Neutral' : 'Needs Improvement'
+        },
+        surveys: surveys.map(s => ({
+          case_id: s.case_id,
+          rating: s.overallSatisfaction,
+          category: s.category,
+          feedback: s.feedback || ''
+        }))
+      };
+      
+      setSurveyAnalysisResults(surveyAnalysis);
+      
+      toast({
+        description: "Using local analysis due to workflow service error.",
+        variant: "default"
+      });
+    } finally {
+      setIsAnalysisLoading(false);
     }
-    
-    const surveyAnalysis = {
-      insights,
-      metrics: {
-        totalSurveys,
-        averageRating,
-        csatPercentage,
-        neutralPercentage,
-        dsatPercentage,
-        trend: csatPercentage >= 80 ? 'Excellent' : csatPercentage >= 60 ? 'Good' : 'Needs Improvement',
-        sentiment: averageRating >= 4.5 ? 'Very Positive' : averageRating >= 4.0 ? 'Positive' : averageRating >= 3.0 ? 'Neutral' : 'Negative'
-      },
-      surveys: surveys.map(survey => ({
-        id: survey.case_id || survey.caseNumber,
-        rating: survey.overallSatisfaction,
-        category: survey.category,
-        feedback: survey.feedback || 'No feedback provided',
-        date: survey.surveyDate,
-        customer: survey.customerName || 'Anonymous'
-      }))
-    };
-    
-    setSurveyAnalysisResults(surveyAnalysis);
   };
 
   // Utility functions

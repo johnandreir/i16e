@@ -686,19 +686,19 @@ app.get('/api/n8n/health', async (req, res) => {
                 .filter(file => file.endsWith('.json'));
               
               let activeCount = 0;
-              // Only consider get-performance workflow as active, regardless of file contents
-              // This ensures we match what you expect - only get-performance should be active
+              // Check each workflow file to see if it has nodes (consider it active if it has nodes)
               for (const file of workflowFiles) {
                 try {
-                  const isGetPerformance = file.toLowerCase().includes('performance') || 
-                                          file.toLowerCase().includes('get-perf') || 
-                                          file === 'Get cases.json';
-                  
-                  if (isGetPerformance) {
-                    activeCount = 1; // Only count get-performance as active
-                    console.log(`📊 Found active workflow (get-performance): ${file}`);
-                    // Once we found the get-performance workflow, we can break
-                    break;
+                  const workflowData = JSON.parse(fs.readFileSync(path.join(workflowsDir, file)));
+                  // Consider a workflow active if:
+                  // 1. It has an explicit 'active' property that's true, OR
+                  // 2. It has nodes (all n8n workflows have nodes if they're properly configured)
+                  if (workflowData && (
+                    (workflowData.active === true) || 
+                    (workflowData.nodes && workflowData.nodes.length > 0)
+                  )) {
+                    activeCount++;
+                    console.log(`📊 Found active workflow: ${file}`);
                   }
                 } catch (parseErr) {
                   console.log(`⚠️ Error parsing workflow file ${file}: ${parseErr.message}`);
@@ -775,22 +775,24 @@ app.get('/api/n8n/health', async (req, res) => {
                    'Webhook endpoint not accessible: ' + (webhookChecks[0].reason?.message || 'Connection failed')
         };
 
-        // Only set up the get-performance webhook, which is the only one that should exist
         webhookStatus = {
-          // Primary webhook - the only one that should exist
+          // New structure for future use
           getPerformance: performanceWebhook,
           
-          // Remove references to other webhooks that don't exist
-          // This ensures we only show the one webhook that should be there
+          // Legacy structure for frontend compatibility
           getCases: {
-            reachable: false,
-            status: 'n/a',
-            message: 'This webhook should not exist - only get-performance is needed'
+            reachable: performanceWebhook.reachable,
+            status: performanceWebhook.status,
+            message: performanceWebhook.reachable ? 
+                     'Mapped to get-performance webhook - active and listening' : 
+                     'Get-performance webhook not available'
           },
           calculateMetrics: {
-            reachable: false,
-            status: 'n/a', 
-            message: 'This webhook should not exist - only get-performance is needed'
+            reachable: performanceWebhook.reachable,
+            status: performanceWebhook.status, 
+            message: performanceWebhook.reachable ?
+                     'Mapped to get-performance webhook - active and listening' :
+                     'Get-performance webhook not available'
           }
         };
 
@@ -2725,12 +2727,270 @@ app.get('/api/n8n/health', async (req, res) => {
   }
 });
 
-console.log('✅ N8N endpoints registered successfully: /api/n8n/get-cases, /api/n8n/calculate-metrics, /api/n8n/health');
+// Endpoint for Analyze SCT workflow
+app.post('/api/n8n/analyze-sct', async (req, res) => {
+  try {
+    console.log('📍 Analyze SCT endpoint called');
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+
+    // Forward the request to n8n
+    // Use container hostname when running in Docker
+    const n8nHost = process.env.IN_DOCKER === 'true' ? 'i16e-n8n' : 'localhost';
+    const n8nUrl = process.env.N8N_BASE_URL || `http://${n8nHost}:5678`;
+    
+    // Use the webhook path directly from the Webhook node config
+    const webhookUrl = `${n8nUrl}/webhook/analyze-sct`;
+    console.log('🔄 Forwarding request to n8n at:', webhookUrl);
+    
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(req.body)
+      });
+
+      if (!response.ok) {
+        throw new Error(`N8N responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Error forwarding request to n8n:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to forward request to n8n',
+        error: error.toString()
+      });
+    }
+  } catch (error) {
+    console.error('Error in analyze-sct endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process analyze-sct request',
+      error: error.toString()
+    });
+  }
+});
+
+// Endpoint for Analyze Survey workflow
+app.post('/api/n8n/analyze-survey', async (req, res) => {
+  try {
+    console.log('📍 Analyze Survey endpoint called');
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+
+    // Forward the request to n8n
+    // Use container hostname when running in Docker
+    const n8nHost = process.env.IN_DOCKER === 'true' ? 'i16e-n8n' : 'localhost';
+    const n8nUrl = process.env.N8N_BASE_URL || `http://${n8nHost}:5678`;
+    
+    // For Analyze Survey, the Webhook ID can be found in the workflow JSON file
+    // Use workflow ID and webhookId from the workflow file
+    const webhookUrl = `${n8nUrl}/webhook/QqDopcDUbvScRTsI/webhook`;
+    console.log('🔄 Forwarding request to n8n at:', webhookUrl);
+    
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(req.body)
+      });
+
+      if (!response.ok) {
+        throw new Error(`N8N responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Error forwarding request to n8n:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to forward request to n8n',
+        error: error.toString()
+      });
+    }
+  } catch (error) {
+    console.error('Error in analyze-survey endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process analyze-survey request',
+      error: error.toString()
+    });
+  }
+});
+
+// Simple test endpoint that lists all active workflows and their webhooks
+app.get('/api/n8n/list-webhooks', async (req, res) => {
+  try {
+    const n8nHost = process.env.IN_DOCKER === 'true' ? 'i16e-n8n' : 'localhost';
+    const n8nUrl = process.env.N8N_BASE_URL || `http://${n8nHost}:5678`;
+    
+    console.log('🔄 Attempting to get workflow list from n8n at:', n8nUrl);
+    
+    try {
+      // Try to get the list of active workflows from n8n REST API
+      const response = await fetch(`${n8nUrl}/rest/workflows`);
+      
+      console.log('📊 N8N API response status:', response.status);
+      
+      if (!response.ok) {
+        res.status(500).json({
+          success: false,
+          message: 'Failed to retrieve workflows from N8N',
+          status: response.status,
+          statusText: response.statusText
+        });
+        return;
+      }
+      
+      const workflows = await response.json();
+      res.json({
+        success: true,
+        message: 'Retrieved workflows from N8N',
+        workflows
+      });
+    } catch (error) {
+      console.error('Error accessing n8n API:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to reach N8N API',
+        error: error.toString()
+      });
+    }
+  } catch (error) {
+    console.error('Error in list-webhooks endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error in list-webhooks endpoint',
+      error: error.toString()
+    });
+  }
+});
+
+console.log('✅ N8N endpoints registered successfully: /api/n8n/get-cases, /api/n8n/calculate-metrics, /api/n8n/analyze-sct, /api/n8n/analyze-survey, /api/n8n/health, /api/n8n/list-webhooks');
 
 // TEMPORARY: Mock N8N workflow endpoints for development/testing
 // These can be used while N8N workflows are being set up
 app.post('/api/n8n/mock/get-cases', async (req, res) => {
   console.log('📍 Mock N8N get-cases endpoint called');
+  
+  // Return a mock successful response with sample case data
+  res.json({
+    success: true,
+    message: "Successfully retrieved case data",
+    data: {
+      cases: [
+        {
+          case_id: "TM-123456",
+          priority: "P1",
+          owner_full_name: "Test Engineer",
+          title: "Sample Case 1",
+          products: ["Product A", "Product B"],
+          status: "Resolved",
+          created_date: "2025-06-20T08:30:00Z",
+          closed_date: "2025-06-23T15:45:00Z",
+          case_age_days: 3
+        },
+        {
+          case_id: "TM-654321",
+          priority: "P2",
+          owner_full_name: "Test Engineer",
+          title: "Sample Case 2",
+          products: ["Product C"],
+          status: "Resolved",
+          created_date: "2025-06-18T10:15:00Z",
+          closed_date: "2025-06-22T12:30:00Z",
+          case_age_days: 4
+        }
+      ]
+    }
+  });
+});
+
+app.post('/api/n8n/mock/analyze-sct', async (req, res) => {
+  console.log('📍 Mock N8N analyze-sct endpoint called');
+  console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+  
+  // Return a mock successful response
+  res.json({
+    success: true,
+    message: "SCT Analysis completed successfully",
+    data: {
+      sct_metrics: [
+        {
+          owner_full_name: "Test Engineer",
+          sct: 3.5,
+          case_count: 12
+        }
+      ],
+      email_sentiment_analysis: [
+        {
+          problem: "Extended case duration leading to customer frustration due to complex issues",
+          case_id: "TM-123456",
+          recommendations: [
+            "Coach on maintaining clear and concise communications",
+            "Improve proactive status updates during complex investigations"
+          ]
+        }
+      ],
+      summary: {
+        areas_for_improvement: [
+          "Enhance customer communications by translating technical jargon",
+          "Improve proactive engagement during long or complex cases"
+        ],
+        strengths: [
+          "Demonstrated perseverance and persistence in complex cases",
+          "Maintained professional and polite communication throughout"
+        ]
+      }
+    }
+  });
+});
+
+app.post('/api/n8n/mock/analyze-survey', async (req, res) => {
+  console.log('📍 Mock N8N analyze-survey endpoint called');
+  console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+  
+  // Return a mock successful response
+  res.json({
+    success: true,
+    message: "Survey Analysis completed successfully",
+    data: {
+      survey_metrics: {
+        satisfaction_score: 4.2,
+        dsat_count: 2,
+        neut_count: 3,
+        sat_count: 15
+      },
+      sentiment_analysis: [
+        {
+          problem: "Technical explanations were too complex for customer understanding",
+          case_id: "TM-654321",
+          survey_type: "NEUT",
+          recommendations: [
+            "Simplify technical communications for customer understanding",
+            "Provide visual aids when explaining complex concepts"
+          ]
+        }
+      ],
+      summary: {
+        areas_for_improvement: [
+          "Simplify technical language and explanations",
+          "Improve follow-up communications"
+        ],
+        strengths: [
+          "Strong technical expertise and problem-solving",
+          "Professional and courteous customer interactions"
+        ]
+      }
+    }
+  });
+});
   console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
   
   // Return a realistic mock response that matches what the frontend expects
