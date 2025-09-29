@@ -1881,6 +1881,7 @@ const IndexNew = () => {
   };
 
   const handleAnalyzeSCT = async () => {
+    console.log('🎯 HANDLEANALYZESCT FUNCTION CALLED - This is for SCT analysis');
     setSctAnalyzed(true);
     setIsAnalysisLoading(true);
     
@@ -2216,9 +2217,29 @@ const IndexNew = () => {
         cases: caseList
       };
       
-      setSctAnalysisResults(sctAnalysis);
+      // Append new results to existing ones instead of replacing
+      setSctAnalysisResults(prevResults => {
+        if (!prevResults) {
+          console.log('✅ SCT Analysis completed successfully! First results set:', sctAnalysis);
+          return sctAnalysis;
+        } else {
+          const existingCases = prevResults.cases || [];
+          const newCases = sctAnalysis.cases || [];
+          const combinedCases = [...existingCases, ...newCases];
+          
+          const combinedResults = {
+            ...sctAnalysis,
+            cases: combinedCases
+          };
+          
+          console.log('🔄 Appending SCT results - Previous cases:', existingCases.length, 'New cases:', newCases.length, 'Combined:', combinedCases.length);
+          console.log('✅ SCT Analysis completed successfully! Combined results set:', combinedResults);
+          return combinedResults;
+        }
+      });
     } finally {
       setIsAnalysisLoading(false);
+      console.log('🔄 SCT Analysis loading state cleared');
     }
     
   };
@@ -2319,7 +2340,7 @@ const IndexNew = () => {
       // If no insights were found, create a summary insight
       if (processedInsights.length === 0) {
         processedInsights.push({
-          id: 'survey-summary-1',
+          id: `survey-summary-cx-${Date.now()}`,
           title: `${entityLabel} Survey Analysis Complete`,
           description: `Customer satisfaction analysis completed for ${entityName}. ${realSurveyData.length} survey responses were analyzed.`,
           impact: 'Medium',
@@ -2426,7 +2447,7 @@ const IndexNew = () => {
             
             if (item && item.case_id && item.problem) {
               const insight = {
-                id: `survey-analysis-${item.case_id}-${index + 1}`,
+                id: `survey-analysis-${item.case_id}-${Date.now()}-${index + 1}`,
                 title: `Case Analysis: ${item.case_id}`,
                 description: item.problem,
                 impact: 'Medium',
@@ -2434,7 +2455,8 @@ const IndexNew = () => {
                 type: item.survey_type === 'DSAT' ? 'warning' : 'info',
                 recommendation: Array.isArray(item.recommendations) ? 
                   `• ${item.recommendations.join('\n• ')}` : 
-                  'No specific recommendations provided.'
+                  'No specific recommendations provided.',
+                surveyType: item.survey_type // Add survey type for grouping
               };
               
               console.log(`📝 Created insight for ${item.survey_type} case ${item.case_id}:`, insight);
@@ -2463,7 +2485,7 @@ const IndexNew = () => {
           }
           
           const summaryInsight = {
-            id: 'survey-summary-1',
+            id: `survey-summary-${Date.now()}`,
             title: `${entityLabel} Customer Survey Summary`,
             description: summaryDescription,
             impact: 'High',
@@ -2486,7 +2508,7 @@ const IndexNew = () => {
       // If no insights were found, create a summary insight
       if (processedInsights.length === 0) {
         processedInsights.push({
-          id: 'survey-summary-1',
+          id: `survey-summary-analyze-${Date.now()}`,
           title: `${entityLabel} Survey Analysis Complete`,
           description: `Customer satisfaction analysis completed for ${entityName}. ${realSurveyData.length} survey responses were analyzed.`,
           impact: 'Medium',
@@ -2500,7 +2522,13 @@ const IndexNew = () => {
         insights: processedInsights
       };
       
-      setSurveyAnalysisResults(surveyAnalysis);
+      // Append new results to existing ones instead of replacing
+      setSurveyAnalysisResults(prevResults => {
+        const existingInsights = prevResults?.insights || [];
+        const combinedInsights = [...existingInsights, ...processedInsights];
+        console.log('🔄 Appending survey results - Previous:', existingInsights.length, 'New:', processedInsights.length, 'Combined:', combinedInsights.length);
+        return { insights: combinedInsights };
+      });
       setIsAnalysisLoading(false);
       
       toast({
@@ -2980,17 +3008,27 @@ const IndexNew = () => {
   const getAllInsights = () => {
     let allInsights = [...sampleInsights];
     
+    console.log('🔍 getAllInsights called - Current state:');
+    console.log('   - sctAnalysisResults:', !!sctAnalysisResults, sctAnalysisResults?.insights?.length || 0);
+    console.log('   - cxInsightResults:', !!cxInsightResults, cxInsightResults?.insights?.length || 0);
+    console.log('   - surveyAnalysisResults:', !!surveyAnalysisResults, surveyAnalysisResults?.insights?.length || 0);
+    
     if (sctAnalysisResults) {
+      console.log('   📊 Adding SCT insights:', sctAnalysisResults.insights.length);
       allInsights = [...allInsights, ...sctAnalysisResults.insights];
     }
     
     if (cxInsightResults) {
+      console.log('   📊 Adding CX insights:', cxInsightResults.insights.length);
       allInsights = [...allInsights, ...cxInsightResults.insights];
     }
     
     if (surveyAnalysisResults) {
+      console.log('   📊 Adding Survey insights:', surveyAnalysisResults.insights.length);
       allInsights = [...allInsights, ...surveyAnalysisResults.insights];
     }
+    
+    console.log('🎯 Total insights returned:', allInsights.length);
     
     return allInsights;
   };

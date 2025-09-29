@@ -13,6 +13,7 @@ interface Insight {
   recommendation?: string;
   member?: string;
   category?: string;
+  surveyType?: 'DSAT' | 'CSAT';
 }
 
 interface InsightsPanelProps {
@@ -174,6 +175,24 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     insight.title.toLowerCase().includes('case analysis')
   ) : [];
 
+  // Separate DSAT and CSAT insights
+  const dsatInsights = cxInsights.filter(insight => 
+    insight.surveyType === 'DSAT' || 
+    insight.title.toLowerCase().includes('dsat') ||
+    insight.type === 'warning'
+  );
+  
+  const csatInsights = cxInsights.filter(insight => 
+    insight.surveyType === 'CSAT' || 
+    (insight.category?.toLowerCase().includes('case-analysis') && insight.surveyType !== 'DSAT') ||
+    (insight.category?.toLowerCase().includes('summary') && !dsatInsights.some(d => d.id === insight.id))
+  );
+  
+  const otherCxInsights = cxInsights.filter(insight => 
+    !dsatInsights.some(d => d.id === insight.id) && 
+    !csatInsights.some(c => c.id === insight.id)
+  );
+
   return (
     <div className="space-y-6">
       {/* Insights and Recommendations */}
@@ -257,33 +276,111 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
               </div>
               {cxOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 mt-3">
+            <CollapsibleContent className="space-y-4 mt-3">
               {cxInsights.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
                   Click "CX Insight" to generate Customer Satisfaction insights
                 </div>
               ) : (
-                cxInsights.map((insight) => (
-                  <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-3 bg-muted/20 rounded-r-lg">
-                    <div className="flex items-start gap-3">
-                      {getInsightIcon(insight.type)}
-                      <div className="flex-1 space-y-2 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-foreground">{insight.title}</h4>
-                          <Badge variant={getInsightBadgeVariant(insight.type)}>
-                            {insight.type}
-                          </Badge>
-                        </div>
-                        {formatDescription(insight.description)}
-                        {insight.recommendation && (
-                          <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
-                            {formatTextWithBullets(insight.recommendation, 'Recommendation')}
+                <div className="space-y-4">
+                  {/* DSAT Feedback Analysis */}
+                  {dsatInsights.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-2">
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                        <h5 className="font-medium text-sm text-red-700 dark:text-red-400">DSAT Feedback Analysis</h5>
+                        <Badge variant="destructive" className="text-xs">{dsatInsights.length} customer{dsatInsights.length !== 1 ? 's' : ''}</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {dsatInsights.map((insight) => (
+                          <div key={insight.id} className="border-l-4 border-l-red-500 pl-4 py-3 bg-red-50 dark:bg-red-950/20 rounded-r-lg">
+                            <div className="flex items-start gap-3">
+                              {getInsightIcon(insight.type)}
+                              <div className="flex-1 space-y-2 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium text-foreground">{insight.title}</h4>
+                                  <Badge variant="destructive">error</Badge>
+                                </div>
+                                {formatDescription(insight.description)}
+                                {insight.recommendation && (
+                                  <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
+                                    {formatTextWithBullets(insight.recommendation, 'Recommendation')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        )}
+                        ))}
                       </div>
                     </div>
-                  </div>
-                ))
+                  )}
+
+                  {/* CSAT Feedback Analysis */}
+                  {csatInsights.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <h5 className="font-medium text-sm text-green-700 dark:text-green-400">CSAT Feedback Analysis</h5>
+                        <Badge variant="success" className="text-xs">{csatInsights.length} customer{csatInsights.length !== 1 ? 's' : ''}</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {csatInsights.map((insight) => (
+                          <div key={insight.id} className="border-l-4 border-l-green-500 pl-4 py-3 bg-green-50 dark:bg-green-950/20 rounded-r-lg">
+                            <div className="flex items-start gap-3">
+                              {getInsightIcon(insight.type)}
+                              <div className="flex-1 space-y-2 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium text-foreground">{insight.title}</h4>
+                                  <Badge variant="success">success</Badge>
+                                </div>
+                                {formatDescription(insight.description)}
+                                {insight.recommendation && (
+                                  <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
+                                    {formatTextWithBullets(insight.recommendation, 'Recommendation')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other CX Insights (not DSAT/CSAT specific) */}
+                  {otherCxInsights.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-2">
+                        <Info className="h-4 w-4 text-blue-500" />
+                        <h5 className="font-medium text-sm text-blue-700 dark:text-blue-400">General CX Insights</h5>
+                        <Badge variant="secondary" className="text-xs">{otherCxInsights.length}</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {otherCxInsights.map((insight) => (
+                          <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-3 bg-muted/20 rounded-r-lg">
+                            <div className="flex items-start gap-3">
+                              {getInsightIcon(insight.type)}
+                              <div className="flex-1 space-y-2 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium text-foreground">{insight.title}</h4>
+                                  <Badge variant={getInsightBadgeVariant(insight.type)}>
+                                    {insight.type}
+                                  </Badge>
+                                </div>
+                                {formatDescription(insight.description)}
+                                {insight.recommendation && (
+                                  <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
+                                    {formatTextWithBullets(insight.recommendation, 'Recommendation')}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </CollapsibleContent>
           </Collapsible>
