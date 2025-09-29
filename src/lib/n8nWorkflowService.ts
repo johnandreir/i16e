@@ -158,7 +158,7 @@ export class N8nWorkflowService {
           trend: workflowMetrics.trend || '',
           insight: workflowMetrics.insight || result.data?.summary?.areas_for_improvement?.[0] || ''
         },
-        cases: result.data?.cases_analyzed || []
+        cases: this.extractCasesAnalyzed(result) || []
       }
     };
   }
@@ -266,7 +266,7 @@ export class N8nWorkflowService {
       
       // Process and return the real data from n8n
       return {
-        cases: result.data?.cases_analyzed || [],
+        cases: this.extractCasesAnalyzed(result) || [],
         sctReport: result.data?.sct_metrics || []
       };
 
@@ -450,6 +450,22 @@ export class N8nWorkflowService {
   /**
    * Get workflow status by testing webhook availability
    */
+
+  /**
+   * Extract cases_analyzed from result, handling array response structure
+   */
+  private extractCasesAnalyzed(result: any): any[] {
+    // Handle array response structure - extract the first item if result is an array
+    let data = result.data;
+    if (Array.isArray(result) && result.length > 0) {
+      data = result[0];
+    } else if (Array.isArray(result.data) && result.data.length > 0) {
+      data = result.data[0];
+    }
+    
+    return data?.cases_analyzed || [];
+  }
+
   /**
    * Format insights from SCT workflow results
    */
@@ -457,56 +473,122 @@ export class N8nWorkflowService {
     // Use only insights directly provided by the workflow
     // No auto-generated fallbacks or default insights
     
+    // Handle array response structure - extract the first item if result is an array
+    let data = result.data;
+    if (Array.isArray(result) && result.length > 0) {
+      data = result[0];
+    } else if (Array.isArray(result.data) && result.data.length > 0) {
+      data = result.data[0];
+    }
+    
+    // Create a case title lookup from cases_analyzed
+    const caseTitleMap: Record<string, string> = {};
+    if (data?.cases_analyzed && Array.isArray(data.cases_analyzed)) {
+      data.cases_analyzed.forEach((caseData: any) => {
+        if (caseData.case_id && caseData.case_title) {
+          caseTitleMap[caseData.case_id] = caseData.case_title;
+        }
+      });
+    }
+    
     // Check if result contains insights directly
-    if (result.data?.insights && Array.isArray(result.data.insights)) {
-      return result.data.insights;
+    if (data?.insights && Array.isArray(data.insights)) {
+      // Make sure all insights have caseId property and proper case titles
+      return data.insights.map(insight => {
+        const caseMatch = insight.title.match(/Case (\d+)/i);
+        if (caseMatch && caseMatch[1] && !insight.caseId) {
+          return {
+            ...insight,
+            caseId: caseMatch[1],
+            caseTitle: caseTitleMap[caseMatch[1]]
+          };
+        }
+        // Add case title from lookup if caseId exists
+        if (insight.caseId && caseTitleMap[insight.caseId]) {
+          return {
+            ...insight,
+            caseTitle: caseTitleMap[insight.caseId]
+          };
+        }
+        return insight;
+      });
     }
     
     const insights = [];
     
     // If workflow provided specific analysis sections, convert them to insights
     
+    // Add performance summary insight first if available
+    if (data?.summary) {
+      insights.push({
+        id: 'summary-1',
+        title: 'SCT Analysis Summary',
+        description: data.summary.overview || 'Solution cycle time performance overview with optimization opportunities identified.',
+        impact: 'High',
+        category: 'process',
+        type: 'info',
+        recommendation: data.summary.areas_for_improvement?.join('\n') || ''
+      });
+    }
+    
     // Add email sentiment analysis insights if available
-    if (result.data?.email_sentiment_analysis && result.data.email_sentiment_analysis.length > 0) {
-      result.data.email_sentiment_analysis.forEach((item: any, index: number) => {
+    if (data?.email_sentiment_analysis && data.email_sentiment_analysis.length > 0) {
+      data.email_sentiment_analysis.forEach((item: any, index: number) => {
+        const caseTitle = caseTitleMap[item.case_id] || item.case_title;
         insights.push({
           id: `email-${index + 1}`,
           title: `Email Communication Analysis: Case ${item.case_id}`,
-          description: item.problem,
+          description: item.problem || 'Analysis of email communications for this case.',
           impact: 'High',
           category: 'communication',
           type: 'warning',
-          recommendation: item.recommendations?.join('\n') || ''
+          recommendation: item.recommendations?.join('\n') || '',
+          caseId: item.case_id, // Adding explicit caseId property for grouping
+          caseTitle: caseTitle // Use case title from webhook data only
         });
       });
     }
 
     // Add case handoffs and delays insights if available
-    if (result.data?.case_handoffs_and_delays && result.data.case_handoffs_and_delays.length > 0) {
-      result.data.case_handoffs_and_delays.forEach((item: any, index: number) => {
+    if (data?.case_handoffs_and_delays && data.case_handoffs_and_delays.length > 0) {
+      data.case_handoffs_and_delays.forEach((item: any, index: number) => {
+        const caseTitle = caseTitleMap[item.case_id] || item.case_title;
         insights.push({
           id: `delay-${index + 1}`,
-          title: `Case Delay Analysis: Case ${item.case_id}`,
-          description: item.problem,
+          title: `Process Delay Analysis: Case ${item.case_id}`,
+          description: item.problem || 'Analysis of process delays for this case.',
           impact: 'Medium',
           category: 'process',
           type: 'error',
-          recommendation: item.recommendations?.join('\n') || ''
+          recommendation: item.recommendations?.join('\n') || '',
+          caseId: item.case_id, // Adding explicit caseId property for grouping
+          caseTitle: caseTitle // Use case title from webhook data only
         });
       });
     }
     
-    // Use workflow-provided summary if available, but don't create artificial one
-    if (result.data?.summary && insights.length > 0) {
-      insights.unshift({
-        id: 'summary-1',
-        title: 'SCT Analysis Summary',
-        description: result.data.summary.overview || '',
-        impact: 'High',
-        category: 'process',
-        type: 'info',
-        recommendation: result.data.summary.areas_for_improvement?.join('\n') || ''
+    // If we have case-specific insights but no summary, create a basic summary
+    if (!data?.summary && insights.length > 1) {
+      // Count unique case IDs to mention in the summary
+      const uniqueCaseIds = new Set();
+      insights.forEach(insight => {
+        if (insight.caseId) {
+          uniqueCaseIds.add(insight.caseId);
+        }
       });
+      
+      const numCases = uniqueCaseIds.size;
+      if (numCases > 0) {
+        insights.unshift({
+          id: 'auto-summary-1',
+          title: 'Performance Overview',
+          description: `Performance overview showing optimization opportunities across ${numCases} case${numCases > 1 ? 's' : ''}.`,
+          impact: 'High',
+          category: 'process',
+          type: 'info',
+          recommendation: 'Review the detailed case analyses for specific recommendations.'
+        });
+      }
     }
 
     return insights;

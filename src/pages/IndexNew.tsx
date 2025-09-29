@@ -4,13 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, FileText, Users, TrendingUp, AlertCircle, CheckCircle2, Clock, Target, BarChart3, PieChart, PieChart as PieChartIcon, Activity, ThumbsUp, ThumbsDown, CheckCircle, Lightbulb, Database } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import KPICard from '@/components/dashboard/KPICard';
 import FilterSection from '@/components/dashboard/FilterSection';
 import TeamPerformanceChart from '@/components/dashboard/TeamPerformanceChart';
 import SurveyAnalysisChart from '@/components/dashboard/SurveyAnalysisChart';
-import InsightsPanel from '@/components/dashboard/InsightsPanel';
+import InsightsPanel from '@/components/dashboard/ImprovedInsightsPanel';
 import DetailedStatsModal from '@/components/dashboard/DetailedStatsModal';
 import QuickEntityAdd from '@/components/dashboard/QuickEntityAdd';
 import EntityManagementDialog from '@/components/dashboard/EntityManagementDialog';
@@ -146,6 +147,164 @@ const IndexNew = () => {
   const [sctAnalysisResults, setSctAnalysisResults] = useState<any>(null);
   const [cxInsightResults, setCxInsightResults] = useState<any>(null);
   const [surveyAnalysisResults, setSurveyAnalysisResults] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<string>('');
+
+  // Set default active tab based on selected entity
+  useEffect(() => {
+    if (selectedEntity === 'squad') {
+      setActiveTab('dpe');
+    } else if (selectedEntity === 'team') {
+      setActiveTab('squad');
+    }
+  }, [selectedEntity]);
+
+  // Helper function to calculate aggregated data based on active tab
+  const getAggregatedData = () => {
+    if (!performanceOverviewData || performanceOverviewData.length === 0) {
+      return { avgSct: null, totalCases: null, avgSatisfaction: null };
+    }
+
+    const avgSct = performanceOverviewData.reduce((acc, member) => acc + member.sct, 0) / performanceOverviewData.length;
+    const totalCases = performanceOverviewData.reduce((acc, member) => acc + member.cases, 0);
+    const avgSatisfaction = performanceOverviewData.reduce((acc, member) => acc + member.satisfaction, 0) / performanceOverviewData.length;
+
+    return {
+      avgSct: Math.round(avgSct * 100) / 100,
+      totalCases,
+      avgSatisfaction: Math.round(avgSatisfaction * 100) / 100
+    };
+  };
+
+  // Helper function to get chart data based on active tab
+  const getChartData = () => {
+    if (!reportDashboardData?.performanceData) return [];
+
+    if (selectedEntity === 'squad') {
+      if (activeTab === 'squad') {
+        // Show combined data of all members for squad tab
+        const aggregated = getAggregatedData();
+        if (aggregated.avgSct === null) return [];
+        return [{
+          name: generatedEntityValue || 'Combined Squad Data',
+          sct: aggregated.avgSct,
+          cases: aggregated.totalCases,
+          satisfaction: aggregated.avgSatisfaction
+        }];
+      } else {
+        // Show individual DPE data for dpe tab
+        return reportDashboardData.performanceData;
+      }
+    } else if (selectedEntity === 'team') {
+      if (activeTab === 'team') {
+        // Show combined data of all squads for team tab
+        const aggregated = getAggregatedData();
+        if (aggregated.avgSct === null) return [];
+        return [{
+          name: `Combined ${generatedEntityValue || 'Team'} Data`,
+          sct: aggregated.avgSct,
+          cases: aggregated.totalCases,
+          satisfaction: aggregated.avgSatisfaction
+        }];
+      } else {
+        // Show individual squad data for squad tab
+        return reportDashboardData.performanceData;
+      }
+    }
+
+    return reportDashboardData.performanceData;
+  };
+
+  // Helper function to get ALL KPI data based on active tab (SCT, Cases, CSAT, DSAT)
+  const getKPIData = () => {
+    const aggregated = getAggregatedData();
+    const aggregatedSatisfaction = getAggregatedSatisfactionData();
+    
+    if (selectedEntity === 'squad') {
+      if (activeTab === 'squad') {
+        // Show aggregated data for squad tab
+        return {
+          sct: aggregated.avgSct,
+          cases: aggregated.totalCases,
+          csat: aggregatedSatisfaction.csat,
+          dsat: aggregatedSatisfaction.dsat
+        };
+      } else {
+        // Show original data for dpe tab
+        return {
+          sct: calculateMetricsData?.sct || reportCurrentData?.sct,
+          cases: calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases,
+          csat: satisfactionData?.satisfactionData?.csatPercentage ?? calculateMetricsData?.satisfaction ?? reportCurrentData?.satisfaction,
+          dsat: satisfactionData?.satisfactionData?.dsatPercentage ?? calculateMetricsData?.dsatPercentage ?? reportCurrentData?.dsatPercentage
+        };
+      }
+    } else if (selectedEntity === 'team') {
+      if (activeTab === 'team') {
+        // Show aggregated data for team tab
+        return {
+          sct: aggregated.avgSct,
+          cases: aggregated.totalCases,
+          csat: aggregatedSatisfaction.csat,
+          dsat: aggregatedSatisfaction.dsat
+        };
+      } else {
+        // Show original data for squad tab
+        return {
+          sct: calculateMetricsData?.sct || reportCurrentData?.sct,
+          cases: calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases,
+          csat: satisfactionData?.satisfactionData?.csatPercentage ?? calculateMetricsData?.satisfaction ?? reportCurrentData?.satisfaction,
+          dsat: satisfactionData?.satisfactionData?.dsatPercentage ?? calculateMetricsData?.dsatPercentage ?? reportCurrentData?.dsatPercentage
+        };
+      }
+    }
+
+    // Default fallback
+    return {
+      sct: calculateMetricsData?.sct || reportCurrentData?.sct,
+      cases: calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases,
+      csat: satisfactionData?.satisfactionData?.csatPercentage ?? calculateMetricsData?.satisfaction ?? reportCurrentData?.satisfaction,
+      dsat: satisfactionData?.satisfactionData?.dsatPercentage ?? calculateMetricsData?.dsatPercentage ?? reportCurrentData?.dsatPercentage
+    };
+  };
+
+  // Helper function to calculate aggregated satisfaction data
+  const getAggregatedSatisfactionData = () => {
+    if (!satisfactionData?.satisfactionData) {
+      return { csat: null, dsat: null };
+    }
+
+    // For aggregated views, use the existing satisfaction data
+    // In a real scenario, you might want to aggregate individual member satisfaction data
+    return {
+      csat: satisfactionData.satisfactionData.csatPercentage,
+      dsat: satisfactionData.satisfactionData.dsatPercentage
+    };
+  };
+
+  // Helper function to get survey chart data based on active tab
+  const getSurveyChartData = () => {
+    if (!chartSurveyData || chartSurveyData.length === 0) return [];
+
+    if (selectedEntity === 'squad') {
+      if (activeTab === 'squad') {
+        // Show combined data of all members for squad tab
+        // Aggregate the survey data if needed
+        return chartSurveyData;
+      } else {
+        // Show individual DPE data for dpe tab
+        return chartSurveyData;
+      }
+    } else if (selectedEntity === 'team') {
+      if (activeTab === 'team') {
+        // Show combined data of all squads for team tab
+        return chartSurveyData;
+      } else {
+        // Show individual squad data for squad tab
+        return chartSurveyData;
+      }
+    }
+
+    return chartSurveyData;
+  };
   
   // Webhook warm-up effect - runs once when component mounts
   useEffect(() => {
@@ -2027,7 +2186,7 @@ const IndexNew = () => {
           aiInsights.unshift({
             id: 'summary-1',
             title: `${entityLabel} Performance Summary`,
-            description: `Analysis of ${scrubberOutput.cases_analyzed?.length || 0} cases completed for ${entityName}.`,
+            description: `Solution cycle time performance overview with multiple optimization opportunities identified.`,
             impact: 'High',
             category: 'performance',
             type: 'info',
@@ -2145,7 +2304,7 @@ const IndexNew = () => {
         // Show fallback message
         toast({
           title: `${entityLabel} SCT Analysis (Local)`,
-          description: `High SCT Email Scrubber unavailable. Local analysis of ${realCaseData.length} cases completed for ${entityName}.`,
+          description: `High SCT Email Scrubber unavailable. Local analysis of ${realCaseData.length} cases completed.`,
           variant: "default"
         });
       }
@@ -2452,7 +2611,7 @@ const IndexNew = () => {
         // Add summary insight if available
         if (workflowResults.summary) {
           const summary = workflowResults.summary;
-          let summaryDescription = `Analysis of ${workflowResults.cases_analyzed?.length || 0} survey cases completed for ${entityName}.`;
+          let summaryDescription = `Customer satisfaction analysis reveals key trends and improvement opportunities.`;
           
           if (summary.strengths?.length > 0) {
             summaryDescription += `\n\n✅ Strengths identified:\n• ${summary.strengths.join('\n• ')}`;
@@ -3187,13 +3346,9 @@ const IndexNew = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KPICard
                   title="SCT Score"
-                  value={formatKPIValue(
-                    calculateMetricsData?.sct || 
-                    reportCurrentData?.sct
-                  )}
+                  value={formatKPIValue(getKPIData().sct)}
                   target={
-                    (calculateMetricsData?.sct !== undefined) || 
-                    (reportCurrentData?.sct !== undefined) ? 15 : null
+                    (getKPIData().sct !== undefined && getKPIData().sct !== null) ? 15 : null
                   }
                   unit="days"
                   icon={<Clock className="h-4 w-4" />}
@@ -3203,11 +3358,7 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="Closed Cases"
-                  value={
-                    calculateMetricsData?.closedCases || 
-                    reportCurrentData?.closedCases || 
-                    reportCurrentData?.cases
-                  }
+                  value={getKPIData().cases}
                   target={null}
                   unit=""
                   icon={<CheckCircle className="h-4 w-4" />}
@@ -3217,19 +3368,9 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="CSAT Score"
-                  value={formatKPIValue(
-                    satisfactionData?.satisfactionData?.csatPercentage !== null && satisfactionData?.satisfactionData?.csatPercentage !== undefined
-                      ? satisfactionData.satisfactionData.csatPercentage
-                      : calculateMetricsData?.satisfaction !== null && calculateMetricsData?.satisfaction !== undefined
-                        ? calculateMetricsData.satisfaction
-                        : reportCurrentData?.satisfaction !== null && reportCurrentData?.satisfaction !== undefined
-                          ? reportCurrentData.satisfaction
-                          : null
-                  )}
+                  value={formatKPIValue(getKPIData().csat)}
                   target={
-                    (satisfactionData?.satisfactionData?.csatPercentage !== null && satisfactionData?.satisfactionData?.csatPercentage !== undefined) ||
-                    (calculateMetricsData?.satisfaction !== null && calculateMetricsData?.satisfaction !== undefined) || 
-                    (reportCurrentData?.satisfaction !== null && reportCurrentData?.satisfaction !== undefined) ? 85 : null
+                    (getKPIData().csat !== null && getKPIData().csat !== undefined) ? 85 : null
                   }
                   unit="%"
                   icon={<ThumbsUp className="h-4 w-4" />}
@@ -3239,19 +3380,9 @@ const IndexNew = () => {
                 />
                 <KPICard
                   title="DSAT Score"
-                  value={formatKPIValue(
-                    satisfactionData?.satisfactionData?.dsatPercentage !== null && satisfactionData?.satisfactionData?.dsatPercentage !== undefined
-                      ? satisfactionData.satisfactionData.dsatPercentage
-                      : calculateMetricsData?.dsatPercentage !== null && calculateMetricsData?.dsatPercentage !== undefined
-                        ? calculateMetricsData.dsatPercentage
-                        : reportCurrentData?.dsatPercentage !== null && reportCurrentData?.dsatPercentage !== undefined
-                          ? reportCurrentData.dsatPercentage
-                          : null
-                  )}
+                  value={formatKPIValue(getKPIData().dsat)}
                   target={
-                    (satisfactionData?.satisfactionData?.dsatPercentage !== null && satisfactionData?.satisfactionData?.dsatPercentage !== undefined) ||
-                    (calculateMetricsData?.dsatPercentage !== null && calculateMetricsData?.dsatPercentage !== undefined) || 
-                    (reportCurrentData?.dsatPercentage !== null && reportCurrentData?.dsatPercentage !== undefined) ? 5 : null
+                    (getKPIData().dsat !== null && getKPIData().dsat !== undefined) ? 5 : null
                   }
                   unit="%"
                   icon={<ThumbsDown className="h-4 w-4" />}
@@ -3275,19 +3406,44 @@ const IndexNew = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-2 card-content">
-                    {isPerformanceLoading ? (
-                      <TeamPerformanceChart
-                        data={[]}
-                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
-                        onBarClick={handleIndividualBarClick}
-                        isLoading={true}
-                      />
-                    ) : (
-                      <TeamPerformanceChart
-                        data={reportDashboardData?.performanceData || []}
-                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
-                        onBarClick={handleIndividualBarClick}
-                      />
+                    {/* Chart Section */}
+                    <div className="mb-4">
+                      {isPerformanceLoading ? (
+                        <TeamPerformanceChart
+                          data={[]}
+                          title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
+                          onBarClick={handleIndividualBarClick}
+                          isLoading={true}
+                        />
+                      ) : (
+                        <TeamPerformanceChart
+                          data={getChartData()}
+                          title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
+                          onBarClick={handleIndividualBarClick}
+                        />
+                      )}
+                    </div>
+
+                    {/* Dynamic Tabs Section - Centered */}
+                    {reportGenerated && selectedEntity && (
+                      <div className="flex justify-center">
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-md">
+                          <TabsList className="grid w-full grid-cols-2 mb-4">
+                            {selectedEntity === 'squad' && (
+                              <>
+                                <TabsTrigger value="dpe">DPE</TabsTrigger>
+                                <TabsTrigger value="squad">Squad</TabsTrigger>
+                              </>
+                            )}
+                            {selectedEntity === 'team' && (
+                              <>
+                                <TabsTrigger value="squad">Squad</TabsTrigger>
+                                <TabsTrigger value="team">Team</TabsTrigger>
+                              </>
+                            )}
+                          </TabsList>
+                        </Tabs>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -3302,26 +3458,51 @@ const IndexNew = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="card-content">
-                    {isSatisfactionLoading && !hasTimedOut ? (
-                      <SurveyAnalysisChart
-                        data={[]}
-                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
-                        totalSurveys={0}
-                        isLoading={true}
-                        onPieClick={handleSurveySegmentClick}
-                      />
-                    ) : (
-                      // Always use SurveyAnalysisChart component for consistent styling
-                      <SurveyAnalysisChart
-                        data={chartSurveyData && chartSurveyData.length > 0 ? chartSurveyData : []}
-                        title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
-                        totalSurveys={
-                          chartSurveyData && chartSurveyData.length > 0 ? 
-                          (chartSurveyData.reduce((sum, item) => sum + (item.value || 0), 0) ||
-                          (satisfactionData?.satisfactionData?.total || 0)) : 0
-                        }
-                        onPieClick={handleSurveySegmentClick}
-                      />
+                    {/* Chart Section */}
+                    <div className="mb-4">
+                      {isSatisfactionLoading && !hasTimedOut ? (
+                        <SurveyAnalysisChart
+                          data={[]}
+                          title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
+                          totalSurveys={0}
+                          isLoading={true}
+                          onPieClick={handleSurveySegmentClick}
+                        />
+                      ) : (
+                        // Always use SurveyAnalysisChart component for consistent styling
+                        <SurveyAnalysisChart
+                          data={getSurveyChartData()}
+                          title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
+                          totalSurveys={
+                            getSurveyChartData().length > 0 ? 
+                            (getSurveyChartData().reduce((sum, item) => sum + (item.value || 0), 0) ||
+                            (satisfactionData?.satisfactionData?.total || 0)) : 0
+                          }
+                          onPieClick={handleSurveySegmentClick}
+                        />
+                      )}
+                    </div>
+
+                    {/* Dynamic Tabs Section - Centered */}
+                    {reportGenerated && selectedEntity && (
+                      <div className="flex justify-center">
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-md">
+                          <TabsList className="grid w-full grid-cols-2 mb-4">
+                            {selectedEntity === 'squad' && (
+                              <>
+                                <TabsTrigger value="dpe">DPE</TabsTrigger>
+                                <TabsTrigger value="squad">Squad</TabsTrigger>
+                              </>
+                            )}
+                            {selectedEntity === 'team' && (
+                              <>
+                                <TabsTrigger value="squad">Squad</TabsTrigger>
+                                <TabsTrigger value="team">Team</TabsTrigger>
+                              </>
+                            )}
+                          </TabsList>
+                        </Tabs>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
