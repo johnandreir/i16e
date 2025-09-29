@@ -1,0 +1,747 @@
+{
+  "name": "Step 1",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb5210fa-51f6-4dd1-a15d-904d8f548a57",
+              "name": "owner_full_name",
+              "value": "={{ $json.owner_full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "94c92f61-6090-453b-9d6c-54d77e08f378",
+              "name": "case_id",
+              "value": "={{ $json.case_id }}",
+              "type": "string"
+            },
+            {
+              "id": "2568e5c6-c8b6-4f00-8e67-3f7c75b0c6dc",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "0ac33fb5-85e5-423c-a27d-e09b9b92b20b",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "72efbc20-b9e9-418f-99c2-1e3fe37ca71f",
+              "name": "products",
+              "value": "={{ $json.products }}",
+              "type": "string"
+            },
+            {
+              "id": "41af6b86-74d6-4c73-a76f-bf6c25a60e48",
+              "name": "status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "6b0b92a4-c9a2-4e5c-a93e-c4d1f1e2b3a4",
+              "name": "created_date",
+              "value": "={{ $json.created_date }}",
+              "type": "string"
+            },
+            {
+              "id": "8d4c6e1f-5a7b-4f9d-b2e8-a9c7e6f4d2b1",
+              "name": "closed_date",
+              "value": "={{ $json.closed_date }}",
+              "type": "string"
+            },
+            {
+              "id": "9e5f7a2c-6b8d-4c1e-a3f9-d7e5c2b4f1a8",
+              "name": "content",
+              "value": "={{ $json.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1008,
+        320
+      ],
+      "id": "eb5555f4-bc13-40fa-a9f5-b836eb49b8a7",
+      "name": "onlyDocs"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connectone-stg.trendmicro.com:8443/api/eurekasearch/EurekaSearch",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Ocp-Apim-Subscription-Key",
+              "value": "693e96c64b6b4358be879c161f8e4cf4"
+            },
+            {
+              "name": "Content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        96,
+        512
+      ],
+      "id": "49076c71-184f-43ba-82c3-9e869483990f",
+      "name": "eurekaAPI",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "NXYnB4PqWAZ37mHL",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data.results[0].docs",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        784,
+        320
+      ],
+      "id": "ec0e39c5-584d-4569-8db7-b16502578ab0",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        320,
+        320
+      ],
+      "id": "6b4f993c-bb33-49eb-a5ca-f71ebb299b6d",
+      "name": "Merge",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized cleaning - adaptive processing based on dataset size\nconst inputData = $input.all();\nconst LARGE_DATASET_THRESHOLD = 50;\n\n// Determine if we should use fast mode based on dataset size\nconst useFastMode = inputData.length > LARGE_DATASET_THRESHOLD;\nconsole.log(`Processing ${inputData.length} items, using ${useFastMode ? 'FAST' : 'NORMAL'} mode`);\n\nif (useFastMode) {\n  // FAST MODE: Minimal cleaning for large datasets (teams/squads)\n  console.log('FAST MODE: Skipping heavy HTML/PII processing for performance');\n  \n  const fastResults = inputData.map(function(item) {\n    const data = item.json;\n    \n    // Basic cleaning only\n    function quickClean(text) {\n      if (!text || typeof text !== 'string') return text;\n      return text\n        .replace(/&nbsp;/g, ' ')\n        .replace(/&amp;/g, '&')\n        .replace(/&lt;/g, '<')\n        .replace(/&gt;/g, '>')\n        .replace(/\\s+/g, ' ')\n        .trim();\n    }\n    \n    return {\n      json: {\n        case_id: data.case_id,\n        priority: data.priority,\n        owner_full_name: data.owner_full_name,\n        title: quickClean(data.title),\n        products: data.products,\n        status: data.status,\n        created_date: data.created_date,\n        closed_date: data.closed_date,\n        content: quickClean(data.content ? data.content.substring(0, 1000) : ''), // Truncate content\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Processed ${fastResults.length} items in minimal time`);\n  return fastResults;\n  \n} else {\n  // NORMAL MODE: Full cleaning for smaller datasets (individuals)\n  console.log('NORMAL MODE: Full HTML/PII processing');\n  \n  function cleanHtmlContent(text) {\n    if (!text || typeof text !== 'string') return text;\n    return text\n      .replace(/<[^>]*>/g, '') // Remove HTML tags\n      .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces\n      .replace(/&amp;/g, '&') // Replace encoded ampersands\n      .replace(/&lt;/g, '<') // Replace encoded less than\n      .replace(/&gt;/g, '>') // Replace encoded greater than\n      .replace(/&quot;/g, '\"') // Replace encoded quotes\n      .replace(/&#39;/g, \"'\") // Replace encoded apostrophes\n      .replace(/\\s+/g, ' ') // Replace multiple whitespace with single space\n      .trim(); // Remove leading/trailing whitespace\n  }\n\n  function removePII(text) {\n    if (!text || typeof text !== 'string') return text;\n    return text\n      // Remove email addresses\n      .replace(/\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b/g, '[EMAIL_REMOVED]')\n      // Remove US phone numbers with specific formatting\n      .replace(/\\b(\\+?1[-.\\s]?)?\\(?([0-9]{3})\\)?[-.\\s]?([0-9]{3})[-.\\s]?([0-9]{4})\\b/g, '[PHONE_REMOVED]')\n      // Remove international phone numbers with separators\n      .replace(/\\b\\+[1-9]\\d{0,3}[-.\\s][0-9]{1,4}[-.\\s]?[0-9]{1,4}[-.\\s]?[0-9]{1,9}\\b/g, '[PHONE_REMOVED]')\n      // Remove international phone numbers without separators (total 8-15 digits including country code)\n      .replace(/\\+\\d{8,15}\\b/g, '[PHONE_REMOVED]')\n      // Remove standalone 10-11 digit numbers that are likely phone numbers\n      .replace(/\\b(?<![0-9T-])\\d{10,11}(?![0-9T:-])\\b/g, '[PHONE_REMOVED]')\n      // Remove system generated email disclaimers\n      .replace(/\\*\\*\\s*This is a system generated email from our case tracking system\\*\\*\\*.*?message\\.\\s*/gis, '')\n      .replace(/This message was sent from outside of Trend Micro\\.\\s*/gi, '')\n      .replace(/Please do not click links or open attachments unless you recognise the source of this email and know the content is safe\\.\\s*/gi, '')\n      .replace(/This email has been received from an external source\\. Do not click links or open attachments unless you can confirm the sender and know the content is safe\\.\\s*/gi, '')\n      // Remove additional resources section\n      .replace(/Additional Resources.*?Vulnerabilities\\s*/gis, '');\n  }\n\n  function processText(text) {\n    if (!text || typeof text !== 'string') return text;\n    let cleaned = cleanHtmlContent(text);\n    cleaned = removePII(cleaned);\n    return cleaned;\n  }\n\n  function processObject(obj) {\n    if (typeof obj === 'string') {\n      return processText(obj);\n    } else if (Array.isArray(obj)) {\n      return obj.map(function(item) { return processObject(item); });\n    } else if (obj && typeof obj === 'object') {\n      const cleaned = {};\n      for (const key in obj) {\n        if (obj.hasOwnProperty(key)) {\n          cleaned[key] = processObject(obj[key]);\n        }\n      }\n      return cleaned;\n    }\n    return obj;\n  }\n\n  // Process all input items with full cleaning\n  const outputData = inputData.map(function(item) {\n    return {\n      json: processObject(item.json)\n    };\n  });\n  \n  console.log(`NORMAL MODE: Processed ${outputData.length} items with full cleaning`);\n  return outputData;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        320
+      ],
+      "id": "91b7c5a7-6c51-49d6-bb91-6bb409536cc9",
+      "name": "cleanHTML&PII"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized email structuring - adaptive processing based on dataset size and fast_processed flag\nconst items = $input.all();\nconst LARGE_DATASET_THRESHOLD = 50;\n\n// Check if we're in fast mode (large dataset)\nconst useFastMode = items.length > LARGE_DATASET_THRESHOLD || (items[0] && items[0].json.fast_processed);\nconsole.log(`Email structuring: ${items.length} items, fast mode: ${useFastMode}`);\n\nif (useFastMode) {\n  // FAST MODE: Minimal email processing for large datasets\n  console.log('FAST MODE: Skipping complex email thread structuring');\n  \n  const fastResults = items.map(function(item) {\n    const itemData = item.json;\n    \n    // Create simple email thread without complex parsing\n    const emailContent = itemData.content || '';\n    const simpleThread = emailContent \n      ? `EMAIL THREAD - Case ${itemData.case_id}\\n\\n[FAST_PROCESSED] Content: ${emailContent.substring(0, 200)}${emailContent.length > 200 ? '...' : ''}\\n\\n[Note: Full email parsing skipped for performance]`\n      : `EMAIL THREAD - Case ${itemData.case_id}\\n\\nNo email content available`;\n    \n    return {\n      json: {\n        case_id: itemData.case_id,\n        priority: itemData.priority,\n        structured_email_thread: simpleThread,\n        owner_full_name: itemData.owner_full_name,\n        title: itemData.title,\n        products: Array.isArray(itemData.products) ? itemData.products[0] : itemData.products,\n        status: itemData.status,\n        created_date: itemData.created_date,\n        closed_date: itemData.closed_date,\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Structured ${fastResults.length} email threads quickly`);\n  return fastResults;\n  \n} else {\n  // NORMAL MODE: Full email thread processing for smaller datasets\n  console.log('NORMAL MODE: Full email thread structuring');\n  \n  // Original complex email processing functions (condensed for performance)\n  function cleanEmailThread(rawContent) {\n    if (!rawContent) return '';\n    \n    // Simplified cleaning for better performance\n    let cleaned = rawContent\n      .replace(/&nbsp;/g, ' ')\n      .replace(/&amp;/g, '&')\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>');\n    \n    // Quick case ID extraction\n    let caseId = '';\n    const tmIndex = cleaned.indexOf('TM-');\n    if (tmIndex !== -1) {\n      const numEnd = tmIndex + 3;\n      let endIndex = numEnd;\n      while (endIndex < cleaned.length && cleaned.charAt(endIndex) >= '0' && cleaned.charAt(endIndex) <= '9') {\n        endIndex++;\n      }\n      caseId = cleaned.substring(tmIndex, endIndex);\n    }\n    \n    return {\n      case_id: caseId,\n      content: cleaned.replace(/  +/g, ' ').trim(),\n      structured_thread: `EMAIL THREAD - Case ${caseId}\\n\\nProcessed Content: ${cleaned.substring(0, 1000)}${cleaned.length > 1000 ? '...' : ''}`,\n      timestamp: new Date().toISOString()\n    };\n  }\n  \n  const results = [];\n  \n  for (let i = 0; i < items.length; i++) {\n    const item = items[i];\n    const emailContent = item.json.content || item.json.description || item.json.body || '';\n    \n    if (emailContent) {\n      const cleanedEmail = cleanEmailThread(emailContent);\n      \n      results.push({\n        json: {\n          case_id: item.json.case_id,\n          priority: item.json.priority,\n          structured_email_thread: cleanedEmail.structured_thread,\n          owner_full_name: item.json.owner_full_name,\n          title: item.json.title,\n          products: Array.isArray(item.json.products) ? item.json.products[0] : item.json.products,\n          status: item.json.status,\n          created_date: item.json.created_date,\n          closed_date: item.json.closed_date\n        }\n      });\n    }\n  }\n  \n  console.log(`NORMAL MODE: Structured ${results.length} email threads with full processing`);\n  return results;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        320
+      ],
+      "id": "23d85a9e-688a-426c-8a4e-3bf21a86092b",
+      "name": "structurizeEmail"
+    },
+    {
+      "parameters": {
+        "jsCode": "function calculateCaseAge(jsonData) {\n  return jsonData.map(caseItem => {\n    const createdDate = new Date(caseItem.created_date);\n    const closedDate = new Date(caseItem.closed_date);\n    const caseAgeInDays = Math.ceil((closedDate - createdDate) / (1000 * 60 * 60 * 24));\n\n    return {\n      ...caseItem,\n      case_age_days: caseAgeInDays\n    };\n  });\n}\n\n// For n8n usage - process the input items\nconst items = $input.all();\nconst processedData = items.map(item => item.json);\nconst result = calculateCaseAge(processedData);\n\n// Return the processed cases with Case Age field\nreturn result.map(caseData => ({ json: caseData }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        320
+      ],
+      "id": "7296e79a-532f-489d-abe9-30c211071e5c",
+      "name": "calcCaseAgeDay"
+    },
+    {
+      "parameters": {
+        "content": "## Clean API Response (HTML and PII), then Populate MongoDB",
+        "height": 256,
+        "width": 1616
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        240,
+        224
+      ],
+      "typeVersion": 1,
+      "id": "22799112-595b-4b2d-928c-386ecaed2252",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "cases",
+        "fields": " case_id, priority, owner_full_name, title, products, status, created_date, closed_date, case_age_days, structured_email_thread, fast_processed",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        320
+      ],
+      "id": "478c900f-ab75-42cf-bc28-d6730bd31402",
+      "name": "populateDB",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "NXkVLOCLl33yKAKM",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Trigger entity processing after all data is saved\nconsole.log('=== TRIGGERING ENTITY PROCESSING WORKFLOW ===');\nconsole.log('All case data has been saved to DB. Ready to trigger entity processing.');\n\n// Small delay to ensure DB operations are complete\nreturn new Promise(resolve => {\n  setTimeout(() => {\n    resolve([{ json: { message: 'Ready for entity processing', timestamp: new Date().toISOString() } }]);\n  }, 1000);\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        320
+      ],
+      "id": "ea5e161c-1f95-412f-a063-eef2a34359c1",
+      "name": "Trigger Entity Processing"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "collection": "cases"
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.2,
+      "position": [
+        -352,
+        432
+      ],
+      "id": "93c2522e-b48b-4f46-aa3d-2aaa55fc3e1f",
+      "name": "deleteDB",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mongoDb": {
+          "id": "NXkVLOCLl33yKAKM",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Loop\nIterate through queried cases (Eureka API limit is 30 cases per query)",
+        "height": 336,
+        "width": 672,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        32,
+        400
+      ],
+      "typeVersion": 1,
+      "id": "f1ee9a00-e53f-4cff-8f2c-0289c5e0a10b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Optimized pagination with smarter batch sizing and parallel processing hints\ntry {\n  const inputData = $input.first().json;\n  \n  console.log('=== OPTIMIZED PAGINATION: ACCESSING ORIGINAL QUERY ===');\n  console.log('Current input data:', JSON.stringify(inputData, null, 2));\n  \n  // Extract current start value from the input\n  let currentStart = 1;\n  if (inputData.data && typeof inputData.data.start === 'number') {\n    currentStart = inputData.data.start;\n  } else if (typeof inputData.start === 'number') {\n    currentStart = inputData.start;\n  }\n  \n  console.log('Current start value:', currentStart);\n  \n  // Access the original query from the Edit Fields_declareStart node\n  let originalQuery = null;\n  \n  try {\n    // Use the correct n8n syntax to access previous node data\n    const declareStartData = $node['Edit Fields_declareStart'].json;\n    console.log('Edit Fields_declareStart data:', JSON.stringify(declareStartData, null, 2));\n    \n    if (declareStartData && declareStartData.action) {\n      originalQuery = declareStartData;\n      console.log('Successfully retrieved original query from Edit Fields_declareStart');\n    }\n  } catch (nodeAccessError) {\n    console.log('Could not access Edit Fields_declareStart node:', nodeAccessError.message);\n  }\n  \n  // If we still don't have the original query, try to access ProcessWebhookData\n  if (!originalQuery) {\n    try {\n      const webhookData = $node['ProcessWebhookData'].json;\n      console.log('ProcessWebhookData:', JSON.stringify(webhookData, null, 2));\n      \n      if (webhookData && webhookData.webhookData) {\n        const wd = webhookData.webhookData;\n        originalQuery = {\n          action: \"query\",\n          q: \"*\",\n          source: \"corp_cases_en\",\n          lang: \"en-us\",\n          search_type: \"text_text\",\n          filter: {\n            owner_full_name: wd.ownerNames || [],\n            status: [\"Resolved\", \"Cancelled\"],\n            closed_date: [wd.eurekaDateRange] || []\n          },\n          field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\"],\n          num: 30\n        };\n        console.log('Reconstructed query from webhook data');\n      }\n    } catch (webhookError) {\n      console.log('Could not access ProcessWebhookData node:', webhookError.message);\n    }\n  }\n  \n  if (!originalQuery) {\n    return [{ json: { \n      error: 'Cannot access original query from any node',\n      currentInput: inputData,\n      startValue: currentStart,\n      nodeAccessAttempts: [\n        'Edit Fields_declareStart: failed',\n        'ProcessWebhookData: failed'\n      ]\n    }}];\n  }\n  \n  // OPTIMIZATION: Use intelligent batch sizing based on expected dataset size\n  // For teams/squads with many owners, use larger jumps to reduce API calls\n  const ownerCount = originalQuery.filter?.owner_full_name?.length || 1;\n  const isLargeDataset = ownerCount > 5; // Squad/team likely has >5 owners\n  \n  // Adaptive step size: larger datasets get bigger jumps\n  const stepSize = isLargeDataset ? 60 : 30; // Double step for large datasets\n  const newStart = currentStart + stepSize;\n  \n  // Create the pagination payload\n  const paginationPayload = {\n    ...originalQuery, // Use all original query parameters\n    start: newStart,   // Update start value with optimized step\n    num: stepSize,     // Match num to step size for consistency\n    optimized: isLargeDataset,\n    ownerCount: ownerCount\n  };\n  \n  console.log('=== OPTIMIZED PAGINATION: SUCCESS ===');\n  console.log(`Original start: ${currentStart} -> New start: ${newStart} (step: ${stepSize})`);\n  console.log(`Large dataset optimization: ${isLargeDataset} (${ownerCount} owners)`);\n  console.log('Pagination payload:', JSON.stringify(paginationPayload, null, 2));\n  \n  return [{ json: paginationPayload }];\n  \n} catch (error) {\n  console.error('Error in optimized pagination Edit Fields:', error);\n  return [{ json: { \n    error: 'Pagination failed: ' + error.message, \n    stack: error.stack,\n    input: $input.first().json\n  }}];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        576
+      ],
+      "id": "e7e95979-497c-4dd4-8deb-a27d58096f01",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "63bec52c-801f-45e9-8616-af1fc55bbecc",
+              "leftValue": "={{ $json.data.start }}",
+              "rightValue": "={{ $json.data.results[0].total - 100 }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        320,
+        512
+      ],
+      "id": "c4c268bc-ef1f-47cc-968b-376d5c5d5636",
+      "name": "Pagination Check"
+    },
+    {
+      "parameters": {
+        "content": "## Main Workflow - Dynamic Entity and Date Processing",
+        "height": 816,
+        "width": 2768,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -560,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "906c677a-33c8-4d63-ae69-a2efacad4c46",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "get-performance",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -800,
+        512
+      ],
+      "id": "76bcbb0a-750a-4dbf-9474-4010af6a0be3",
+      "name": "Webhook",
+      "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process webhook data - simplified working version with execution guard\nconst inputData = $input.first();\nconsole.log('=== PROCESSING WEBHOOK DATA ===');\n\n// EXECUTION GUARD: Check if workflow is already running\n// This prevents infinite loops from downstream workflows\nconst currentTime = new Date().getTime();\nconst executionKey = 'get-cases-execution-' + Math.floor(currentTime / 60000); // 1-minute window\n\nconsole.log('Execution guard key:', executionKey);\n\n// Get the actual webhook data from the correct location\nconst webhookJson = $input.first().json;\nlet actualData = null;\n\nif (webhookJson && webhookJson.body) {\n  actualData = webhookJson.body;\n} else if (webhookJson) {\n  actualData = webhookJson;\n} else {\n  actualData = inputData;\n}\n\n// Check if this is a spurious re-execution\nif (actualData && actualData.source === 'internal-workflow') {\n  console.log('GUARD: Detected internal workflow trigger - blocking execution');\n  return [{ json: { \n    blocked: true, \n    reason: 'Internal workflow re-execution prevented',\n    timestamp: new Date().toISOString()\n  }}];\n}\n\nif (actualData) {\n  const entityType = actualData.entityType || '';\n  const entityName = actualData.entityName || '';\n  const ownerNamesRaw = actualData.ownerNames;\n  const eurekaDateRange = actualData.eurekaDateRange || '';\n  const dateRange = actualData.dateRange;\n  \n  // Convert ownerNames\n  let ownerNames = [];\n  if (ownerNamesRaw && typeof ownerNamesRaw === 'object') {\n    ownerNames = Object.values(ownerNamesRaw);\n  }\n  \n  const result = {\n    webhookData: {\n      entityType: entityType,\n      entityName: entityName,\n      ownerNames: ownerNames,\n      eurekaDateRange: eurekaDateRange,\n      dateRange: dateRange,\n      executionId: executionKey\n    }\n  };\n  \n  console.log('ProcessWebhookData SUCCESS:', JSON.stringify(result, null, 2));\n  return [{ json: result }];\n} else {\n  console.log('ERROR - No data found');\n  return [{ json: { error: 'No data found' } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        512
+      ],
+      "id": "6a86f6a9-1186-42d1-9e47-e8a3cdc830da",
+      "name": "ProcessWebhookData"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create complete Eureka API request payload from ProcessWebhookData\ntry {\n  // Get webhook data from ProcessWebhookData node instead of current input\n  const webhookData = $node['ProcessWebhookData'].json.webhookData;\n  \n  console.log('=== CREATING COMPLETE EUREKA API PAYLOAD ===');\n  console.log('Webhook data from ProcessWebhookData:', JSON.stringify(webhookData, null, 2));\n  \n  if (!webhookData) {\n    console.error('ERROR: No webhookData from ProcessWebhookData node');\n    return [{ json: { error: 'No webhookData from ProcessWebhookData node' } }];\n  }\n  \n  // Validate required fields\n  if (!webhookData.ownerNames || !Array.isArray(webhookData.ownerNames) || webhookData.ownerNames.length === 0) {\n    console.error('ERROR: Invalid ownerNames:', webhookData.ownerNames);\n    return [{ json: { error: 'Invalid ownerNames', ownerNames: webhookData.ownerNames } }];\n  }\n  \n  if (!webhookData.eurekaDateRange || typeof webhookData.eurekaDateRange !== 'string') {\n    console.error('ERROR: Invalid eurekaDateRange:', webhookData.eurekaDateRange);\n    return [{ json: { error: 'Invalid eurekaDateRange', eurekaDateRange: webhookData.eurekaDateRange } }];\n  }\n  \n  // Create the complete JSON payload for Eureka API\n  const eurekaPayload = {\n    action: \"query\",\n    q: \"*\",\n    source: \"corp_cases_en\",\n    lang: \"en-us\",\n    search_type: \"text_text\",\n    filter: {\n      owner_full_name: webhookData.ownerNames,\n      status: [\"Resolved\", \"Cancelled\"],\n      closed_date: [webhookData.eurekaDateRange]\n    },\n    field: [\"case_id\", \"priority\", \"products\", \"status\", \"closed_date\", \"created_date\", \"owner_full_name\"],\n    start: 1,\n    num: 30\n  };\n  \n  console.log('=== SUCCESS: CREATED COMPLETE EUREKA PAYLOAD ===');\n  console.log('Complete payload:', JSON.stringify(eurekaPayload, null, 2));\n  console.log('Payload string length:', JSON.stringify(eurekaPayload).length);\n  console.log('owner_full_name array:', eurekaPayload.filter.owner_full_name);\n  console.log('closed_date array:', eurekaPayload.filter.closed_date);\n  \n  return [{ json: eurekaPayload }];\n  \n} catch (error) {\n  console.error('Error in Edit Fields_declareStart:', error);\n  return [{ json: { error: error.message, stack: error.stack } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        512
+      ],
+      "id": "9c095e34-524d-4f38-a6eb-db2644e40afe",
+      "name": "Edit Fields_declareStart"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare entity data directly from ProcessWebhookData for Execute Workflow\nconsole.log('=== PREPARE ENTITY DATA FOR EXECUTE WORKFLOW ===');\n\n// Get the original webhook data directly from ProcessWebhookData node\nconst processedData = $('ProcessWebhookData').first().json;\nconsole.log('Data from ProcessWebhookData node:', JSON.stringify(processedData, null, 2));\n\nif (!processedData || !processedData.webhookData) {\n  throw new Error('No webhook data found from ProcessWebhookData node');\n}\n\nconst webhookData = processedData.webhookData;\nconsole.log('Extracted webhookData:', JSON.stringify(webhookData, null, 2));\n\n// Extract entity values from webhook data\nlet entityValues = [];\n\n// Try different extraction strategies\nif (webhookData.ownerNames && Array.isArray(webhookData.ownerNames) && webhookData.ownerNames.length > 0) {\n  entityValues = webhookData.ownerNames;\n  console.log('✅ Found entityValues in ownerNames:', entityValues);\n} else if (webhookData.entityValue) {\n  entityValues = [webhookData.entityValue];\n  console.log('✅ Found entityValue in entityValue:', webhookData.entityValue);\n} else if (webhookData.entityName) {\n  entityValues = [webhookData.entityName];\n  console.log('✅ Found entityValue in entityName:', webhookData.entityName);\n}\n\n// FAIL if no entity values - no fallbacks\nif (!entityValues || entityValues.length === 0) {\n  console.error('❌ CRITICAL: No entityValues found in webhook data');\n  console.error('Available webhook data keys:', Object.keys(webhookData));\n  throw new Error('CRITICAL: No entityValues found - cannot execute Calculate Metrics workflow');\n}\n\nconsole.log(`✅ Found ${entityValues.length} entities to process:`, entityValues);\n\n// Create data structure for each entity (multiple outputs for multiple Calculate Metrics executions)\nconst executeDataArray = entityValues.map((entityValue, index) => {\n  return {\n    entityValue: entityValue,\n    owner_full_name: entityValue,\n    source: 'get-cases-workflow',\n    timestamp: new Date().toISOString(),\n    entityIndex: index,\n    totalEntities: entityValues.length,\n    entityType: webhookData.entityType || 'unknown',\n    entityName: webhookData.entityName || 'unknown'\n  };\n});\n\nconsole.log('✅ Entity data prepared for Execute Workflow:', JSON.stringify(executeDataArray, null, 2));\nconsole.log(`✅ Will trigger ${executeDataArray.length} Calculate Metrics workflow executions`);\n\n// Return multiple items, one for each entity\nreturn executeDataArray.map(data => ({ json: data }));"
+      },
+      "id": "9925a115-45bc-43ed-a583-8f4e2a1488a1",
+      "name": "Prepare Entity Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "qZ1v8w3jqsYtSUq4",
+          "mode": "list",
+          "cachedResultName": "Step 2"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2352,
+        224
+      ],
+      "id": "001c3fc6-e0a1-4724-a2a3-367d3dc2ffae",
+      "name": "Call 'Calculate metrics'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4Ag84oc6TwKqyFfR",
+          "mode": "list",
+          "cachedResultName": "Step 3"
+        },
+        "workflowInputs": {
+          "mappingMode": "passthrough",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2352,
+        416
+      ],
+      "id": "46de1eb6-ce9e-43a4-939b-0dd6e2e8e1f4",
+      "name": "Process Customer Survey"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate multiple Process Survey outputs for merge node compatibility\nconst allItems = $input.all();\n\nconsole.log('🔄 Survey Results Aggregation:', {\n  totalInputs: allItems.length,\n  inputTypes: allItems.map(item => {\n    const json = item.json;\n    return {\n      entity_name: json?.entity_name,\n      entity_type: json?.entity_type,\n      hasMetrics: !!json?.metrics,\n      hasCustomerSatisfaction: !!json?.metrics?.customerSatisfaction\n    };\n  })\n});\n\nif (allItems.length === 0) {\n  console.log('⚠️ No Process Survey outputs to aggregate');\n  return [];\n}\n\nif (allItems.length === 1) {\n  console.log('✅ Single Process Survey output, passing through unchanged');\n  return allItems;\n}\n\n// Multiple outputs - pass them all through for Aggregate Data workflow to handle\nconsole.log('📊 Multiple Process Survey outputs detected, passing all through');\nconsole.log('📋 Survey data summary:', allItems.map(item => ({\n  entity_name: item.json?.entity_name,\n  satisfaction_total: item.json?.metrics?.customerSatisfaction?.total,\n  has_survey_details: !!item.json?.metrics?.surveyDetails\n})));\n\n// Pass all survey results through - the Aggregate Data workflow will handle the merging\nreturn allItems;"
+      },
+      "id": "5f091466-ea2d-4aaf-a76a-388238f810f2",
+      "name": "Aggregate Survey Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge case performance data with survey data, ensuring surveyDetails is preserved\nconst allItems = $input.all();\n\nconsole.log('🔄 Merging workflows data:', {\n  totalInputs: allItems.length,\n  rawInputs: allItems,\n  inputTypes: allItems.map((items, inputIndex) => ({\n    inputIndex,\n    isArray: Array.isArray(items),\n    itemCount: Array.isArray(items) ? items.length : 'not array',\n    type: typeof items\n  }))\n});\n\n// Input 0: Case performance data\n// Input 1: Survey data (with surveyDetails)\nconst caseData = Array.isArray(allItems[0]) ? allItems[0] : [];\nconst surveyData = Array.isArray(allItems[1]) ? allItems[1] : [];\n\nconsole.log('📊 Case data summary:', {\n  isArray: Array.isArray(caseData),\n  length: caseData.length,\n  items: caseData.map(item => ({\n    entity_name: item.json?.entity_name,\n    cases_count: item.json?.cases_count,\n    hasMetrics: !!item.json?.metrics\n  }))\n});\n\nconsole.log('📋 Survey data summary:', {\n  isArray: Array.isArray(surveyData),\n  length: surveyData.length,\n  items: surveyData.map(item => ({\n    entity_name: item.json?.entity_name,\n    hasSurveyDetails: !!item.json?.surveyDetails,\n    surveyDetailsCount: item.json?.surveyDetails?.length || 0,\n    hasCustomerSatisfaction: !!item.json?.metrics?.customerSatisfaction\n  }))\n});\n\n// Pass all data through to the Aggregate Data workflow\n// The Aggregate Data workflow will handle the proper merging\nconst allData = [...caseData, ...surveyData];\n\nconsole.log('✅ Passing through all data for Aggregate Data workflow:', {\n  totalItems: allData.length,\n  caseItems: caseData.length,\n  surveyItems: surveyData.length\n});\n\nreturn allData;"
+      },
+      "id": "d1966b96-dbde-4f7c-b5c9-f5c7968011e0",
+      "name": "Wait for Both Workflows Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2576,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "AjDfQFdyNwd7hDR7",
+          "mode": "list",
+          "cachedResultName": "Step 4 - Aggregate"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "070debfa-293a-4682-848b-9e2a97ca37f7",
+      "name": "Trigger Aggregate Data",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2800,
+        320
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3024,
+        320
+      ],
+      "id": "d65e41a6-1c28-4baa-82dc-0a512042f389",
+      "name": "Workflow Complete"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "onlyDocs": {
+      "main": [
+        [
+          {
+            "node": "structurizeEmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "eurekaAPI": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Pagination Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "onlyDocs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "cleanHTML&PII",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cleanHTML&PII": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "structurizeEmail": {
+      "main": [
+        [
+          {
+            "node": "calcCaseAgeDay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "calcCaseAgeDay": {
+      "main": [
+        [
+          {
+            "node": "populateDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deleteDB": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields_declareStart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields_declareStart": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "eurekaAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pagination Check": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ProcessWebhookData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ProcessWebhookData": {
+      "main": [
+        [
+          {
+            "node": "deleteDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "populateDB": {
+      "main": [
+        [
+          {
+            "node": "Trigger Entity Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Entity Processing": {
+      "main": [
+        [
+          {
+            "node": "Prepare Entity Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Entity Data": {
+      "main": [
+        [
+          {
+            "node": "Call 'Calculate metrics'",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Process Customer Survey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Calculate metrics'": {
+      "main": [
+        [
+          {
+            "node": "Wait for Both Workflows Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Customer Survey": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Survey Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Both Workflows Complete": {
+      "main": [
+        [
+          {
+            "node": "Trigger Aggregate Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Aggregate Data": {
+      "main": [
+        [
+          {
+            "node": "Workflow Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c26d7f20-2890-41d8-b4cb-2e9ed080ea5c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "197030258e5ec4f22da7668edae4c29f9bb02818dd32dfbc6a28b550e0739e49"
+  },
+  "id": "E0rEuDzh7GYPMpDF",
+  "tags": []
+}

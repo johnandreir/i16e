@@ -604,7 +604,7 @@ app.get('/api/n8n/health', async (req, res) => {
     // Check N8N service availability (no auth needed) - using container name
     let serviceCheck;
     try {
-      serviceCheck = await fetch('http://n8n:5678/rest/login', {
+      serviceCheck = await fetch('http://localhost:5678/rest/login', {
         method: 'GET',
         signal: controller.signal
       });
@@ -642,7 +642,7 @@ app.get('/api/n8n/health', async (req, res) => {
       
       // Check workflow status using N8N REST API
       try {
-        const workflowsResponse = await fetch('http://n8n:5678/rest/workflows', {
+        const workflowsResponse = await fetch('http://localhost:5678/rest/workflows', {
           method: 'GET',
           headers: { 
             'Content-Type': 'application/json'
@@ -755,7 +755,7 @@ app.get('/api/n8n/health', async (req, res) => {
       try {
         const webhookChecks = await Promise.allSettled([
           // Check Get Performance webhook (the only one that exists)
-          fetch('http://n8n:5678/webhook-test/get-performance', {
+          fetch('http://localhost:5678/webhook-test/get-performance', {
             method: 'POST', // N8N webhooks respond to POST, not HEAD
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}), // Empty body for health check
@@ -2353,7 +2353,7 @@ app.post('/api/n8n/get-cases', async (req, res) => {
     console.log('🔗 Proxying request to N8N Get Performance webhook...');
     console.log('📦 Request body received:', JSON.stringify(req.body, null, 2));
     
-    const webhookUrl = 'http://n8n:5678/webhook-test/get-performance';
+    const webhookUrl = 'http://localhost:5678/webhook-test/get-performance';
     const requestData = JSON.stringify(req.body);
     
     console.log('🎯 Target webhook URL:', webhookUrl);
@@ -2428,7 +2428,7 @@ app.get('/api/n8n/get-cases', async (req, res) => {
 
     // Forward query parameters
     const queryString = new URLSearchParams(req.query).toString();
-    let webhookUrl = `http://n8n:5678/webhook-test/get-performance${queryString ? '?' + queryString : ''}`;
+    let webhookUrl = `http://localhost:5678/webhook-test/get-performance${queryString ? '?' + queryString : ''}`;
 
     console.log('🎯 Target webhook URL (GET):', webhookUrl);      const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -2466,7 +2466,7 @@ app.post('/api/n8n/calculate-metrics', async (req, res) => {
     console.log('🔗 Proxying request to N8N Get Performance webhook...');
     console.log('📦 Request body received:', JSON.stringify(req.body, null, 2));
     
-    const webhookUrl = 'http://n8n:5678/webhook-test/get-performance';
+    const webhookUrl = 'http://localhost:5678/webhook-test/get-performance';
     const requestData = JSON.stringify(req.body);
     
     console.log('🎯 Target webhook URL:', webhookUrl);
@@ -2559,7 +2559,7 @@ app.get('/api/n8n/health', async (req, res) => {
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout for health checks
 
     // Check N8N service availability (no auth needed)
-    const serviceCheck = await fetch('http://n8n:5678/rest/login', {
+    const serviceCheck = await fetch('http://localhost:5678/rest/login', {
       method: 'GET',
       signal: controller.signal
     });
@@ -2580,7 +2580,7 @@ app.get('/api/n8n/health', async (req, res) => {
     if (isServiceRunning) {
       // Check workflow status using N8N REST API
       try {
-        const workflowsResponse = await fetch('http://n8n:5678/rest/workflows', {
+        const workflowsResponse = await fetch('http://localhost:5678/rest/workflows', {
           method: 'GET',
           headers: { 
             'Content-Type': 'application/json'
@@ -2645,7 +2645,7 @@ app.get('/api/n8n/health', async (req, res) => {
       // OPTIONS is normally used to check what methods a resource accepts
       const webhookChecks = await Promise.allSettled([
         // Check Get Performance webhook (the only one that exists)
-        fetch('http://n8n:5678/webhook-test/get-performance', {
+        fetch('http://localhost:5678/webhook-test/get-performance', {
           method: 'OPTIONS', // Use OPTIONS instead of POST to avoid triggering workflow
           headers: { 
             'Content-Type': 'application/json',
@@ -2734,12 +2734,12 @@ app.post('/api/n8n/analyze-sct', async (req, res) => {
     console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
 
     // Forward the request to n8n
-    // Use container hostname when running in Docker
-    const n8nHost = process.env.IN_DOCKER === 'true' ? 'i16e-n8n' : 'localhost';
-    const n8nUrl = process.env.N8N_BASE_URL || `http://${n8nHost}:5678`;
+    // Use localhost for consistent webhook calls
+    const n8nHost = 'localhost';
+    const n8nUrl = `http://${n8nHost}:5678`;
     
-    // Use the webhook path directly from the Webhook node config
-    const webhookUrl = `${n8nUrl}/webhook/analyze-sct`;
+    // Use the webhook-test path to match other endpoints
+    const webhookUrl = `${n8nUrl}/webhook-test/analyze-sct`;
     console.log('🔄 Forwarding request to n8n at:', webhookUrl);
     
     try {
@@ -2971,71 +2971,71 @@ function setupGracefulShutdown() {
     }, 3000);
   };
 
-  // Handle different termination signals
-  process.on('SIGINT', () => cleanup('SIGINT'));   // Ctrl+C
-  process.on('SIGTERM', () => cleanup('SIGTERM')); // Termination signal
-  process.on('SIGHUP', () => cleanup('SIGHUP'));   // Hang up signal
+  // Handle different termination signals (SIGINT is handled above with protection)
+  // process.on('SIGINT', () => cleanup('SIGINT'));   // Removed - using protected handler above
+  // process.on('SIGTERM', () => cleanup('SIGTERM')); // Removed - using protected handler above
+  // process.on('SIGHUP', () => cleanup('SIGHUP'));   // Removed - using protected handler above
 
-  // Handle Windows-specific signals
-  if (process.platform === 'win32') {
-    process.on('SIGBREAK', () => cleanup('SIGBREAK'));
-  }
+  // Handle Windows-specific signals  
+  // if (process.platform === 'win32') {
+  //   process.on('SIGBREAK', () => cleanup('SIGBREAK')); // Removed - using protected handler above
+  // }
 
-  // Enhanced uncaught exception handler
-  process.on('uncaughtException', async (error) => {
-    console.error('💥 Uncaught Exception:', error);
-    console.error('Stack trace:', error.stack);
+  // Enhanced uncaught exception handler - REMOVED to avoid conflicts with global handler
+  // process.on('uncaughtException', async (error) => {
+  //   console.error('💥 Uncaught Exception:', error);
+  //   console.error('Stack trace:', error.stack);
 
-    // Try to log to a file as well if possible
-    try {
-      const fs = require('fs');
-      const timestamp = new Date().toISOString();
-      const logEntry = `[${timestamp}] UNCAUGHT EXCEPTION: ${error.message}\nStack: ${error.stack}\n\n`;
-      fs.appendFileSync('mongodb-api-errors.log', logEntry);
-    } catch (logError) {
-      console.error('Failed to write error log:', logError);
-    }
+  //   // Try to log to a file as well if possible
+  //   try {
+  //     const fs = require('fs');
+  //     const timestamp = new Date().toISOString();
+  //     const logEntry = `[${timestamp}] UNCAUGHT EXCEPTION: ${error.message}\nStack: ${error.stack}\n\n`;
+  //     fs.appendFileSync('mongodb-api-errors.log', logEntry);
+  //   } catch (logError) {
+  //     console.error('Failed to write error log:', logError);
+  //   }
 
-    await cleanup('UNCAUGHT_EXCEPTION');
-  });
+  //   await cleanup('UNCAUGHT_EXCEPTION');
+  // });
 
-  // Enhanced unhandled rejection handler
-  process.on('unhandledRejection', async (reason, promise) => {
-    console.error('💥 Unhandled Promise Rejection at:', promise);
-    console.error('Reason:', reason);
+  // Enhanced unhandled rejection handler - REMOVED to avoid conflicts with global handler
+  // process.on('unhandledRejection', async (reason, promise) => {
+  //   console.error('💥 Unhandled Promise Rejection at:', promise);
+  //   console.error('Reason:', reason);
 
-    // Try to log to a file as well if possible
-    try {
-      const fs = require('fs');
-      const timestamp = new Date().toISOString();
-      const logEntry = `[${timestamp}] UNHANDLED REJECTION: ${reason}\nPromise: ${promise}\n\n`;
-      fs.appendFileSync('mongodb-api-errors.log', logEntry);
-    } catch (logError) {
-      console.error('Failed to write error log:', logError);
-    }
+  //   // Try to log to a file as well if possible
+  //   try {
+  //     const fs = require('fs');
+  //     const timestamp = new Date().toISOString();
+  //     const logEntry = `[${timestamp}] UNHANDLED REJECTION: ${reason}\nPromise: ${promise}\n\n`;
+  //     fs.appendFileSync('mongodb-api-errors.log', logEntry);
+  //   } catch (logError) {
+  //     console.error('Failed to write error log:', logError);
+  //   }
 
-    // Don't exit immediately for unhandled rejections, but log them
-    console.log('🔄 Attempting to recover from unhandled rejection...');
+  //   // Don't exit immediately for unhandled rejections, but log them
+  //   console.log('🔄 Attempting to recover from unhandled rejection...');
 
-    // If we get too many unhandled rejections, we should restart
-    if (!process.env.REJECTION_COUNT) {
-      process.env.REJECTION_COUNT = '0';
-    }
-    process.env.REJECTION_COUNT = (parseInt(process.env.REJECTION_COUNT) + 1).toString();
+  //   // If we get too many unhandled rejections, we should restart
+  //   if (!process.env.REJECTION_COUNT) {
+  //     process.env.REJECTION_COUNT = '0';
+  //   }
+  //   process.env.REJECTION_COUNT = (parseInt(process.env.REJECTION_COUNT) + 1).toString();
 
-    if (parseInt(process.env.REJECTION_COUNT) > 5) {
-      console.error('❌ Too many unhandled rejections. Shutting down...');
-      await cleanup('MULTIPLE_UNHANDLED_REJECTIONS');
-    }
-  });
+  //   if (parseInt(process.env.REJECTION_COUNT) > 5) {
+  //     console.error('❌ Too many unhandled rejections. Shutting down...');
+  //     await cleanup('MULTIPLE_UNHANDLED_REJECTIONS');
+  //   }
+  // });
 
-  // Handle memory warnings
-  process.on('warning', (warning) => {
-    console.warn('⚠️ Process Warning:', warning.name, warning.message);
-    if (warning.name === 'MaxListenersExceededWarning') {
-      console.warn('💡 Consider reviewing event listener usage to prevent memory leaks');
-    }
-  });
+  // Handle memory warnings - REMOVED to avoid conflicts with global handler
+  // process.on('warning', (warning) => {
+  //   console.warn('⚠️ Process Warning:', warning.name, warning.message);
+  //   if (warning.name === 'MaxListenersExceededWarning') {
+  //     console.warn('💡 Consider reviewing event listener usage to prevent memory leaks');
+  //   }
+  // });
 }
 
 // Graceful shutdown function
@@ -3226,14 +3226,14 @@ startServer().catch(error => {
   }
 });
 
-// Add global error handlers
-process.on('uncaughtException', (error) => {
-  console.error('💥 Uncaught Exception:', error);
-  console.error('Stack:', error.stack);
-});
+// Add global error handlers - REMOVED to avoid conflicts with handlers at top of file
+// process.on('uncaughtException', (error) => {
+//   console.error('💥 Uncaught Exception:', error);
+//   console.error('Stack:', error.stack);
+// });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-});
+// process.on('unhandledRejection', (reason, promise) => {
+//   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+// });
 
-console.log('🛡️ Global error handlers registered');
+console.log('🛡️ Global error handlers registered at top of file');

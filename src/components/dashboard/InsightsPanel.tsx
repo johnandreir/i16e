@@ -43,6 +43,65 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
   const [sctOpen, setSctOpen] = useState(false);
   const [cxOpen, setCxOpen] = useState(false);
 
+  // Helper function to format text with bullet points for better readability
+  const formatTextWithBullets = (text: string, label: string = 'Recommendation') => {
+    // Split by newlines and filter out empty lines
+    const lines = text.split('\n').filter(line => line.trim());
+    
+    // If there's only one line or no splitting needed, return as single paragraph
+    if (lines.length <= 1) {
+      return (
+        <p className="text-sm text-foreground">
+          <strong>{label}:</strong> {text}
+        </p>
+      );
+    }
+    
+    // If multiple lines, format as bullet points
+    return (
+      <div className="text-sm text-foreground">
+        <strong>{label}s:</strong>
+        <ul className="list-disc list-inside mt-2 space-y-1 ml-2">
+          {lines.map((line, index) => (
+            <li key={index} className="text-sm">
+              {line.trim()}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  // Helper function to format descriptions - break long sentences into bullet points
+  const formatDescription = (description: string) => {
+    // Check if description is very long (over 200 characters) and contains sentence patterns
+    if (description.length > 200 && (description.includes('. ') || description.includes(', '))) {
+      // Split by sentences and major clause separators
+      const sentences = description
+        .split(/\.\s+|\,\s+(?=The|Although|However|During|In|Customer|Engineer|Support)/)
+        .filter(sentence => sentence.trim().length > 10)
+        .map(sentence => sentence.trim().replace(/\.$/, '') + (sentence.trim().endsWith('.') ? '' : '.'));
+      
+      // If we got multiple meaningful sentences, format as bullets
+      if (sentences.length > 1) {
+        return (
+          <div className="text-sm text-muted-foreground">
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              {sentences.map((sentence, index) => (
+                <li key={index} className="text-sm">
+                  {sentence}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
+    }
+    
+    // Return as normal paragraph if not suitable for bullet formatting
+    return <p className="text-sm text-muted-foreground">{description}</p>;
+  };
+
   const getInsightIcon = (type: string) => {
     switch (type) {
       case 'improvement':
@@ -70,17 +129,30 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
   };
 
   // Filter insights by category from passed props - only show when analysis is performed
-  const sctInsights = sctAnalyzed ? insights.filter(insight => 
-    insight.category?.toLowerCase().includes('performance') || 
-    insight.category?.toLowerCase().includes('process') ||
-    insight.category?.toLowerCase().includes('trending') ||
-    insight.category?.toLowerCase().includes('resource') ||
-    insight.title.toLowerCase().includes('sct') ||
-    insight.title.toLowerCase().includes('cycle time') ||
-    insight.title.toLowerCase().includes('development') ||
-    insight.title.toLowerCase().includes('testing') ||
-    insight.title.toLowerCase().includes('analysis')
-  ) : [];
+  const sctInsights = sctAnalyzed ? insights.filter(insight => {
+    const isSctRelated = insight.category?.toLowerCase().includes('performance') || 
+      insight.category?.toLowerCase().includes('process') ||
+      insight.category?.toLowerCase().includes('communication') ||
+      insight.category?.toLowerCase().includes('trending') ||
+      insight.category?.toLowerCase().includes('resource') ||
+      insight.title.toLowerCase().includes('sct') ||
+      insight.title.toLowerCase().includes('cycle time') ||
+      insight.title.toLowerCase().includes('development') ||
+      insight.title.toLowerCase().includes('testing') ||
+      insight.title.toLowerCase().includes('sct analysis') ||
+      insight.title.toLowerCase().includes('email communication') ||
+      insight.title.toLowerCase().includes('process delay') ||
+      insight.title.toLowerCase().includes('email') ||
+      insight.title.toLowerCase().includes('delay');
+    
+    // Exclude satisfaction-related insights that should go to CX section
+    const isSatisfactionRelated = insight.category?.toLowerCase().includes('satisfaction') ||
+      insight.title.toLowerCase().includes('satisfaction') ||
+      insight.title.toLowerCase().includes('csat') ||
+      insight.title.toLowerCase().includes('dsat');
+    
+    return isSctRelated && !isSatisfactionRelated;
+  }) : [];
   
   const cxInsights = cxAnalyzed ? insights.filter(insight => 
     insight.category?.toLowerCase().includes('satisfaction') ||
@@ -152,12 +224,10 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                             {insight.type}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">{insight.description}</p>
+                        {formatDescription(insight.description)}
                         {insight.recommendation && (
                           <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
-                            <p className="text-sm text-foreground">
-                              <strong>Recommendation:</strong> {insight.recommendation}
-                            </p>
+                            {formatTextWithBullets(insight.recommendation, 'Recommendation')}
                           </div>
                         )}
                       </div>
@@ -199,12 +269,10 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                             {insight.type}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">{insight.description}</p>
+                        {formatDescription(insight.description)}
                         {insight.recommendation && (
                           <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
-                            <p className="text-sm text-foreground">
-                              <strong>Recommendation:</strong> {insight.recommendation}
-                            </p>
+                            {formatTextWithBullets(insight.recommendation, 'Recommendation')}
                           </div>
                         )}
                       </div>

@@ -147,6 +147,27 @@ const IndexNew = () => {
   const [cxInsightResults, setCxInsightResults] = useState<any>(null);
   const [surveyAnalysisResults, setSurveyAnalysisResults] = useState<any>(null);
   
+  // Webhook warm-up effect - runs once when component mounts
+  useEffect(() => {
+    const warmUpWebhooks = async () => {
+      try {
+        console.log('🚀 Dashboard mounted - warming up n8n webhooks...');
+        const warmedUp = await n8nWorkflowService.warmUpWebhooks();
+        if (warmedUp) {
+          console.log('🔥 Webhooks warmed up successfully - High SCT Email Scrubber ready!');
+        } else {
+          console.log('⚠️ Webhook warm-up completed with warnings');
+        }
+      } catch (error) {
+        console.log('⚠️ Webhook warm-up failed, but this won\'t prevent normal operation:', error);
+      }
+    };
+    
+    // Warm up webhooks after a short delay to let the dashboard finish loading
+    const timer = setTimeout(warmUpWebhooks, 2000);
+    return () => clearTimeout(timer);
+  }, []); // Empty dependency array means this runs once on mount
+  
   // Calculate metrics workflow results state
   const [calculateMetricsData, setCalculateMetricsData] = useState<any>(null);
   const [detailedCasesData, setDetailedCasesData] = useState<any[]>([]);
@@ -1789,76 +1810,115 @@ const IndexNew = () => {
     }
     
     try {
-      // Use n8n workflow service to analyze SCT
+      // Trigger the High SCT Email Scrubber workflow for SCT analysis
+      console.log('🔍 Starting High SCT Email Scrubber workflow...', { entityType, entityName, casesCount: realCaseData.length });
+      console.log('⏳ Waiting for workflow to complete...');
+      
       const workflowResults = await n8nWorkflowService.analyzeSCT(entityType, entityName, realCaseData);
       
-      if (workflowResults && workflowResults.success && workflowResults.data) {
-        // Use the workflow analysis results
-        setSctAnalysisResults(workflowResults.data);
+      console.log('✅ Workflow completed! Processing results...');
+      console.log('📊 Full workflow response:', JSON.stringify(workflowResults, null, 2));
+      console.log('🔍 Workflow response type:', typeof workflowResults);
+      console.log('🔍 Is array:', Array.isArray(workflowResults));
+      
+      // Debug validation checks
+      console.log('🔍 VALIDATION CHECKS:');
+      console.log('   - workflowResults exists:', !!workflowResults);
+      console.log('   - has email_sentiment_analysis:', !!(workflowResults?.email_sentiment_analysis));
+      console.log('   - has case_handoffs_and_delays:', !!(workflowResults?.case_handoffs_and_delays));
+      console.log('   - has summary:', !!(workflowResults?.summary));
+      console.log('   - is array with length > 0:', Array.isArray(workflowResults) && workflowResults.length > 0);
+      
+      // Validate and process workflow results - handle both direct High SCT format and wrapped format
+      const isDirectHighSctFormat = workflowResults && (
+        workflowResults.email_sentiment_analysis || 
+        workflowResults.case_handoffs_and_delays || 
+        workflowResults.summary || 
+        (Array.isArray(workflowResults) && workflowResults.length > 0)
+      );
+      
+      const isWrappedHighSctFormat = workflowResults?.data && (
+        workflowResults.data.email_sentiment_analysis || 
+        workflowResults.data.case_handoffs_and_delays || 
+        workflowResults.data.summary ||
+        (Array.isArray(workflowResults.data) && workflowResults.data.length > 0)
+      );
+      
+      console.log('🔍 Format detection:', { isDirectHighSctFormat, isWrappedHighSctFormat });
+      
+      if (isDirectHighSctFormat || isWrappedHighSctFormat) {
+        console.log('✅ Valid High SCT Email Scrubber results detected');
         
-        toast({
-          title: `${entityLabel} SCT Analysis Complete`,
-          description: `Analysis completed for ${entityName} with insights generated.`,
-          variant: "default"
+        // Extract the actual High SCT data - handle both direct and wrapped formats
+        let rawScrubberData;
+        if (isDirectHighSctFormat) {
+          console.log('📊 Using direct High SCT format');
+          rawScrubberData = workflowResults;
+        } else if (isWrappedHighSctFormat) {
+          console.log('📊 Using wrapped High SCT format - extracting from .data');
+          rawScrubberData = workflowResults.data;
+        }
+        
+        // Handle array output from High SCT Email Scrubber workflow
+        let scrubberOutput;
+        if (Array.isArray(rawScrubberData) && rawScrubberData.length > 0) {
+          console.log('📊 Processing array format results');
+          scrubberOutput = rawScrubberData[0]; // Take first item from array
+        } else {
+          console.log('📊 Processing direct object format results');
+          scrubberOutput = rawScrubberData; // Handle non-array format
+        }
+        
+        console.log('🔍 Scrubber output structure:', {
+          hasEmailAnalysis: !!scrubberOutput.email_sentiment_analysis,
+          hasDelayAnalysis: !!scrubberOutput.case_handoffs_and_delays,
+          hasSummary: !!scrubberOutput.summary,
+          casesAnalyzedCount: scrubberOutput.cases_analyzed?.length || 0
         });
-      } else {
-        // Fall back to local analysis if workflow fails
-        performLocalSCTAnalysis(entityLabel, entityName, realCaseData, currentSCT);
-        toast({
-          description: "Using local analysis due to workflow service error.",
-          variant: "default"
-        });
-      }
-    } catch (error) {
-      console.error("Error analyzing SCT data:", error);
-      // Fall back to local analysis if there's an error
-      performLocalSCTAnalysis(entityLabel, entityName, realCaseData, currentSCT);
-      toast({
-        description: "Using local analysis due to workflow service error.",
-        variant: "default"
-      });
-    } finally {
-      setIsAnalysisLoading(false);
-    }
-    
-    try {
-      // Trigger the n8n workflow for SCT analysis
-      const workflowResults = await n8nWorkflowService.analyzeSCT(entityType, entityName, realCaseData);
-      
-      // If we got results from the workflow, use them
-      if (workflowResults) {
-        console.log('SCT Analysis workflow results:', workflowResults);
         
         // Process the AI analysis results
         const aiInsights = [];
         
         // Map email sentiment analysis to insights
-        if (workflowResults.email_sentiment_analysis && workflowResults.email_sentiment_analysis.length > 0) {
-          workflowResults.email_sentiment_analysis.forEach((item: any, index: number) => {
+        if (scrubberOutput.email_sentiment_analysis && scrubberOutput.email_sentiment_analysis.length > 0) {
+          scrubberOutput.email_sentiment_analysis.forEach((item: any, index: number) => {
             aiInsights.push({
               id: `email-${index + 1}`,
-              title: `Email Communication Issue: Case ${item.case_id}`,
+              title: `Email Communication Analysis: Case ${item.case_id}`,
               description: item.problem,
               impact: 'Medium',
               category: 'communication',
               type: 'warning',
-              recommendation: item.recommendations.join('\n')
+              recommendation: item.recommendations?.join('\n') || 'No specific recommendations'
             });
           });
         }
         
         // Map case handoffs and delays to insights
-        if (workflowResults.case_handoffs_and_delays && workflowResults.case_handoffs_and_delays.length > 0) {
-          workflowResults.case_handoffs_and_delays.forEach((item: any, index: number) => {
+        if (scrubberOutput.case_handoffs_and_delays && scrubberOutput.case_handoffs_and_delays.length > 0) {
+          scrubberOutput.case_handoffs_and_delays.forEach((item: any, index: number) => {
             aiInsights.push({
               id: `delay-${index + 1}`,
-              title: `Process Delay: Case ${item.case_id}`,
+              title: `Process Delay Analysis: Case ${item.case_id}`,
               description: item.problem,
               impact: 'High',
               category: 'process',
               type: 'warning',
-              recommendation: item.recommendations.join('\n')
+              recommendation: item.recommendations?.join('\n') || 'No specific recommendations'
             });
+          });
+        }
+        
+        // Add summary insight if available
+        if (scrubberOutput.summary && (scrubberOutput.summary.areas_for_improvement?.length > 0 || scrubberOutput.summary.strengths?.length > 0)) {
+          aiInsights.unshift({
+            id: 'summary-1',
+            title: `${entityLabel} Performance Summary`,
+            description: `Analysis of ${scrubberOutput.cases_analyzed?.length || 0} cases completed for ${entityName}.`,
+            impact: 'High',
+            category: 'performance',
+            type: 'info',
+            recommendation: `Areas for improvement: ${scrubberOutput.summary.areas_for_improvement?.join(', ') || 'None identified'}\n\nStrengths: ${scrubberOutput.summary.strengths?.join(', ') || 'None identified'}`
           });
         }
         
@@ -1868,28 +1928,50 @@ const IndexNew = () => {
             {
               id: '1',
               title: `${entityLabel} SCT Analysis Complete`,
-              description: `Analysis completed for ${entityName}. ${workflowResults.cases_analyzed?.length || 0} cases were analyzed.`,
+              description: `Analysis completed for ${entityName}. ${scrubberOutput.cases_analyzed?.length || 0} cases were analyzed.`,
               impact: 'Medium',
               category: 'performance',
               type: 'info',
-              recommendation: workflowResults.summary?.areas_for_improvement?.join('\n') || 'No specific recommendations found.'
+              recommendation: scrubberOutput.summary?.areas_for_improvement?.join('\n') || 'No specific recommendations found.'
             }
           ],
           metrics: {
             averageSCT: currentSCT,
             targetSCT: 15,
-            improvement: workflowResults.summary?.strengths?.length > 0 ? workflowResults.summary.strengths[0] : 'N/A',
-            bottleneck: workflowResults.summary?.areas_for_improvement?.length > 0 ? workflowResults.summary.areas_for_improvement[0] : 'N/A',
-            efficiency: 'Analyzing...',
-            trend: workflowResults.cases_analyzed?.length > 0 ? 'Analysis Complete' : 'Insufficient Data'
+            improvement: scrubberOutput.summary?.strengths?.length > 0 ? 'Analysis Complete' : 'Needs Attention',
+            bottleneck: scrubberOutput.summary?.areas_for_improvement?.[0] || 'N/A',
+            efficiency: aiInsights.length === 0 ? 'Good' : 'Needs Improvement',
+            trend: scrubberOutput.cases_analyzed?.length > 0 ? 'Analysis Complete' : 'Insufficient Data'
           },
-          cases: workflowResults.cases_analyzed || []
+          cases: scrubberOutput.cases_analyzed || []
         };
         
         setSctAnalysisResults(sctAnalysis);
+        
+        // Show detailed success message
+        const casesAnalyzed = scrubberOutput.cases_analyzed?.length || realCaseData.length || 0;
+        const insightsGenerated = aiInsights.length;
+        
+        console.log('🎉 High SCT Email Scrubber analysis complete!', {
+          casesAnalyzed,
+          insightsGenerated,
+          emailAnalysisCount: scrubberOutput.email_sentiment_analysis?.length || 0,
+          delayAnalysisCount: scrubberOutput.case_handoffs_and_delays?.length || 0,
+          hasSummary: !!scrubberOutput.summary
+        });
+        
+        toast({
+          title: `🎉 ${entityLabel} SCT Analysis Complete`,
+          description: `High SCT Email Scrubber analyzed ${casesAnalyzed} cases for ${entityName} and generated ${insightsGenerated} insights.`,
+          variant: "default"
+        });
       } else {
         // Fall back to local analysis if workflow didn't return results
-    
+        console.log('❌ HIGH SCT EMAIL SCRUBBER WORKFLOW VALIDATION FAILED');
+        console.log('📊 Workflow returned:', workflowResults);
+        console.log('🔄 Falling back to local SCT analysis (this is what you\'re seeing now)');
+        console.log('💡 Check n8n workflow output format - needs email_sentiment_analysis, case_handoffs_and_delays, or summary properties');
+        
         // Analyze real case data locally
         const insights = [];
         const caseList = realCaseData.map(caseItem => ({
@@ -1946,6 +2028,13 @@ const IndexNew = () => {
         };
         
         setSctAnalysisResults(sctAnalysis);
+        
+        // Show fallback message
+        toast({
+          title: `${entityLabel} SCT Analysis (Local)`,
+          description: `High SCT Email Scrubber unavailable. Local analysis of ${realCaseData.length} cases completed for ${entityName}.`,
+          variant: "default"
+        });
       }
     } catch (error) {
       console.error('Error analyzing SCT with workflow:', error);

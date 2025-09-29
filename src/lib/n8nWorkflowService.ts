@@ -30,6 +30,8 @@ export class N8nWorkflowService {
   private baseUrl: string;
   private n8nDirectUrl: string;
   private workflowId: string;
+  // High SCT Email Scrubber webhook path confirmed from n8n workflow
+  private analyzeSctWebhookPath: string = '/webhook-test/analyze-sct';
 
   constructor() {
     // Use backend API proxy endpoints to avoid CORS issues
@@ -40,17 +42,111 @@ export class N8nWorkflowService {
   }
 
   /**
+   * Initialize webhooks by making a lightweight test call
+   * This helps "warm up" the n8n webhook system
+   */
+  async initializeWebhooks(): Promise<void> {
+    console.log('🚀 Initializing n8n webhooks...');
+    
+    const testPayload = {
+      entity_type: "initialization_test",
+      entity_name: "Webhook Initialization",
+      cases_data: []
+    };
+
+    try {
+      // Test the Analyze SCT webhook
+      const response = await fetch(`${this.n8nDirectUrl}${this.analyzeSctWebhookPath}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testPayload),
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (response.ok) {
+        console.log('✅ High SCT Email Scrubber webhook initialized successfully');
+      } else {
+        console.log('⚠️ High SCT Email Scrubber webhook returned status:', response.status);
+      }
+    } catch (error) {
+      console.log('⚠️ Failed to initialize High SCT Email Scrubber webhook:', error.message);
+    }
+
+    // Small delay to let n8n process
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  /**
+   * Manually warm up webhooks - call this when your dashboard loads
+   * to ensure webhooks are ready before user interactions
+   */
+  async warmUpWebhooks(): Promise<boolean> {
+    try {
+      console.log('🔥 Warming up n8n webhooks...');
+      await this.initializeWebhooks();
+      console.log('🔥 Webhook warm-up completed');
+      return true;
+    } catch (error) {
+      console.error('🔥 Webhook warm-up failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Process the result from the webhook call and format it as expected by the UI
    * Only uses data directly from the workflow response without auto-generating content
    */
   private processResult(result: any, totalItems: number): any {
-    // Extract metrics directly from workflow response
+    console.log('🔍 processResult called with:', { result, totalItems });
+    console.log('🔍 result type:', typeof result);
+    console.log('🔍 result isArray:', Array.isArray(result));
+    console.log('🔍 result structure:', JSON.stringify(result, null, 2));
+    
+    // Handle array output from High SCT Email Scrubber workflow
+    if (Array.isArray(result)) {
+      console.log('📋 ✅ DETECTED ARRAY - Processing High SCT Email Scrubber array output, length:', result.length);
+      console.log('📋 Returning array directly to frontend');
+      // Return the array directly for frontend to handle
+      return result;
+    }
+    
+    // Check if this is High SCT Email Scrubber output format
+    console.log('🔍 Checking High SCT format properties:', {
+      hasEmailAnalysis: !!(result.email_sentiment_analysis),
+      hasDelayAnalysis: !!(result.case_handoffs_and_delays), 
+      hasSummary: !!(result.summary)
+    });
+    
+    if (result.email_sentiment_analysis || result.case_handoffs_and_delays || result.summary) {
+      console.log('📧 ✅ DETECTED HIGH SCT FORMAT - Returning raw result');
+      return result;
+    }
+    
+    // Handle wrapped High SCT Email Scrubber format (in case it's wrapped in a data object)
+    console.log('🔍 Checking wrapped High SCT format:', {
+      hasData: !!(result.data),
+      hasWrappedEmailAnalysis: !!(result.data?.email_sentiment_analysis),
+      hasWrappedDelayAnalysis: !!(result.data?.case_handoffs_and_delays),
+      hasWrappedSummary: !!(result.data?.summary)
+    });
+    
+    if (result.data && (result.data.email_sentiment_analysis || result.data.case_handoffs_and_delays || result.data.summary)) {
+      console.log('📧 ✅ DETECTED WRAPPED HIGH SCT FORMAT - Returning unwrapped data');
+      return result.data;
+    }
+    
+    // Handle standard object output format (fallback)
+    console.log('⚠️ FALLING BACK TO STRUCTURED FORMAT - High SCT format not detected');
+    console.log('🔄 This means your workflow result will be converted to old format');
+    
     const workflowMetrics = result.data?.metrics || {};
     
     // Determine which insight formatter to use based on result content
     const insights = result.data?.survey_sentiment_analysis || result.data?.survey_data
       ? this.formatInsightsFromSurveyResults(result)
       : this.formatInsightsFromSCTResults(result);
+    
+    console.log('📊 Using structured format with insights:', insights);
     
     return {
       success: true,
@@ -189,7 +285,7 @@ export class N8nWorkflowService {
   /**
    * Trigger the Analyze SCT workflow directly in n8n
    */
-  async analyzeSCT(entityType: string, entityName: string, casesData: CaseData[]): Promise<any> {
+  async analyzeSCT(entityType: string, entityName: string, casesData: CaseData[], retryWithInitialization: boolean = true): Promise<any> {
     try {
       console.log('Triggering Analyze SCT workflow directly on n8n...');
       
@@ -202,29 +298,54 @@ export class N8nWorkflowService {
 
       // Try to call n8n webhook directly first
       try {
-        console.log('Attempting direct connection to n8n webhook...');
-        const directResponse = await fetch(`${this.n8nDirectUrl}/webhook-test/analyze-sct`, {
+        console.log('🚀 Initiating High SCT Email Scrubber workflow...');
+        console.log(`� Webhook URL: ${this.n8nDirectUrl}${this.analyzeSctWebhookPath}`);
+        console.log(`📊 Sending ${casesData.length} cases for analysis`);
+        console.log('⏳ Please wait while workflow processes the data...');
+        
+        const directResponse = await fetch(`${this.n8nDirectUrl}${this.analyzeSctWebhookPath}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(workflowPayload),
           // Set a timeout to fail fast if n8n is not responding
-          signal: AbortSignal.timeout(3000)
+          signal: AbortSignal.timeout(30000) // 30 seconds for High SCT Email Scrubber processing
         });
 
         if (!directResponse.ok) {
           throw new Error(`Direct n8n webhook returned status: ${directResponse.status}`);
         }
         
-        console.log('Direct n8n webhook call successful!');
-        return this.processResult(await directResponse.json(), casesData.length);
+        console.log('✅ High SCT Email Scrubber workflow completed successfully!');
+        console.log('📥 Receiving workflow results...');
+        const rawResult = await directResponse.json();
+        console.log('🔍 Raw webhook response:', rawResult);
+        console.log('🔍 Raw response type:', typeof rawResult);
+        console.log('🔍 Raw response isArray:', Array.isArray(rawResult));
+        const processedResult = this.processResult(rawResult, casesData.length);
+        console.log('📊 Processed result:', processedResult);
+        return processedResult;
       } catch (directError) {
+        // If direct call fails and we haven't tried initialization yet, try initializing webhooks first
+        if (retryWithInitialization && (directError.message.includes('404') || directError.message.includes('connection') || directError.message.includes('fetch'))) {
+          console.warn(`Direct webhook failed: ${directError.message}`);
+          console.log('🔄 Attempting to initialize webhooks and retry...');
+          
+          try {
+            await this.initializeWebhooks();
+            // Retry the call without initialization flag to prevent infinite recursion
+            return await this.analyzeSCT(entityType, entityName, casesData, false);
+          } catch (initError) {
+            console.warn('Webhook initialization failed, falling back to API proxy');
+          }
+        }
+        
         // If direct call fails, fall back to API proxy
         console.warn(`Direct n8n webhook call failed: ${directError.message}`);
         console.log('Falling back to API server proxy...');
         
-        const response = await fetch(`${this.baseUrl}/webhook/analyze-sct`, {
+        const response = await fetch(`${this.baseUrl}/analyze-sct`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -237,7 +358,10 @@ export class N8nWorkflowService {
         }
         
         const result = await response.json();
-        return this.processResult(result, casesData.length);
+        console.log('🔍 API proxy raw result:', result);
+        const processedResult = this.processResult(result, casesData.length);
+        console.log('📊 API proxy processed result:', processedResult);
+        return processedResult;
       }
 
       // This should never be reached now as both paths return directly
