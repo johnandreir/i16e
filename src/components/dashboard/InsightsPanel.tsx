@@ -161,12 +161,17 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     insight.category?.toLowerCase().includes('channel') ||
     insight.category?.toLowerCase().includes('efficiency') ||
     insight.category?.toLowerCase().includes('loyalty') ||
+    insight.category?.toLowerCase().includes('survey') ||
+    insight.category?.toLowerCase().includes('case-analysis') ||
+    insight.category?.toLowerCase().includes('summary') ||
     insight.title.toLowerCase().includes('customer') ||
     insight.title.toLowerCase().includes('satisfaction') ||
     insight.title.toLowerCase().includes('csat') ||
     insight.title.toLowerCase().includes('dsat') ||
     insight.title.toLowerCase().includes('cx') ||
-    insight.title.toLowerCase().includes('feedback')
+    insight.title.toLowerCase().includes('feedback') ||
+    insight.title.toLowerCase().includes('survey') ||
+    insight.title.toLowerCase().includes('case analysis')
   ) : [];
 
   return (

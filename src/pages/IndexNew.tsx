@@ -248,7 +248,109 @@ const IndexNew = () => {
     }
     
     setSelectedTimeRange(range);
+    
+    // Recalculate chart data if we have satisfaction data
+    if (satisfactionData && satisfactionData.satisfactionData) {
+      // Recalculate filtered chart data
+      const filteredChartData = generateFilteredChartData(satisfactionData.satisfactionData);
+      setChartSurveyData(filteredChartData);
+    }
   };
+
+  // Helper function to generate filtered chart data based on time range
+  const generateFilteredChartData = (surveyDetails: any[]) => {
+    if (!surveyDetails || !Array.isArray(surveyDetails) || surveyDetails.length === 0) {
+      return [];
+    }
+
+    // Filter surveys by time range if one is selected
+    const filteredSurveys = surveyDetails.filter(survey => {
+      if (!selectedTimeRange.from || !selectedTimeRange.to || !survey.surveyDate) {
+        return true; // Include all if no time range or no survey date
+      }
+      
+      try {
+        const surveyDate = new Date(survey.surveyDate);
+        const fromDate = new Date(selectedTimeRange.from);
+        const toDate = new Date(selectedTimeRange.to);
+        
+        fromDate.setHours(0, 0, 0, 0);
+        toDate.setHours(23, 59, 59, 999);
+        
+        return surveyDate >= fromDate && surveyDate <= toDate;
+      } catch (error) {
+        console.error('Error parsing survey date:', survey.surveyDate, error);
+        return true; // Include if date parsing fails
+      }
+    });
+
+    // Recalculate metrics from filtered surveys
+    // Check multiple possible rating fields and categorize based on rating value or category
+    const csatCount = filteredSurveys.filter(s => {
+      const rating = s.rating || s.customerSatisfactionRating || s.ratingValue;
+      if (rating !== undefined && rating !== null) {
+        return rating >= 4 && rating <= 5;
+      }
+      // Fallback to category field
+      return s.category?.toLowerCase() === 'csat';
+    }).length;
+    
+    const neutralCount = filteredSurveys.filter(s => {
+      const rating = s.rating || s.customerSatisfactionRating || s.ratingValue;
+      if (rating !== undefined && rating !== null) {
+        return rating === 3;
+      }
+      // Fallback to category field
+      return s.category?.toLowerCase() === 'neutral';
+    }).length;
+    
+    const dsatCount = filteredSurveys.filter(s => {
+      const rating = s.rating || s.customerSatisfactionRating || s.ratingValue;
+      if (rating !== undefined && rating !== null) {
+        return rating >= 1 && rating <= 2;
+      }
+      // Fallback to category field
+      return s.category?.toLowerCase() === 'dsat';
+    }).length;
+    
+    const total = csatCount + neutralCount + dsatCount;
+
+    if (total === 0) {
+      return []; // No data to display
+    }
+
+    const csatPercentage = Math.round((csatCount / total) * 100);
+    const neutralPercentage = Math.round((neutralCount / total) * 100);
+    const dsatPercentage = Math.round((dsatCount / total) * 100);
+
+    console.log('📊 Filtered chart data generated:', {
+      total: filteredSurveys.length,
+      csat: csatCount,
+      neutral: neutralCount,
+      dsat: dsatCount,
+      timeRange: selectedTimeRange.from && selectedTimeRange.to ? 
+        `${selectedTimeRange.from.toLocaleDateString()} - ${selectedTimeRange.to.toLocaleDateString()}` : 'All time'
+    });
+
+    return [{
+      name: 'CSAT (4-5)',
+      value: csatCount,
+      percentage: csatPercentage,
+      color: '#10b981'
+    }, {
+      name: 'Neutral (3)',
+      value: neutralCount,
+      percentage: neutralPercentage,
+      color: '#f59e0b'
+    }, {
+      name: 'DSAT (1-2)',
+      value: dsatCount,
+      percentage: dsatPercentage,
+      color: '#ef4444'
+    }];
+  };
+
+
 
   // Fetch satisfaction data for the selected entity
   const fetchSatisfactionData = async (entityName: string, entityType: string) => {
@@ -261,7 +363,7 @@ const IndexNew = () => {
         const data = await CustomerSatisfactionService.getEntitySatisfactionData(entityName, entityType);
         if (data) {
           setSatisfactionData(data);
-          const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(data.satisfactionData);
+          const chartData = generateFilteredChartData(data.surveyDetails);
           setChartSurveyData(chartData);
         } else {
           setSatisfactionData(null);
@@ -293,7 +395,7 @@ const IndexNew = () => {
               satisfactionData: aggregatedData,
               surveyDetails: allSurveyDetails // Include all survey details from squad members
             });
-            const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(aggregatedData);
+            const chartData = generateFilteredChartData(allSurveyDetails);
             setChartSurveyData(chartData);
           } else {
             setSatisfactionData(null);
@@ -337,7 +439,7 @@ const IndexNew = () => {
               satisfactionData: aggregatedData,
               surveyDetails: allSurveyDetails // Include all survey details from team members
             });
-            const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(aggregatedData);
+            const chartData = generateFilteredChartData(allSurveyDetails);
             setChartSurveyData(chartData);
           } else {
             setSatisfactionData(null);
@@ -887,23 +989,8 @@ const IndexNew = () => {
               // End satisfaction loading state since we have data now
               setIsSatisfactionLoading(false);
               
-              // Format for chart
-              const chartData = [{
-                name: 'CSAT (4-5)',
-                value: aggregatedSatisfaction.csat,
-                percentage: aggregatedSatisfaction.csatPercentage,
-                color: '#10b981'
-              }, {
-                name: 'Neutral (3)',
-                value: aggregatedSatisfaction.neutral,
-                percentage: aggregatedSatisfaction.neutralPercentage,
-                color: '#f59e0b'
-              }, {
-                name: 'DSAT (1-2)',
-                value: aggregatedSatisfaction.dsat,
-                percentage: aggregatedSatisfaction.dsatPercentage,
-                color: '#ef4444'
-              }];
+              // Format for chart with time range filtering
+              const chartData = generateFilteredChartData(allSquadSurveyDetails);
               
               setChartSurveyData(chartData);
             }
@@ -1073,22 +1160,7 @@ const IndexNew = () => {
               });
               
               // Format for chart
-              const chartData = [{
-                name: 'CSAT (4-5)',
-                value: aggregatedTeamSatisfaction.csat,
-                percentage: aggregatedTeamSatisfaction.csatPercentage,
-                color: '#10b981'
-              }, {
-                name: 'Neutral (3)',
-                value: aggregatedTeamSatisfaction.neutral,
-                percentage: aggregatedTeamSatisfaction.neutralPercentage,
-                color: '#f59e0b'
-              }, {
-                name: 'DSAT (1-2)',
-                value: aggregatedTeamSatisfaction.dsat,
-                percentage: aggregatedTeamSatisfaction.dsatPercentage,
-                color: '#ef4444'
-              }];
+              const chartData = generateFilteredChartData(allTeamSurveyDetails);
               
               setChartSurveyData(chartData);
             }
@@ -1176,22 +1248,7 @@ const IndexNew = () => {
               setIsSatisfactionLoading(false);
               
               // Format for chart
-              const chartData = [{
-                name: 'CSAT (4-5)',
-                value: latestMetrics.metrics.customerSatisfaction.csat,
-                percentage: latestMetrics.metrics.customerSatisfaction.csatPercentage,
-                color: '#10b981' // green
-              }, {
-                name: 'Neutral (3)',
-                value: latestMetrics.metrics.customerSatisfaction.neutral,
-                percentage: latestMetrics.metrics.customerSatisfaction.neutralPercentage,
-                color: '#f59e0b' // amber
-              }, {
-                name: 'DSAT (1-2)',
-                value: latestMetrics.metrics.customerSatisfaction.dsat,
-                percentage: latestMetrics.metrics.customerSatisfaction.dsatPercentage,
-                color: '#ef4444' // red
-              }];
+              const chartData = generateFilteredChartData(latestMetrics.surveyDetails || []);
               
               setChartSurveyData(chartData);
               setIsSatisfactionLoading(false); // Clear loading state when satisfaction data is set
@@ -1425,26 +1482,72 @@ const IndexNew = () => {
   };
 
   const handleSurveySegmentClick = (data: any, segment: string) => {
+    console.log('🔍 Survey segment clicked:', segment);
+    console.log('📊 Satisfaction data available:', !!satisfactionData);
+    
     if (!satisfactionData) {
+      console.log('❌ No satisfaction data');
       return;
     }
     if (!satisfactionData.surveyDetails) {
+      console.log('❌ No survey details');
       return;
     }
     
     if (!Array.isArray(satisfactionData.surveyDetails)) {
+      console.log('❌ Survey details not an array');
       return;
     }
     
     if (satisfactionData.surveyDetails.length === 0) {
+      console.log('❌ No survey details available');
       return;
     }
-    // Filter survey details by the clicked segment category
+    
+    console.log('📋 Total surveys available:', satisfactionData.surveyDetails.length);
+    console.log('📅 Survey dates:', satisfactionData.surveyDetails.map(s => ({ 
+      case: s.caseNumber, 
+      category: s.category,
+      date: s.surveyDate 
+    })));
+    // Helper function to check if a survey date is within the selected time range
+    const isDateInRange = (dateString: string): boolean => {
+      if (!selectedTimeRange.from || !selectedTimeRange.to || !dateString) {
+        return true; // If no date range selected or no survey date, include all
+      }
+      
+      try {
+        const surveyDate = new Date(dateString);
+        const fromDate = new Date(selectedTimeRange.from);
+        const toDate = new Date(selectedTimeRange.to);
+        
+        // Set time to start/end of day for proper comparison
+        fromDate.setHours(0, 0, 0, 0);
+        toDate.setHours(23, 59, 59, 999);
+        
+        return surveyDate >= fromDate && surveyDate <= toDate;
+      } catch (error) {
+        console.warn('Invalid date format in survey:', dateString);
+        return true; // Include surveys with invalid dates as fallback
+      }
+    };
+
+    // Filter survey details by the clicked segment category AND selected time range
     const segmentSurveys = satisfactionData.surveyDetails.filter(survey => {
       const category = survey.category?.toLowerCase();
-      return category === segment.toLowerCase();
+      const categoryMatch = category === segment.toLowerCase();
+      const dateMatch = isDateInRange(survey.surveyDate);
+      return categoryMatch && dateMatch;
     });
+    
+    console.log('🔍 Filtered surveys for segment:', segmentSurveys.length);
+    console.log('📅 Time range:', {
+      from: selectedTimeRange.from?.toLocaleDateString(),
+      to: selectedTimeRange.to?.toLocaleDateString()
+    });
+    
     if (segmentSurveys.length === 0) {
+      console.log('❌ No surveys found for segment after filtering');
       return;
     }
     
@@ -1466,10 +1569,20 @@ const IndexNew = () => {
       priority: 'N/A',
       products: survey.productArea ? `["${survey.productArea}"]` : '[]'
     }));
+    // Format date range for modal title
+    const formatDateRange = () => {
+      if (!selectedTimeRange.from || !selectedTimeRange.to) {
+        return '(All Time)';
+      }
+      const fromDate = selectedTimeRange.from.toLocaleDateString();
+      const toDate = selectedTimeRange.to.toLocaleDateString();
+      return `(${fromDate} - ${toDate})`;
+    };
+    
     // Open the detailed modal with real survey data
     setModalData(modalSurveyData);
     setModalType('survey');
-    setModalTitle(`${segment.toUpperCase()} Feedback Details - Customer Satisfaction Survey Results`);
+    setModalTitle(`${segment.toUpperCase()} Feedback Details - Customer Satisfaction Survey Results ${formatDateRange()}`);
     setModalOpen(true);
     
     // Add insight to CX results
@@ -2037,12 +2150,18 @@ const IndexNew = () => {
         });
       }
     } catch (error) {
-      console.error('Error analyzing SCT with workflow:', error);
+      console.error('❌ Error running High SCT Email Scrubber workflow:', error);
+      
+      // Show specific error message with more details
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      toast({
+        title: "High SCT Email Scrubber Failed",
+        description: `Workflow error: ${errorMessage}. Please check if n8n is running and the workflow is activated.`,
+        variant: "destructive"
+      });
       
       // Fallback to local analysis if workflow failed
-      // (Using the same code as the 'else' block above)
-      
-      // Analyze real case data locally
       const insights = [];
       const caseList = realCaseData.map(caseItem => ({
         case_id: caseItem.case_id,
@@ -2064,22 +2183,22 @@ const IndexNew = () => {
       if (avgSCT <= targetSCT) {
         insights.push({
           id: '1',
-          title: `${entityLabel} SCT Performance Above Target`,
-          description: `${entityName} achieves ${avgSCT} days average SCT, meeting the ≤${targetSCT} days target. Best case: ${minSCT} days, Longest case: ${maxSCT} days.`,
+          title: `${entityLabel} SCT Performance Above Target (Local Analysis)`,
+          description: `${entityName} achieves ${avgSCT} days average SCT, meeting the ≤${targetSCT} days target. Best case: ${minSCT} days, Longest case: ${maxSCT} days. Note: AI analysis unavailable.`,
           impact: 'High',
           category: 'performance',
           type: 'success',
-          recommendation: `Continue current practices. Share successful techniques with team members.`
+          recommendation: `Continue current practices. Note: Detailed AI insights not available due to workflow error.`
         });
       } else {
         insights.push({
           id: '1',
-          title: `${entityLabel} SCT Performance Below Target`,
-          description: `${entityName} averages ${avgSCT} days SCT, ${Math.round((avgSCT - targetSCT) * 10) / 10} days above the ${targetSCT} days target. Improvement needed.`,
+          title: `${entityLabel} SCT Performance Below Target (Local Analysis)`,
+          description: `${entityName} averages ${avgSCT} days SCT, ${Math.round((avgSCT - targetSCT) * 10) / 10} days above the ${targetSCT} days target. Note: AI analysis unavailable.`,
           impact: 'High',
           category: 'performance',
           type: 'warning',
-          recommendation: `Focus on reducing case resolution time. Analyze longest cases (${maxSCT} days) for process improvements.`
+          recommendation: `Focus on reducing case resolution time. Note: Detailed AI insights not available due to workflow error.`
         });
       }
       
@@ -2089,28 +2208,24 @@ const IndexNew = () => {
         metrics: {
           averageSCT: avgSCT,
           targetSCT: targetSCT,
-          improvement: avgSCT <= targetSCT ? 'Meeting target' : 'Needs improvement',
+          improvement: avgSCT <= targetSCT ? 'Meeting target (Basic)' : 'Needs improvement (Basic)',
           bottleneck: avgSCT > targetSCT ? 'Case resolution time' : 'None identified',
-          efficiency: avgSCT <= targetSCT ? 'Good' : 'Needs improvement',
-          trend: realCaseData.length > 3 ? 'Stable' : 'Insufficient Data'
+          efficiency: avgSCT <= targetSCT ? 'Good (Basic)' : 'Needs improvement (Basic)',
+          trend: realCaseData.length > 3 ? 'Stable (Basic)' : 'Insufficient Data'
         },
         cases: caseList
       };
       
       setSctAnalysisResults(sctAnalysis);
-      toast({
-        title: "AI Analysis Issue",
-        description: "Could not connect to AI analysis service. Using basic analysis instead.",
-        variant: "destructive"
-      });
     } finally {
       setIsAnalysisLoading(false);
     }
     
   };
 
-  const handleCXInsight = () => {
+  const handleCXInsight = async () => {
     setCxAnalyzed(true);
+    setIsAnalysisLoading(true);
     
     // Get entity-specific terminology
     const entityType = generatedEntity || selectedEntity;
@@ -2120,88 +2235,129 @@ const IndexNew = () => {
     const peerGroup = entityType === 'dpe' ? 'other DPEs' : entityType === 'squad' ? 'other squads' : 'other teams';
     const performanceLevel = entityType === 'dpe' ? 'all DPEs' : entityType === 'squad' ? 'all squads' : 'all teams';
     
-    // Generate comprehensive CX insight results with entity-specific detailed recommendations
-    const cxInsights = {
-      insights: [
-        {
-          id: '4',
-          title: `${entityLabel} Exceptional Customer Satisfaction Performance`,
-          description: `${entityName} maintains ${reportCurrentData?.satisfaction || 85}% CSAT, exceeding the 85% target by significant margin. Top 15% performer across ${performanceLevel}.`,
-          impact: 'High',
-          category: 'satisfaction',
-          type: 'success',
-          recommendation: entityType === 'dpe'
-            ? `Document your customer interaction best practices and consider mentoring junior DPEs. Your communication skills could be valuable for squad-wide training.`
-            : `Document and share best practices with underperforming ${peerGroup}. Consider this ${entityType} as a mentoring resource for customer interaction excellence.`
-        },
-        {
-          id: '5',
-          title: `${entityLabel} DSAT Root Cause Analysis - Action Required`,
-          description: `Primary dissatisfaction drivers for ${entityName}: Response time delays (45%), Communication clarity issues (30%), and Solution completeness (25%). DSAT trending at 6%, above 5% target.`,
-          impact: 'High',
-          category: 'feedback',
-          type: 'warning',
-          recommendation: entityType === 'dpe'
-            ? `Immediate personal actions: 1) Set response time targets and track them, 2) Attend communication skills training, 3) Use solution checklists before case closure. Consider pairing with high-CSAT DPEs.`
-            : `Immediate ${entityContext}-level actions: 1) Implement response time SLA tracking, 2) Provide communication training for ${entityType} members, 3) Establish solution validation checkpoints before closure.`
-        },
-        {
-          id: '6',
-          title: `${entityLabel} Positive Customer Feedback Momentum`,
-          description: `Positive feedback for ${entityName} increased by 12% this quarter, with specific praise for solution quality (78%), technical expertise (71%), and proactive communication (65%).`,
-          impact: 'High',
-          category: 'trending',
-          type: 'success',
-          recommendation: entityType === 'dpe'
-            ? `Leverage this momentum by documenting successful case resolutions and sharing techniques with your squad. Consider becoming a customer interaction champion.`
-            : `Leverage this momentum by capturing customer success stories from ${entityType} cases, creating case studies, and using positive feedback for ${entityType} member motivation and recognition.`
-        },
-        {
-          id: '7',
-          title: `${entityLabel} Customer Interaction Channel Optimization`,
-          description: `Phone interactions for ${entityName} show 23% higher satisfaction vs. email/chat. Complex issues resolved 40% faster via direct communication channels.`,
-          impact: 'Medium',
-          category: 'channel',
-          type: 'info',
-          recommendation: entityType === 'dpe'
-            ? `Prioritize phone calls for your complex cases (P1/P2). Develop phone communication skills and use calls to build stronger customer relationships.`
-            : `Implement ${entityContext}-level triage system to route high-impact cases to direct communication channels. Train ${entityType} members on effective phone communication techniques.`
-        },
-        {
-          id: '8',
-          title: `${entityLabel} First Contact Resolution Opportunity`,
-          description: `First contact resolution rate for ${entityName} at 73%, with potential to reach 85% target. Multi-contact cases show 2.3x longer resolution time and 15% lower satisfaction.`,
-          impact: 'Medium',
-          category: 'efficiency',
-          type: 'improvement',
-          recommendation: entityType === 'dpe'
-            ? `Enhance your diagnostic skills and knowledge base usage. Practice comprehensive case analysis during first contact to reduce follow-ups.`
-            : `Enhance knowledge base accessibility for ${entityType}, implement comprehensive case diagnosis tools, and provide advanced troubleshooting training to improve FCR rate.`
-        },
-        {
-          id: '9',
-          title: `${entityLabel} Customer Loyalty and Retention Indicators`,
-          description: `Customer retention rate for ${entityName} at 94% with high NPS scores (8.2/10). Customers specifically value technical expertise and solution durability.`,
-          impact: 'High',
-          category: 'loyalty',
-          type: 'success',
-          recommendation: entityType === 'dpe'
-            ? `Maintain current service quality standards. Continue building technical expertise and consider proactive follow-ups with customers to ensure solution effectiveness.`
-            : `Maintain current service quality standards across ${entityType}. Consider implementing customer success check-ins and proactive solution optimization reviews.`
-        }
-      ],
-      metrics: {
-        csat: reportCurrentData?.satisfaction || 0,
-        dsat: reportCurrentData?.surveyData?.find(d => d.name.includes('DSAT'))?.percentage || 0,
-        totalSurveys: reportCurrentData?.totalSurveys || 0,
-        trend: '+12%',
-        nps: 8.2,
-        fcr: '73%',
-        retention: '94%'
-      }
-    };
+    // Use real survey data if available
+    const realSurveyData = satisfactionData?.surveyDetails || [];
     
-    setCxInsightResults(cxInsights);
+    if (realSurveyData.length === 0) {
+      // Fallback to dummy data only if no real data available
+      const cxAnalysis = {
+        insights: [
+          {
+            id: '1',
+            title: 'No Survey Data Available',
+            description: 'No customer satisfaction survey data found for the selected time period to analyze CX performance.',
+            impact: 'Low',
+            category: 'data',
+            type: 'info',
+            recommendation: 'Generate a report for a period with survey responses to see detailed CX analysis.'
+          }
+        ]
+      };
+      setSurveyAnalysisResults(cxAnalysis);
+      setIsAnalysisLoading(false);
+      return;
+    }
+    
+    try {
+      // Trigger the Analyze Survey workflow for CX analysis
+      console.log('🔍 Starting Analyze Survey workflow...', { entityType, entityName, surveysCount: realSurveyData.length });
+      console.log('⏳ Waiting for workflow to complete...');
+      
+      const workflowResults = await n8nWorkflowService.analyzeSurvey(entityType, entityName, realSurveyData);
+      
+      console.log('✅ Workflow completed! Processing results...');
+      console.log('📊 Full workflow response:', JSON.stringify(workflowResults, null, 2));
+      
+      // Process the workflow results into insights format
+      const processedInsights = [];
+      
+      // Check if we have direct insights from the workflow
+      if (workflowResults && Array.isArray(workflowResults)) {
+        workflowResults.forEach((item: any, index: number) => {
+          if (item.title && item.description) {
+            processedInsights.push({
+              id: `survey-${index + 1}`,
+              title: item.title,
+              description: item.description,
+              impact: item.impact || 'Medium',
+              category: item.category || 'satisfaction',
+              type: item.type || 'info',
+              recommendation: item.recommendation || 'No specific recommendations provided.'
+            });
+          }
+        });
+      } else if (workflowResults && typeof workflowResults === 'object') {
+        // Handle single object response
+        if (workflowResults.title && workflowResults.description) {
+          processedInsights.push({
+            id: 'survey-1',
+            title: workflowResults.title,
+            description: workflowResults.description,
+            impact: workflowResults.impact || 'Medium',
+            category: workflowResults.category || 'satisfaction',
+            type: workflowResults.type || 'info',
+            recommendation: workflowResults.recommendation || 'No specific recommendations provided.'
+          });
+        }
+        
+        // Check for nested insights structure
+        if (workflowResults.insights && Array.isArray(workflowResults.insights)) {
+          workflowResults.insights.forEach((insight: any, index: number) => {
+            processedInsights.push({
+              id: `survey-insight-${index + 1}`,
+              title: insight.title || `Survey Insight ${index + 1}`,
+              description: insight.description || insight.analysis || 'No description available',
+              impact: insight.impact || 'Medium',
+              category: insight.category || 'satisfaction',
+              type: insight.type || 'info',
+              recommendation: insight.recommendation || insight.recommendations || 'No recommendations provided.'
+            });
+          });
+        }
+      }
+      
+      // If no insights were found, create a summary insight
+      if (processedInsights.length === 0) {
+        processedInsights.push({
+          id: 'survey-summary-1',
+          title: `${entityLabel} Survey Analysis Complete`,
+          description: `Customer satisfaction analysis completed for ${entityName}. ${realSurveyData.length} survey responses were analyzed.`,
+          impact: 'Medium',
+          category: 'satisfaction',
+          type: 'info',
+          recommendation: 'Review the detailed workflow output for specific insights and recommendations.'
+        });
+      }
+      
+      const cxAnalysis = {
+        insights: processedInsights
+      };
+      
+      setSurveyAnalysisResults(cxAnalysis);
+      setIsAnalysisLoading(false);
+      
+    } catch (error) {
+      console.error('❌ Error running Analyze Survey workflow:', error);
+      
+      // Fallback to error state
+      const errorAnalysis = {
+        insights: [
+          {
+            id: 'error-1',
+            title: 'Survey Analysis Failed',
+            description: `Failed to analyze customer satisfaction data: ${error.message}`,
+            impact: 'Low',
+            category: 'error',
+            type: 'warning',
+            recommendation: 'Check n8n workflow status and try again. Ensure the Analyze Survey workflow is active and accessible.'
+          }
+        ]
+      };
+      
+      setSurveyAnalysisResults(errorAnalysis);
+      setIsAnalysisLoading(false);
+    }
+
   };
 
   const handleAnalyzeSurvey = async () => {
@@ -2214,10 +2370,10 @@ const IndexNew = () => {
     const entityLabel = entityType === 'dpe' ? 'DPE' : entityType === 'squad' ? 'Squad' : 'Team';
     
     // Use survey data from modalData or satisfaction data
-    const surveyData = modalData || [];
-    const realSatisfactionData = satisfactionData;
+    const surveyDataFromModal = modalData || [];
+    const realSurveyData = surveyDataFromModal.length > 0 ? surveyDataFromModal : (satisfactionData?.surveyDetails || []);
     
-    if (!realSatisfactionData || (!surveyData.length && !realSatisfactionData.surveyDetails)) {
+    if (realSurveyData.length === 0) {
       // Fallback when no survey data available
       const fallbackAnalysis = {
         insights: [
@@ -2230,17 +2386,7 @@ const IndexNew = () => {
             type: 'info',
             recommendation: 'Ensure surveys are being collected and processed for comprehensive feedback analysis.'
           }
-        ],
-        metrics: {
-          totalSurveys: 0,
-          averageRating: 'N/A',
-          csatPercentage: realSatisfactionData?.satisfactionData?.csatPercentage || 0,
-          neutralPercentage: realSatisfactionData?.satisfactionData?.neutralPercentage || 0,
-          dsatPercentage: realSatisfactionData?.satisfactionData?.dsatPercentage || 0,
-          trend: 'Insufficient Data',
-          sentiment: 'Unknown'
-        },
-        surveys: []
+        ]
       };
       setSurveyAnalysisResults(fallbackAnalysis);
       setIsAnalysisLoading(false);
@@ -2248,153 +2394,147 @@ const IndexNew = () => {
     }
     
     try {
-      // Use n8n workflow service to analyze surveys
-      const workflowResults = await n8nWorkflowService.analyzeSurvey(entityType, entityName, surveyData);
+      // Trigger the Analyze Survey workflow
+      console.log('🔍 Starting Analyze Survey workflow from modal...', { entityType, entityName, surveysCount: realSurveyData.length });
+      console.log('⏳ Waiting for workflow to complete...');
       
-      if (workflowResults && workflowResults.success && workflowResults.data) {
-        // Use the workflow analysis results
-        setSurveyAnalysisResults(workflowResults.data);
-        
-        toast({
-          title: `${entityLabel} Survey Analysis Complete`,
-          description: `Analysis completed for ${entityName} with ${workflowResults.data.insights.length} insights generated.`,
-          variant: "default"
-        });
-      } else {
-        // Fall back to local analysis if workflow fails
-        const insights = [];
-        const surveys = surveyData.length > 0 ? surveyData : (realSatisfactionData.surveyDetails || []);
-        
-        // Calculate metrics from survey data
-        const totalSurveys = surveys.length;
-        const ratings = surveys.map(s => s.overallSatisfaction).filter(r => r !== undefined && r > 0);
-        const averageRating = ratings.length > 0 ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : 0;
-        
-        const csatCount = surveys.filter(s => s.category === 'csat').length;
-        const neutralCount = surveys.filter(s => s.category === 'neutral').length;
-        const dsatCount = surveys.filter(s => s.category === 'dsat').length;
-        
-        const csatPercentage = totalSurveys > 0 ? Math.round((csatCount / totalSurveys) * 100) : 0;
-        const neutralPercentage = totalSurveys > 0 ? Math.round((neutralCount / totalSurveys) * 100) : 0;
-        const dsatPercentage = totalSurveys > 0 ? Math.round((dsatCount / totalSurveys) * 100) : 0;
-        
-        // Overall satisfaction analysis
-        if (csatPercentage >= 80) {
-          insights.push({
-            id: '1',
-            title: `Excellent Customer Satisfaction Performance`,
-            description: `${entityName} achieves ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${csatCount} satisfied customers out of ${totalSurveys} total surveys.`,
-            impact: 'High',
-            category: 'satisfaction',
-            type: 'success',
-            recommendation: 'Continue the excellent customer service practices. Consider documenting successful approaches for training materials.'
-          });
-        } else if (csatPercentage >= 60) {
-          insights.push({
-            id: '1',
-            title: `Good Customer Satisfaction Performance`,
-            description: `${entityName} achieves ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${dsatCount} dissatisfied customers out of ${totalSurveys} total surveys.`,
-            impact: 'Medium',
-            category: 'satisfaction',
-            type: 'success',
-            recommendation: 'Maintain current satisfaction levels while focusing on addressing areas that received neutral ratings.'
-          });
+      const workflowResults = await n8nWorkflowService.analyzeSurvey(entityType, entityName, realSurveyData);
+      
+      console.log('✅ Workflow completed! Processing results...');
+      console.log('📊 Full workflow response:', JSON.stringify(workflowResults, null, 2));
+      
+      // Process the workflow results into insights format
+      const processedInsights = [];
+      
+      console.log('🔍 Processing Analyze Survey workflow results...');
+      console.log('🔍 Workflow response type:', typeof workflowResults);
+      console.log('🔍 Has survey_sentiment_analysis:', !!(workflowResults?.survey_sentiment_analysis));
+      console.log('🔍 Has summary:', !!(workflowResults?.summary));
+      console.log('🔍 survey_sentiment_analysis length:', workflowResults?.survey_sentiment_analysis?.length);
+      console.log('🔍 survey_sentiment_analysis content:', workflowResults?.survey_sentiment_analysis);
+      
+      // Handle the Analyze Survey workflow format
+      if (workflowResults && typeof workflowResults === 'object') {
+        // Process survey_sentiment_analysis array
+        if (workflowResults.survey_sentiment_analysis && Array.isArray(workflowResults.survey_sentiment_analysis)) {
+          console.log(`📊 Processing ${workflowResults.survey_sentiment_analysis.length} survey analysis items`);
+          
+          for (let index = 0; index < workflowResults.survey_sentiment_analysis.length; index++) {
+            const item = workflowResults.survey_sentiment_analysis[index];
+            console.log(`🔍 Processing item ${index + 1}:`, item);
+            console.log(`🔍 Item case_id: ${item?.case_id}, survey_type: ${item?.survey_type}`);
+            
+            if (item && item.case_id && item.problem) {
+              const insight = {
+                id: `survey-analysis-${item.case_id}-${index + 1}`,
+                title: `Case Analysis: ${item.case_id}`,
+                description: item.problem,
+                impact: 'Medium',
+                category: 'case-analysis',
+                type: item.survey_type === 'DSAT' ? 'warning' : 'info',
+                recommendation: Array.isArray(item.recommendations) ? 
+                  `• ${item.recommendations.join('\n• ')}` : 
+                  'No specific recommendations provided.'
+              };
+              
+              console.log(`📝 Created insight for ${item.survey_type} case ${item.case_id}:`, insight);
+              processedInsights.push(insight);
+            } else {
+              console.warn(`⚠️ Skipping invalid item at index ${index}:`, item);
+            }
+          }
+          
+          console.log(`✅ Added ${processedInsights.length} case insights to processedInsights array`);
         } else {
-          insights.push({
-            id: '1',
-            title: `Customer Satisfaction Needs Improvement`,
-            description: `${entityName} has a ${csatPercentage}% CSAT rate with an average rating of ${averageRating}/5. ${dsatCount} dissatisfied customers out of ${totalSurveys} total surveys.`,
-            impact: 'High',
-            category: 'satisfaction',
-            type: 'warning',
-            recommendation: 'Review DSAT cases to identify common issues. Implement targeted training on addressing specific customer concerns.'
-          });
+          console.warn('⚠️ survey_sentiment_analysis not found or not an array');
         }
         
-        // Set the analysis results using local analysis
-        const surveyAnalysis = {
-          insights: insights,
-          metrics: {
-            totalSurveys: totalSurveys,
-            averageRating: averageRating,
-            csatPercentage: csatPercentage,
-            neutralPercentage: neutralPercentage,
-            dsatPercentage: dsatPercentage,
-            trend: totalSurveys > 3 ? 'Stable' : 'Insufficient Data',
-            sentiment: csatPercentage >= 70 ? 'Positive' : csatPercentage >= 50 ? 'Neutral' : 'Needs Improvement'
-          },
-          surveys: surveys.map(s => ({
-            case_id: s.case_id,
-            rating: s.overallSatisfaction,
-            category: s.category,
-            feedback: s.feedback || ''
-          }))
-        };
+        // Add summary insight if available
+        if (workflowResults.summary) {
+          const summary = workflowResults.summary;
+          let summaryDescription = `Analysis of ${workflowResults.cases_analyzed?.length || 0} survey cases completed for ${entityName}.`;
+          
+          if (summary.strengths?.length > 0) {
+            summaryDescription += `\n\n✅ Strengths identified:\n• ${summary.strengths.join('\n• ')}`;
+          }
+          
+          if (summary.areas_for_improvement?.length > 0) {
+            summaryDescription += `\n\n🎯 Areas for improvement:\n• ${summary.areas_for_improvement.join('\n• ')}`;
+          }
+          
+          const summaryInsight = {
+            id: 'survey-summary-1',
+            title: `${entityLabel} Customer Survey Summary`,
+            description: summaryDescription,
+            impact: 'High',
+            category: 'summary',
+            type: 'success',
+            recommendation: summary.areas_for_improvement?.length > 0 ? 
+              `Focus on:\n• ${summary.areas_for_improvement.join('\n• ')}` : 
+              'Continue current excellent practices.'
+          };
+          console.log(`📋 Adding summary insight:`, summaryInsight);
+          processedInsights.unshift(summaryInsight);
+        }
         
-        setSurveyAnalysisResults(surveyAnalysis);
-        
-        toast({
-          description: "Using local analysis due to workflow service error.",
-          variant: "default"
+        console.log(`🎉 Total insights created: ${processedInsights.length}`);
+        console.log(`📊 Individual case insights: ${workflowResults.survey_sentiment_analysis?.length || 0}`);
+        console.log(`📋 Summary insights: ${workflowResults.summary ? 1 : 0}`);
+        console.log(`🔍 All processed insights:`, processedInsights);
+      }
+      
+      // If no insights were found, create a summary insight
+      if (processedInsights.length === 0) {
+        processedInsights.push({
+          id: 'survey-summary-1',
+          title: `${entityLabel} Survey Analysis Complete`,
+          description: `Customer satisfaction analysis completed for ${entityName}. ${realSurveyData.length} survey responses were analyzed.`,
+          impact: 'Medium',
+          category: 'satisfaction',
+          type: 'info',
+          recommendation: 'Review the detailed workflow output for specific insights and recommendations.'
         });
       }
-    } catch (error) {
-      console.error("Error analyzing survey data:", error);
-      // Fall back to local analysis if there's an error
-      const insights = [];
-      const surveys = surveyData.length > 0 ? surveyData : (realSatisfactionData.surveyDetails || []);
-      
-      // Calculate metrics from survey data
-      const totalSurveys = surveys.length;
-      const ratings = surveys.map(s => s.overallSatisfaction).filter(r => r !== undefined && r > 0);
-      const averageRating = ratings.length > 0 ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10 : 0;
-      
-      const csatCount = surveys.filter(s => s.category === 'csat').length;
-      const neutralCount = surveys.filter(s => s.category === 'neutral').length;
-      const dsatCount = surveys.filter(s => s.category === 'dsat').length;
-      
-      const csatPercentage = totalSurveys > 0 ? Math.round((csatCount / totalSurveys) * 100) : 0;
-      const neutralPercentage = totalSurveys > 0 ? Math.round((neutralCount / totalSurveys) * 100) : 0;
-      const dsatPercentage = totalSurveys > 0 ? Math.round((dsatCount / totalSurveys) * 100) : 0;
-      
-      // Simple analysis based on percentages
-      insights.push({
-        id: '1',
-        title: `Customer Satisfaction Analysis`,
-        description: `Analysis for ${entityName}. ${totalSurveys} surveys were analyzed.`,
-        impact: 'Medium',
-        category: 'satisfaction',
-        type: 'info',
-        recommendation: 'Review customer feedback and address key issues.'
-      });
       
       const surveyAnalysis = {
-        insights: insights,
-        metrics: {
-          totalSurveys: totalSurveys,
-          averageRating: averageRating,
-          csatPercentage: csatPercentage,
-          neutralPercentage: neutralPercentage,
-          dsatPercentage: dsatPercentage,
-          trend: totalSurveys > 3 ? 'Stable' : 'Insufficient Data',
-          sentiment: csatPercentage >= 70 ? 'Positive' : csatPercentage >= 50 ? 'Neutral' : 'Needs Improvement'
-        },
-        surveys: surveys.map(s => ({
-          case_id: s.case_id,
-          rating: s.overallSatisfaction,
-          category: s.category,
-          feedback: s.feedback || ''
-        }))
+        insights: processedInsights
       };
       
       setSurveyAnalysisResults(surveyAnalysis);
+      setIsAnalysisLoading(false);
       
       toast({
-        description: "Using local analysis due to workflow service error.",
+        title: `${entityLabel} Survey Analysis Complete`,
+        description: `Analysis completed for ${entityName} with ${processedInsights.length} insights generated.`,
         variant: "default"
       });
-    } finally {
+      
+    } catch (error) {
+      console.error('❌ Error running Analyze Survey workflow:', error);
+      
+      // Fallback to error state
+      const errorAnalysis = {
+        insights: [
+          {
+            id: 'error-1',
+            title: 'Survey Analysis Failed',
+            description: `Failed to analyze customer satisfaction data: ${error.message}`,
+            impact: 'Low',
+            category: 'error',
+            type: 'warning',
+            recommendation: 'Check n8n workflow status and try again. Ensure the Analyze Survey workflow is active and accessible.'
+          }
+        ]
+      };
+      
+      setSurveyAnalysisResults(errorAnalysis);
       setIsAnalysisLoading(false);
+      
+      toast({
+        title: "Survey Analysis Error",
+        description: "Failed to analyze survey data. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -3162,12 +3302,13 @@ const IndexNew = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="card-content">
-                    {isSatisfactionLoading ? (
+                    {isSatisfactionLoading && !hasTimedOut ? (
                       <SurveyAnalysisChart
                         data={[]}
                         title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
                         totalSurveys={0}
                         isLoading={true}
+                        onPieClick={handleSurveySegmentClick}
                       />
                     ) : (
                       // Always use SurveyAnalysisChart component for consistent styling

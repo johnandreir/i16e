@@ -301,7 +301,8 @@ export class N8nWorkflowService {
         console.log('🚀 Initiating High SCT Email Scrubber workflow...');
         console.log(`� Webhook URL: ${this.n8nDirectUrl}${this.analyzeSctWebhookPath}`);
         console.log(`📊 Sending ${casesData.length} cases for analysis`);
-        console.log('⏳ Please wait while workflow processes the data...');
+        console.log('⏳ Please wait while workflow processes the data (this may take 2-3 minutes)...');
+        console.log('💡 If this times out, check that your n8n workflow is activated and running');
         
         const directResponse = await fetch(`${this.n8nDirectUrl}${this.analyzeSctWebhookPath}`, {
           method: 'POST',
@@ -309,8 +310,8 @@ export class N8nWorkflowService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(workflowPayload),
-          // Set a timeout to fail fast if n8n is not responding
-          signal: AbortSignal.timeout(30000) // 30 seconds for High SCT Email Scrubber processing
+          // Set a longer timeout to allow n8n workflow to complete
+          signal: AbortSignal.timeout(180000) // 3 minutes for High SCT Email Scrubber processing
         });
 
         if (!directResponse.ok) {
@@ -385,32 +386,47 @@ export class N8nWorkflowService {
         entity_name: entityName,
         survey_data: surveyData
       };
+      
+      console.log('📋 PAYLOAD being sent to n8n workflow:');
+      console.log('📋 Entity Type:', entityType);
+      console.log('📋 Entity Name:', entityName);
+      console.log('📋 Survey Data Count:', surveyData?.length || 0);
+      console.log('📋 Survey Data Details:', JSON.stringify(surveyData, null, 2));
 
       // Try to call n8n webhook directly first
       try {
-        console.log('Attempting direct connection to n8n webhook...');
+        console.log('🚀 Initiating Analyze Survey workflow...');
+        console.log(`🔗 Webhook URL: ${this.n8nDirectUrl}/webhook-test/analyze-survey`);
+        console.log(`📊 Sending ${surveyData.length} surveys for analysis`);
+        console.log('⏳ Please wait while workflow processes the data (this may take 2-3 minutes)...');
+        console.log('💡 If this times out, check that your n8n workflow is activated and running');
         const directResponse = await fetch(`${this.n8nDirectUrl}/webhook-test/analyze-survey`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(workflowPayload),
-          // Set a timeout to fail fast if n8n is not responding
-          signal: AbortSignal.timeout(3000)
+          // Set a longer timeout to allow n8n workflow to complete
+          signal: AbortSignal.timeout(180000) // 3 minutes for Analyze Survey processing
         });
 
         if (!directResponse.ok) {
           throw new Error(`Direct n8n webhook returned status: ${directResponse.status}`);
         }
         
-        console.log('Direct n8n webhook call successful!');
-        return this.processResult(await directResponse.json(), surveyData.length);
+        console.log('✅ Analyze Survey workflow completed successfully!');
+        console.log('📥 Receiving workflow results...');
+        const rawResult = await directResponse.json();
+        console.log('🔍 Raw webhook response:', rawResult);
+        const processedResult = this.processResult(rawResult, surveyData.length);
+        console.log('📊 Processed result:', processedResult);
+        return processedResult;
       } catch (directError) {
         // If direct call fails, fall back to API proxy
         console.warn(`Direct n8n webhook call failed: ${directError.message}`);
         console.log('Falling back to API server proxy...');
         
-        const response = await fetch(`${this.baseUrl}/webhook/analyze-survey`, {
+        const response = await fetch(`${this.baseUrl}/webhook-test/analyze-survey`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

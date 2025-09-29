@@ -65,8 +65,11 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1392, 272],
-      "id": "eaaf184b-3905-421b-85f2-cdb745f68cb0",
+      "position": [
+        -1120,
+        480
+      ],
+      "id": "017b9d0f-70b8-43d3-8586-0641759a445c",
       "name": "onlyDocs"
     },
     {
@@ -95,12 +98,15 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [496, 464],
-      "id": "388edf73-86d0-4111-b792-03a48c42232b",
+      "position": [
+        -2016,
+        672
+      ],
+      "id": "9dff07df-512c-4852-b2c0-d4dc7adeb890",
       "name": "eurekaAPI",
       "credentials": {
         "httpBasicAuth": {
-          "id": "eMnqreoglS3qDWTM",
+          "id": "NXYnB4PqWAZ37mHL",
           "name": "Unnamed credential"
         }
       }
@@ -112,37 +118,49 @@
       },
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [1168, 272],
-      "id": "d49a53a2-3215-413c-8c8c-d4bf57ff8743",
+      "position": [
+        -1344,
+        480
+      ],
+      "id": "52a0b61c-0d33-43c6-a717-2b247d6c3e2d",
       "name": "Split Out"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [720, 272],
-      "id": "092afe8e-26c3-4cd9-b47c-c6c6e753b35d",
+      "position": [
+        -1792,
+        480
+      ],
+      "id": "e697081e-d234-4ddf-b605-c27d3e5a9f35",
       "name": "Merge",
       "executeOnce": true
     },
     {
       "parameters": {
-        "jsCode": "// Optimized cleaning - adaptive processing based on dataset size\nconst inputData = $input.all();\nconst LARGE_DATASET_THRESHOLD = 50;\n\n// Determine if we should use fast mode based on dataset size\nconst useFastMode = inputData.length > LARGE_DATASET_THRESHOLD;\nconsole.log(`Processing ${inputData.length} items, using ${useFastMode ? 'FAST' : 'NORMAL'} mode`);\n\nif (useFastMode) {\n  // FAST MODE: Minimal cleaning for large datasets (teams/squads)\n  console.log('FAST MODE: Skipping heavy HTML/PII processing for performance');\n  \n  const fastResults = inputData.map(function(item) {\n    const data = item.json;\n    \n    // Basic cleaning only\n    function quickClean(text) {\n      if (!text || typeof text !== 'string') return text;\n      return text\n        .replace(/&nbsp;/g, ' ')\n        .replace(/&amp;/g, '&')\n        .replace(/&lt;/g, '<')\n        .replace(/&gt;/g, '>')\n        .replace(/\\s+/g, ' ')\n        .trim();\n    }\n    \n    return {\n      json: {\n        case_id: data.case_id,\n        priority: data.priority,\n        owner_full_name: data.owner_full_name,\n        title: quickClean(data.title),\n        products: data.products,\n        status: data.status,\n        created_date: data.created_date,\n        closed_date: data.closed_date,\n        content: quickClean(data.content ? data.content.substring(0, 1000) : ''), // Truncate content\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Processed ${fastResults.length} items in minimal time`);\n  return fastResults;\n  \n} else {\n  // NORMAL MODE: Full cleaning for smaller datasets (individuals)\n  console.log('NORMAL MODE: Full HTML/PII processing');\n  \n  function cleanHtmlContent(text) {\n    if (!text || typeof text !== 'string') return text;\n    return text\n      .replace(/<[^>]*>/g, '') // Remove HTML tags\n      .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces\n      .replace(/&amp;/g, '&') // Replace encoded ampersands\n      .replace(/&lt;/g, '<') // Replace encoded less than\n      .replace(/&gt;/g, '>') // Replace encoded greater than\n      .replace(/&quot;/g, '\"') // Replace encoded quotes\n      .replace(/&#39;/g, \"'\") // Replace encoded apostrophes\n      .replace(/\\s+/g, ' ') // Replace multiple whitespace with single space\n      .trim(); // Remove leading/trailing whitespace\n  }\n\n  function removePII(text) {\n    if (!text || typeof text !== 'string') return text;\n    return text\n      // Remove email addresses\n      .replace(/\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b/g, '[EMAIL_REMOVED]')\n      // Remove US phone numbers with specific formatting\n      .replace(/\\b(\\+?1[-.\\s]?)?\\(?([0-9]{3})\\)?[-.\\s]?([0-9]{3})[-.\\s]?([0-9]{4})\\b/g, '[PHONE_REMOVED]')\n      // Remove international phone numbers with separators\n      .replace(/\\b\\+[1-9]\\d{0,3}[-.\\s][0-9]{1,4}[-.\\s]?[0-9]{1,4}[-.\\s]?[0-9]{1,9}\\b/g, '[PHONE_REMOVED]')\n      // Remove international phone numbers without separators (total 8-15 digits including country code)\n      .replace(/\\+\\d{8,15}\\b/g, '[PHONE_REMOVED]')\n      // Remove standalone 10-11 digit numbers that are likely phone numbers\n      .replace(/\\b(?<![0-9T-])\\d{10,11}(?![0-9T:-])\\b/g, '[PHONE_REMOVED]')\n      // Remove system generated email disclaimers\n      .replace(/\\*\\*\\s*This is a system generated email from our case tracking system\\*\\*\\*.*?message\\.\\s*/gis, '')\n      .replace(/This message was sent from outside of Trend Micro\\.\\s*/gi, '')\n      .replace(/Please do not click links or open attachments unless you recognise the source of this email and know the content is safe\\.\\s*/gi, '')\n      .replace(/This email has been received from an external source\\. Do not click links or open attachments unless you can confirm the sender and know the content is safe\\.\\s*/gi, '')\n      // Remove additional resources section\n      .replace(/Additional Resources.*?Vulnerabilities\\s*/gis, '');\n  }\n\n  function processText(text) {\n    if (!text || typeof text !== 'string') return text;\n    let cleaned = cleanHtmlContent(text);\n    cleaned = removePII(cleaned);\n    return cleaned;\n  }\n\n  function processObject(obj) {\n    if (typeof obj === 'string') {\n      return processText(obj);\n    } else if (Array.isArray(obj)) {\n      return obj.map(function(item) { return processObject(item); });\n    } else if (obj && typeof obj === 'object') {\n      const cleaned = {};\n      for (const key in obj) {\n        if (obj.hasOwnProperty(key)) {\n          cleaned[key] = processObject(obj[key]);\n        }\n      }\n      return cleaned;\n    }\n    return obj;\n  }\n\n  // Process all input items with full cleaning\n  const outputData = inputData.map(function(item) {\n    return {\n      json: processObject(item.json)\n    };\n  });\n  \n  console.log(`NORMAL MODE: Processed ${outputData.length} items with full cleaning`);\n  return outputData;\n}"
+        "jsCode": "// Optimized cleaning - adaptive processing based on dataset size\nconst inputData = $input.all();\nconst LARGE_DATASET_THRESHOLD = 50;\n\n// Determine if we should use fast mode based on dataset size\nconst useFastMode = inputData.length > LARGE_DATASET_THRESHOLD;\nconsole.log(`Processing ${inputData.length} items, using ${useFastMode ? 'FAST' : 'NORMAL'} mode`);\n\nif (useFastMode) {\n  // FAST MODE: Minimal cleaning for large datasets (teams/squads)\n  console.log('FAST MODE: Skipping heavy HTML/PII processing for performance');\n  \n  const fastResults = inputData.map(function(item) {\n    const data = item.json;\n    \n    // Basic cleaning only\n    function quickClean(text) {\n      if (!text || typeof text !== 'string') return text;\n      return text\n        .replace(/&nbsp;/g, ' ')\n        .replace(/&amp;/g, '&')\n        .replace(/&lt;/g, '<')\n        .replace(/&gt;/g, '>')\n        .replace(/\\s+/g, ' ')\n        .trim();\n    }\n    \n    return {\n      json: {\n        case_id: data.case_id,\n        priority: data.priority,\n        owner_full_name: data.owner_full_name,\n        title: quickClean(data.title),\n        products: data.products,\n        status: data.status,\n        created_date: data.created_date,\n        closed_date: data.closed_date,\n        content: quickClean(data.content || ''), // REMOVED CHARACTER LIMIT - Full content preserved\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Processed ${fastResults.length} items in minimal time`);\n  return fastResults;\n  \n} else {\n  // NORMAL MODE: Full cleaning for smaller datasets (individuals)\n  console.log('NORMAL MODE: Full HTML/PII processing');\n  \n  function cleanHtmlContent(text) {\n    if (!text || typeof text !== 'string') return text;\n    return text\n      .replace(/<[^>]*>/g, '') // Remove HTML tags\n      .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces\n      .replace(/&amp;/g, '&') // Replace encoded ampersands\n      .replace(/&lt;/g, '<') // Replace encoded less than\n      .replace(/&gt;/g, '>') // Replace encoded greater than\n      .replace(/&quot;/g, '\"') // Replace encoded quotes\n      .replace(/&#39;/g, \"'\") // Replace encoded apostrophes\n      .replace(/\\s+/g, ' ') // Replace multiple whitespace with single space\n      .trim(); // Remove leading/trailing whitespace\n  }\n\n  function removePII(text) {\n    if (!text || typeof text !== 'string') return text;\n    return text\n      // Remove email addresses\n      .replace(/\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b/g, '[EMAIL_REMOVED]')\n      // Remove US phone numbers with specific formatting\n      .replace(/\\b(\\+?1[-.\\s]?)?\\(?([0-9]{3})\\)?[-.\\s]?([0-9]{3})[-.\\s]?([0-9]{4})\\b/g, '[PHONE_REMOVED]')\n      // Remove international phone numbers with separators\n      .replace(/\\b\\+[1-9]\\d{0,3}[-.\\s][0-9]{1,4}[-.\\s]?[0-9]{1,4}[-.\\s]?[0-9]{1,9}\\b/g, '[PHONE_REMOVED]')\n      // Remove international phone numbers without separators (total 8-15 digits including country code)\n      .replace(/\\+\\d{8,15}\\b/g, '[PHONE_REMOVED]')\n      // Remove standalone 10-11 digit numbers that are likely phone numbers\n      .replace(/\\b(?<![0-9T-])\\d{10,11}(?![0-9T:-])\\b/g, '[PHONE_REMOVED]')\n      // Remove system generated email disclaimers\n      .replace(/\\*\\*\\s*This is a system generated email from our case tracking system\\*\\*\\*.*?message\\.\\s*/gis, '')\n      .replace(/This message was sent from outside of Trend Micro\\.\\s*/gi, '')\n      .replace(/Please do not click links or open attachments unless you recognise the source of this email and know the content is safe\\.\\s*/gi, '')\n      .replace(/This email has been received from an external source\\. Do not click links or open attachments unless you can confirm the sender and know the content is safe\\.\\s*/gi, '')\n      // Remove additional resources section\n      .replace(/Additional Resources.*?Vulnerabilities\\s*/gis, '');\n  }\n\n  function processText(text) {\n    if (!text || typeof text !== 'string') return text;\n    let cleaned = cleanHtmlContent(text);\n    cleaned = removePII(cleaned);\n    return cleaned;\n  }\n\n  function processObject(obj) {\n    if (typeof obj === 'string') {\n      return processText(obj);\n    } else if (Array.isArray(obj)) {\n      return obj.map(function(item) { return processObject(item); });\n    } else if (obj && typeof obj === 'object') {\n      const cleaned = {};\n      for (const key in obj) {\n        if (obj.hasOwnProperty(key)) {\n          cleaned[key] = processObject(obj[key]);\n        }\n      }\n      return cleaned;\n    }\n    return obj;\n  }\n\n  // Process all input items with full cleaning\n  const outputData = inputData.map(function(item) {\n    return {\n      json: processObject(item.json)\n    };\n  });\n  \n  console.log(`NORMAL MODE: Processed ${outputData.length} items with full cleaning`);\n  return outputData;\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [944, 272],
-      "id": "9788a590-de7a-4247-b19c-84b363596520",
+      "position": [
+        -1568,
+        480
+      ],
+      "id": "f9ca79f3-cbc0-45ea-94bb-b7330ae8a56a",
       "name": "cleanHTML&PII"
     },
     {
       "parameters": {
-        "jsCode": "// Optimized email structuring - adaptive processing based on dataset size and fast_processed flag\nconst items = $input.all();\nconst LARGE_DATASET_THRESHOLD = 50;\n\n// Check if we're in fast mode (large dataset)\nconst useFastMode = items.length > LARGE_DATASET_THRESHOLD || (items[0] && items[0].json.fast_processed);\nconsole.log(`Email structuring: ${items.length} items, fast mode: ${useFastMode}`);\n\nif (useFastMode) {\n  // FAST MODE: Minimal email processing for large datasets\n  console.log('FAST MODE: Skipping complex email thread structuring');\n  \n  const fastResults = items.map(function(item) {\n    const itemData = item.json;\n    \n    // Create simple email thread without complex parsing\n    const emailContent = itemData.content || '';\n    const simpleThread = emailContent \n      ? `EMAIL THREAD - Case ${itemData.case_id}\\n\\n[FAST_PROCESSED] Content: ${emailContent.substring(0, 200)}${emailContent.length > 200 ? '...' : ''}\\n\\n[Note: Full email parsing skipped for performance]`\n      : `EMAIL THREAD - Case ${itemData.case_id}\\n\\nNo email content available`;\n    \n    return {\n      json: {\n        case_id: itemData.case_id,\n        priority: itemData.priority,\n        structured_email_thread: simpleThread,\n        owner_full_name: itemData.owner_full_name,\n        title: itemData.title,\n        products: Array.isArray(itemData.products) ? itemData.products[0] : itemData.products,\n        status: itemData.status,\n        created_date: itemData.created_date,\n        closed_date: itemData.closed_date,\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Structured ${fastResults.length} email threads quickly`);\n  return fastResults;\n  \n} else {\n  // NORMAL MODE: Full email thread processing for smaller datasets\n  console.log('NORMAL MODE: Full email thread structuring');\n  \n  // Original complex email processing functions (condensed for performance)\n  function cleanEmailThread(rawContent) {\n    if (!rawContent) return '';\n    \n    // Simplified cleaning for better performance\n    let cleaned = rawContent\n      .replace(/&nbsp;/g, ' ')\n      .replace(/&amp;/g, '&')\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>');\n    \n    // Quick case ID extraction\n    let caseId = '';\n    const tmIndex = cleaned.indexOf('TM-');\n    if (tmIndex !== -1) {\n      const numEnd = tmIndex + 3;\n      let endIndex = numEnd;\n      while (endIndex < cleaned.length && cleaned.charAt(endIndex) >= '0' && cleaned.charAt(endIndex) <= '9') {\n        endIndex++;\n      }\n      caseId = cleaned.substring(tmIndex, endIndex);\n    }\n    \n    return {\n      case_id: caseId,\n      content: cleaned.replace(/  +/g, ' ').trim(),\n      structured_thread: `EMAIL THREAD - Case ${caseId}\\n\\nProcessed Content: ${cleaned.substring(0, 1000)}${cleaned.length > 1000 ? '...' : ''}`,\n      timestamp: new Date().toISOString()\n    };\n  }\n  \n  const results = [];\n  \n  for (let i = 0; i < items.length; i++) {\n    const item = items[i];\n    const emailContent = item.json.content || item.json.description || item.json.body || '';\n    \n    if (emailContent) {\n      const cleanedEmail = cleanEmailThread(emailContent);\n      \n      results.push({\n        json: {\n          case_id: item.json.case_id,\n          priority: item.json.priority,\n          structured_email_thread: cleanedEmail.structured_thread,\n          owner_full_name: item.json.owner_full_name,\n          title: item.json.title,\n          products: Array.isArray(item.json.products) ? item.json.products[0] : item.json.products,\n          status: item.json.status,\n          created_date: item.json.created_date,\n          closed_date: item.json.closed_date\n        }\n      });\n    }\n  }\n  \n  console.log(`NORMAL MODE: Structured ${results.length} email threads with full processing`);\n  return results;\n}"
+        "jsCode": "// Optimized email structuring - adaptive processing based on dataset size and fast_processed flag\nconst items = $input.all();\nconst LARGE_DATASET_THRESHOLD = 50;\n\n// Check if we're in fast mode (large dataset)\nconst useFastMode = items.length > LARGE_DATASET_THRESHOLD || (items[0] && items[0].json.fast_processed);\nconsole.log(`Email structuring: ${items.length} items, fast mode: ${useFastMode}`);\n\nif (useFastMode) {\n  // FAST MODE: Minimal email processing for large datasets\n  console.log('FAST MODE: Skipping complex email thread structuring');\n  \n  const fastResults = items.map(function(item) {\n    const itemData = item.json;\n    \n    // Create simple email thread without complex parsing\n    const emailContent = itemData.content || '';\n    const simpleThread = emailContent \n      ? `EMAIL THREAD - Case ${itemData.case_id}\\n\\n[FAST_PROCESSED] Content: ${emailContent}\\n\\n[Note: Full email parsing skipped for performance]`\n      : `EMAIL THREAD - Case ${itemData.case_id}\\n\\nNo email content available`;\n    \n    return {\n      json: {\n        case_id: itemData.case_id,\n        priority: itemData.priority,\n        structured_email_thread: simpleThread,\n        owner_full_name: itemData.owner_full_name,\n        title: itemData.title,\n        products: Array.isArray(itemData.products) ? itemData.products[0] : itemData.products,\n        status: itemData.status,\n        created_date: itemData.created_date,\n        closed_date: itemData.closed_date,\n        fast_processed: true\n      }\n    };\n  });\n  \n  console.log(`FAST MODE: Structured ${fastResults.length} email threads quickly`);\n  return fastResults;\n  \n} else {\n  // NORMAL MODE: Full email thread processing for smaller datasets\n  console.log('NORMAL MODE: Full email thread structuring');\n  \n  // Original complex email processing functions (condensed for performance)\n  function cleanEmailThread(rawContent) {\n    if (!rawContent) return '';\n    \n    // Simplified cleaning for better performance\n    let cleaned = rawContent\n      .replace(/&nbsp;/g, ' ')\n      .replace(/&amp;/g, '&')\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>');\n    \n    // Quick case ID extraction\n    let caseId = '';\n    const tmIndex = cleaned.indexOf('TM-');\n    if (tmIndex !== -1) {\n      const numEnd = tmIndex + 3;\n      let endIndex = numEnd;\n      while (endIndex < cleaned.length && cleaned.charAt(endIndex) >= '0' && cleaned.charAt(endIndex) <= '9') {\n        endIndex++;\n      }\n      caseId = cleaned.substring(tmIndex, endIndex);\n    }\n    \n    return {\n      case_id: caseId,\n      content: cleaned.replace(/  +/g, ' ').trim(),\n      structured_thread: `EMAIL THREAD - Case ${caseId}\\n\\nProcessed Content: ${cleaned}`,\n      timestamp: new Date().toISOString()\n    };\n  }\n  \n  const results = [];\n  \n  for (let i = 0; i < items.length; i++) {\n    const item = items[i];\n    const emailContent = item.json.content || item.json.description || item.json.body || '';\n    \n    if (emailContent) {\n      const cleanedEmail = cleanEmailThread(emailContent);\n      \n      results.push({\n        json: {\n          case_id: item.json.case_id,\n          priority: item.json.priority,\n          structured_email_thread: cleanedEmail.structured_thread,\n          owner_full_name: item.json.owner_full_name,\n          title: item.json.title,\n          products: Array.isArray(item.json.products) ? item.json.products[0] : item.json.products,\n          status: item.json.status,\n          created_date: item.json.created_date,\n          closed_date: item.json.closed_date\n        }\n      });\n    }\n  }\n  \n  console.log(`NORMAL MODE: Structured ${results.length} email threads with full processing`);\n  return results;\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1616, 272],
-      "id": "4344ec3e-6099-4bf0-8e8a-bdf88d5287f7",
+      "position": [
+        -896,
+        480
+      ],
+      "id": "ac04ff8e-31e4-4937-aa43-205844157b86",
       "name": "structurizeEmail"
     },
     {
@@ -151,8 +169,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1840, 272],
-      "id": "39fa0d86-ee58-4556-9177-87eeadb4cb08",
+      "position": [
+        -672,
+        480
+      ],
+      "id": "e75f6a83-5c2b-459f-8605-d2ef12305e8e",
       "name": "calcCaseAgeDay"
     },
     {
@@ -162,9 +183,12 @@
         "width": 1616
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [640, 176],
+      "position": [
+        -1872,
+        384
+      ],
       "typeVersion": 1,
-      "id": "c2609c1d-625a-4e53-8842-e44dc9b909b3",
+      "id": "7fde0866-e21e-449f-be08-7cff4825f893",
       "name": "Sticky Note"
     },
     {
@@ -176,13 +200,16 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [2064, 272],
-      "id": "6ae8645b-6d96-4d19-b3bc-f5a2aedb0003",
+      "position": [
+        -448,
+        480
+      ],
+      "id": "68e2316a-ab65-4967-be28-72b9dfd05dd6",
       "name": "populateDB",
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "uCCYnpccbmAfY9W9",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -193,8 +220,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2288, 272],
-      "id": "4942a112-ec9c-4575-8a39-95a25f682255",
+      "position": [
+        -224,
+        480
+      ],
+      "id": "4fa85f62-cf3a-4784-acd3-0b56f3c7effa",
       "name": "Trigger Entity Processing"
     },
     {
@@ -204,13 +234,16 @@
       },
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
-      "position": [48, 464],
-      "id": "2c8b67df-db94-4e3d-82c2-70b1d012ce19",
+      "position": [
+        -2464,
+        672
+      ],
+      "id": "f2ed74c9-1f76-47b6-bdc9-8231cf400e04",
       "name": "deleteDB",
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "uCCYnpccbmAfY9W9",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -223,9 +256,12 @@
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [416, 384],
+      "position": [
+        -2096,
+        592
+      ],
       "typeVersion": 1,
-      "id": "a3bb1157-c7d8-4c77-ba12-2bdbea48b84d",
+      "id": "58e782f1-4186-471f-8d10-da853f3835e8",
       "name": "Sticky Note1"
     },
     {
@@ -234,8 +270,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [944, 544],
-      "id": "fb415108-aa22-42d8-94ea-8309356a9441",
+      "position": [
+        -1568,
+        752
+      ],
+      "id": "4157f5bb-840d-41bd-8bf4-e22691a33a05",
       "name": "Edit Fields"
     },
     {
@@ -264,8 +303,11 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [720, 464],
-      "id": "19a279c5-6dea-4eab-ae8e-3a32d616f310",
+      "position": [
+        -1792,
+        672
+      ],
+      "id": "a65c2ea3-1cbd-4c41-9e22-9b05e7326c16",
       "name": "Pagination Check"
     },
     {
@@ -276,9 +318,12 @@
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [-752, -112],
+      "position": [
+        -3264,
+        96
+      ],
       "typeVersion": 1,
-      "id": "da55975d-a824-4da0-ba14-4ab0c54975df",
+      "id": "e6a6ceca-6473-4a33-9374-22ad939a267b",
       "name": "Sticky Note3"
     },
     {
@@ -289,8 +334,11 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-400, 464],
-      "id": "112527b8-abe5-480c-98e9-c1f39055b61f",
+      "position": [
+        -2912,
+        672
+      ],
+      "id": "8a9d1144-92a2-4806-9aa8-b153edd135ab",
       "name": "Webhook",
       "webhookId": "62ef5b3b-65fb-411a-b537-d80ea44a1b84"
     },
@@ -300,8 +348,11 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-176, 464],
-      "id": "2db7ba54-7b01-466e-8f60-0903f54d08d6",
+      "position": [
+        -2688,
+        672
+      ],
+      "id": "5252fc35-fa8b-4607-8e19-f9996de8daf8",
       "name": "ProcessWebhookData"
     },
     {
@@ -310,27 +361,33 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [272, 464],
-      "id": "f438b1dc-69d7-4a1f-9118-71027dfa1731",
+      "position": [
+        -2240,
+        672
+      ],
+      "id": "789281d4-c296-41f2-ac09-66edd284321d",
       "name": "Edit Fields_declareStart"
     },
     {
       "parameters": {
         "jsCode": "// Prepare entity data directly from ProcessWebhookData for Execute Workflow\nconsole.log('=== PREPARE ENTITY DATA FOR EXECUTE WORKFLOW ===');\n\n// Get the original webhook data directly from ProcessWebhookData node\nconst processedData = $('ProcessWebhookData').first().json;\nconsole.log('Data from ProcessWebhookData node:', JSON.stringify(processedData, null, 2));\n\nif (!processedData || !processedData.webhookData) {\n  throw new Error('No webhook data found from ProcessWebhookData node');\n}\n\nconst webhookData = processedData.webhookData;\nconsole.log('Extracted webhookData:', JSON.stringify(webhookData, null, 2));\n\n// Extract entity values from webhook data\nlet entityValues = [];\n\n// Try different extraction strategies\nif (webhookData.ownerNames && Array.isArray(webhookData.ownerNames) && webhookData.ownerNames.length > 0) {\n  entityValues = webhookData.ownerNames;\n  console.log('✅ Found entityValues in ownerNames:', entityValues);\n} else if (webhookData.entityValue) {\n  entityValues = [webhookData.entityValue];\n  console.log('✅ Found entityValue in entityValue:', webhookData.entityValue);\n} else if (webhookData.entityName) {\n  entityValues = [webhookData.entityName];\n  console.log('✅ Found entityValue in entityName:', webhookData.entityName);\n}\n\n// FAIL if no entity values - no fallbacks\nif (!entityValues || entityValues.length === 0) {\n  console.error('❌ CRITICAL: No entityValues found in webhook data');\n  console.error('Available webhook data keys:', Object.keys(webhookData));\n  throw new Error('CRITICAL: No entityValues found - cannot execute Calculate Metrics workflow');\n}\n\nconsole.log(`✅ Found ${entityValues.length} entities to process:`, entityValues);\n\n// Create data structure for each entity (multiple outputs for multiple Calculate Metrics executions)\nconst executeDataArray = entityValues.map((entityValue, index) => {\n  return {\n    entityValue: entityValue,\n    owner_full_name: entityValue,\n    source: 'get-cases-workflow',\n    timestamp: new Date().toISOString(),\n    entityIndex: index,\n    totalEntities: entityValues.length,\n    entityType: webhookData.entityType || 'unknown',\n    entityName: webhookData.entityName || 'unknown'\n  };\n});\n\nconsole.log('✅ Entity data prepared for Execute Workflow:', JSON.stringify(executeDataArray, null, 2));\nconsole.log(`✅ Will trigger ${executeDataArray.length} Calculate Metrics workflow executions`);\n\n// Return multiple items, one for each entity\nreturn executeDataArray.map(data => ({ json: data }));"
       },
-      "id": "f7494844-fab4-42b0-a75e-b312d08fe558",
+      "id": "1772fca1-902a-4732-8128-c0fceb77ce43",
       "name": "Prepare Entity Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2512, 272]
+      "position": [
+        16,
+        480
+      ]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "44b6j3sPpySqjNhf",
+          "value": "4Ag84oc6TwKqyFfR",
           "mode": "list",
-          "cachedResultName": "Process Survey"
+          "cachedResultName": "Step 3 - Survey"
         },
         "workflowInputs": {
           "mappingMode": "passthrough",
@@ -344,35 +401,44 @@
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [2736, 368],
-      "id": "0fd20f77-2508-4ffe-bb0c-9dff4280f548",
+      "position": [
+        240,
+        576
+      ],
+      "id": "269f07c2-333c-4724-aa6e-3d66e79b1617",
       "name": "Process Customer Survey"
     },
     {
       "parameters": {
         "jsCode": "// This node waits for pagination to complete\n// It doesn't need to do anything as it's just a pass-through\n// The actual logic to wait for pagination is handled by the Pagination Check node\nconsole.log('Data saved to database, waiting for pagination to complete before triggering entity processing');\nreturn $input.item;\n"
       },
-      "id": "a7bb21fc-3c4a-48e9-aed1-d2f8f9e0c123",
+      "id": "43583dcf-13da-4930-a0c0-57a8dea40911",
       "name": "Wait For Pagination",
       "type": "n8n-nodes-base.code",
       "typeVersion": 1,
-      "position": [1480, 560]
+      "position": [
+        -1024,
+        768
+      ]
     },
     {
       "parameters": {},
-      "id": "355ed52b-d66a-4e04-9172-3fe49a66e435",
+      "id": "5a4f0a4f-301c-4d8a-bf2e-cffd529ac9d0",
       "name": "Wait for Both Workflows Complete",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
-      "position": [2960, 272]
+      "position": [
+        464,
+        480
+      ]
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "O4mcGfaJBplOoQcm",
+          "value": "AjDfQFdyNwd7hDR7",
           "mode": "list",
-          "cachedResultName": "Aggregate Data"
+          "cachedResultName": "Step 4 - Aggregate"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -386,46 +452,56 @@
           "waitForSubWorkflow": true
         }
       },
-      "id": "b6fd005d-a720-4499-8c34-4ac2dfaa4b11",
+      "id": "a4d35a4c-5a62-4586-85b5-0db96cd36728",
       "name": "Trigger Aggregate Data",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [3184, 272]
+      "position": [
+        688,
+        480
+      ]
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [3408, 272],
-      "id": "a0c45b2e-8d81-4110-90c6-b44c0c03365a",
+      "position": [
+        912,
+        480
+      ],
+      "id": "febbff6f-2732-4fac-b909-6f8d66e6a20c",
       "name": "Workflow Complete"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "LsMBtiNgGrAMrWkR",
+          "value": "qZ1v8w3jqsYtSUq4",
           "mode": "list",
-          "cachedResultName": "Calculate Metrics"
+          "cachedResultName": "Step 2 - SCT"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
-          "value": {}
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
         },
         "options": {}
       },
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [2736, 176],
-      "id": "c8731396-1925-4712-914d-ac06de5c3cbb",
+      "position": [
+        240,
+        384
+      ],
+      "id": "ca25cbc9-b141-4dd8-8cb9-9a07e7931c95",
       "name": "Call 'Calculate Metrics'"
     }
   ],
   "pinData": {},
   "connections": {
-    "Wait For Pagination": {
-      "main": [[]]
-    },
     "onlyDocs": {
       "main": [
         [
@@ -668,11 +744,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "add1dc26-7268-4ee6-8d85-42505d379297",
+  "versionId": "a6be8e30-8f4b-4e55-a010-e0ec2c07fbb5",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "19925d8ea9608c62de932aa1564c2e7236335b0466d69111e1fed356d5342c96"
+    "instanceId": "197030258e5ec4f22da7668edae4c29f9bb02818dd32dfbc6a28b550e0739e49"
   },
-  "id": "oIi4NspGLo4y6Spl",
+  "id": "E0rEuDzh7GYPMpDF",
   "tags": []
 }
