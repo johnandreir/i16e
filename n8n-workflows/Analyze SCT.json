@@ -1,5 +1,5 @@
 {
-  "name": "High SCT Email Scrubber",
+  "name": "Analyze SCT",
   "nodes": [
     {
       "parameters": {
@@ -10,11 +10,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        0,
-        0
+        -752,
+        112
       ],
       "typeVersion": 1,
-      "id": "e31cd06a-c95b-4553-b67b-6709d1a1f250",
+      "id": "06930a23-3b80-4e9f-825c-f9776c3c760d",
       "name": "Sticky Note4"
     },
     {
@@ -24,10 +24,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        656,
-        64
+        -96,
+        176
       ],
-      "id": "6910440d-1394-4b64-b1a3-0e48ccae3aa7",
+      "id": "b68572fe-d1be-44e1-8d42-39e4e7d24e88",
       "name": "JSONizer"
     },
     {
@@ -39,14 +39,14 @@
       "type": "n8n-nodes-base.mongoDbTool",
       "typeVersion": 1.2,
       "position": [
-        400,
-        288
+        -352,
+        400
       ],
-      "id": "702c7e3b-0d78-47b0-be7e-c4731d486f9d",
+      "id": "bb33fd63-a43f-4172-85e3-72b7a8e457ef",
       "name": "emailDB",
       "credentials": {
         "mongoDb": {
-          "id": "NXkVLOCLl33yKAKM",
+          "id": "uCCYnpccbmAfY9W9",
           "name": "MongoDB account"
         }
       }
@@ -64,14 +64,14 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        144,
-        288
+        -608,
+        400
       ],
-      "id": "8c361e77-a3b8-43cd-9184-ee9408cbc5f1",
+      "id": "b2bbd88d-b4a7-4482-9862-18a60d72032c",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "qKEozZy1FaCPhKS2",
+          "id": "sNYSwlaVIlldj1f2",
           "name": "OpenAi account"
         }
       }
@@ -85,14 +85,14 @@
       "type": "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
       "typeVersion": 1,
       "position": [
-        272,
-        288
+        -480,
+        400
       ],
-      "id": "6902a657-a395-4eab-98e4-42e679437729",
+      "id": "37414973-e296-4411-ae9a-19de0f97df89",
       "name": "MongoDB Chat Memory",
       "credentials": {
         "mongoDb": {
-          "id": "NXkVLOCLl33yKAKM",
+          "id": "uCCYnpccbmAfY9W9",
           "name": "MongoDB account"
         }
       }
@@ -106,10 +106,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        208,
-        64
+        -544,
+        176
       ],
-      "id": "c8b682a8-3bd7-45d2-b5da-d42bad157655",
+      "id": "4600b3a6-99aa-49ec-8b04-5f0ded16780e",
       "name": "AI Agent"
     },
     {
@@ -122,10 +122,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -128,
-        64
+        -880,
+        176
       ],
-      "id": "f6e3c36b-6663-4549-803e-b5f5c161b4c8",
+      "id": "3ff50188-d28c-4b18-9e6d-44bd89f14736",
       "name": "Webhook",
       "webhookId": "0bf25328-aa75-4ec4-9720-fbad836f08fb"
     },
@@ -134,10 +134,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -576,
-        112
+        -1328,
+        224
       ],
-      "id": "1a28bbb6-9b89-4167-895e-49f59397834e",
+      "id": "453f8509-4cff-4c25-ad7e-5dcd99b08d8c",
       "name": "When clicking ‘Execute workflow’",
       "disabled": true
     },
@@ -148,10 +148,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        928,
-        64
+        176,
+        176
       ],
-      "id": "dd2ecdbf-a212-4bcc-b74f-5262f831b695",
+      "id": "660830d5-2163-4c13-9b76-4acf2704c275",
       "name": "Respond to Webhook"
     }
   ],
@@ -212,11 +212,6 @@
         ]
       ]
     },
-    "When clicking ‘Execute workflow’": {
-      "main": [
-        []
-      ]
-    },
     "JSONizer": {
       "main": [
         [
@@ -233,11 +228,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "b95f2f4f-89ef-4c8b-b48d-7a05ed0fbdc0",
+  "versionId": "876fced4-29cd-46c3-bb44-428fcbcfe35e",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "197030258e5ec4f22da7668edae4c29f9bb02818dd32dfbc6a28b550e0739e49"
+    "instanceId": "19925d8ea9608c62de932aa1564c2e7236335b0466d69111e1fed356d5342c96"
   },
-  "id": "BzHkSZ3jzPMIkiS7",
+  "id": "yQissI9g6XMYRinM",
   "tags": []
 }

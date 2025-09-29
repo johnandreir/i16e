@@ -426,7 +426,7 @@ export class N8nWorkflowService {
         console.warn(`Direct n8n webhook call failed: ${directError.message}`);
         console.log('Falling back to API server proxy...');
         
-        const response = await fetch(`${this.baseUrl}/webhook-test/analyze-survey`, {
+        const response = await fetch(`${this.baseUrl}/analyze-survey`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

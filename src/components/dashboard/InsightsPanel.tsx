@@ -14,6 +14,8 @@ interface Insight {
   member?: string;
   category?: string;
   surveyType?: 'DSAT' | 'CSAT';
+  caseId?: string;
+  caseTitle?: string;
 }
 
 interface InsightsPanelProps {
@@ -175,6 +177,55 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     insight.title.toLowerCase().includes('case analysis')
   ) : [];
 
+  // Group SCT insights by case
+  const groupSctInsightsByCase = () => {
+    const caseGroups: { [key: string]: { emailAnalysis: any[], processDelay: any[], caseId: string, caseTitle?: string } } = {};
+    
+    sctInsights.forEach(insight => {
+      let caseId = insight.caseId || '';
+      let caseTitle = insight.caseTitle || '';
+      
+      // Fallback: Extract case ID from title if not available as property
+      if (!caseId) {
+        if (insight.title.includes('Email Communication Analysis: Case ')) {
+          caseId = insight.title.replace('Email Communication Analysis: Case ', '');
+        } else if (insight.title.includes('Process Delay Analysis: Case ')) {
+          caseId = insight.title.replace('Process Delay Analysis: Case ', '');
+        }
+      }
+      
+      if (caseId) {
+        if (!caseGroups[caseId]) {
+          caseGroups[caseId] = {
+            caseId,
+            caseTitle: caseTitle || undefined,
+            emailAnalysis: [],
+            processDelay: []
+          };
+        }
+        
+        // Update case title if this insight has one and the group doesn't
+        if (caseTitle && !caseGroups[caseId].caseTitle) {
+          caseGroups[caseId].caseTitle = caseTitle;
+        }
+        
+        if (insight.title.includes('Email Communication Analysis') || insight.category === 'communication') {
+          caseGroups[caseId].emailAnalysis.push(insight);
+        } else if (insight.title.includes('Process Delay Analysis') || insight.category === 'process') {
+          caseGroups[caseId].processDelay.push(insight);
+        }
+      }
+    });
+    
+    return Object.values(caseGroups);
+  };
+  
+  const caseGroups = groupSctInsightsByCase();
+  const nonCaseInsights = sctInsights.filter(insight => 
+    !insight.title.includes('Email Communication Analysis: Case ') &&
+    !insight.title.includes('Process Delay Analysis: Case ')
+  );
+
   // Separate DSAT and CSAT insights
   const dsatInsights = cxInsights.filter(insight => 
     insight.surveyType === 'DSAT' || 
@@ -208,11 +259,11 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
           {!sctAnalyzed && !cxAnalyzed && (
             <div className="text-center py-8 text-muted-foreground">
               <div className="space-y-2">
-                <p className="text-sm">Click the analysis buttons above to generate insights and recommendations</p>
+                <p className="text-sm">Click on chart elements to open detailed views with analysis options</p>
                 <div className="flex justify-center gap-2 text-xs">
                   <span className="bg-muted px-2 py-1 rounded">Analyze SCT</span>
                   <span>or</span>
-                  <span className="bg-muted px-2 py-1 rounded">CX Insight</span>
+                  <span className="bg-muted px-2 py-1 rounded">Analyze Survey</span>
                 </div>
               </div>
             </div>
@@ -237,27 +288,100 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                   Click "Analyze SCT" to generate Solution Cycle Time insights
                 </div>
               ) : (
-                sctInsights.map((insight) => (
-                  <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-3 bg-muted/20 rounded-r-lg">
-                    <div className="flex items-start gap-3">
-                      {getInsightIcon(insight.type)}
-                      <div className="flex-1 space-y-2 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-foreground">{insight.title}</h4>
-                          <Badge variant={getInsightBadgeVariant(insight.type)}>
-                            {insight.type}
-                          </Badge>
+                <div className="space-y-4">
+                  {/* Render grouped case insights */}
+                  {caseGroups.map((caseGroup) => (
+                    <div key={caseGroup.caseId} className="space-y-3">
+                      {/* Case Header */}
+                      <div className="border-l-4 border-l-primary pl-4 py-2 bg-primary/5 rounded-r-lg">
+                        <h3 className="font-semibold text-foreground flex items-center gap-2">
+                          📋 {caseGroup.caseId}{caseGroup.caseTitle ? `: ${caseGroup.caseTitle}` : ''}
+                        </h3>
+                      </div>
+                      
+                      {/* Email Communication Analysis Subsection */}
+                      {caseGroup.emailAnalysis.length > 0 && (
+                        <div className="ml-6 space-y-2">
+                          <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                            📧 Email Communication Analysis
+                          </h4>
+                          {caseGroup.emailAnalysis.map((insight) => (
+                            <div key={insight.id} className="border-l-4 border-l-orange-500 pl-4 py-3 bg-orange-50 dark:bg-orange-950/20 rounded-r-lg ml-4">
+                              <div className="flex items-start gap-3">
+                                {getInsightIcon(insight.type)}
+                                <div className="flex-1 space-y-2 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={getInsightBadgeVariant(insight.type)}>
+                                      {insight.type}
+                                    </Badge>
+                                  </div>
+                                  {formatDescription(insight.description)}
+                                  {insight.recommendation && (
+                                    <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
+                                      {formatTextWithBullets(insight.recommendation, 'Recommendation')}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        {formatDescription(insight.description)}
-                        {insight.recommendation && (
-                          <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
-                            {formatTextWithBullets(insight.recommendation, 'Recommendation')}
+                      )}
+                      
+                      {/* Process Delay Analysis Subsection */}
+                      {caseGroup.processDelay.length > 0 && (
+                        <div className="ml-6 space-y-2">
+                          <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                            ⏱️ Process Delay Analysis
+                          </h4>
+                          {caseGroup.processDelay.map((insight) => (
+                            <div key={insight.id} className="border-l-4 border-l-red-500 pl-4 py-3 bg-red-50 dark:bg-red-950/20 rounded-r-lg ml-4">
+                              <div className="flex items-start gap-3">
+                                {getInsightIcon(insight.type)}
+                                <div className="flex-1 space-y-2 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant={getInsightBadgeVariant(insight.type)}>
+                                      {insight.type}
+                                    </Badge>
+                                  </div>
+                                  {formatDescription(insight.description)}
+                                  {insight.recommendation && (
+                                    <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
+                                      {formatTextWithBullets(insight.recommendation, 'Recommendation')}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {/* Render non-case insights */}
+                  {nonCaseInsights.map((insight) => (
+                    <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-3 bg-muted/20 rounded-r-lg">
+                      <div className="flex items-start gap-3">
+                        {getInsightIcon(insight.type)}
+                        <div className="flex-1 space-y-2 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-foreground">{insight.title}</h4>
+                            <Badge variant={getInsightBadgeVariant(insight.type)}>
+                              {insight.type}
+                            </Badge>
                           </div>
-                        )}
+                          {formatDescription(insight.description)}
+                          {insight.recommendation && (
+                            <div className="bg-accent/10 border border-accent/20 rounded-md p-3 mt-2">
+                              {formatTextWithBullets(insight.recommendation, 'Recommendation')}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </CollapsibleContent>
           </Collapsible>
@@ -279,7 +403,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
             <CollapsibleContent className="space-y-4 mt-3">
               {cxInsights.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
-                  Click "CX Insight" to generate Customer Satisfaction insights
+                  Click "Analyze Survey" to generate Customer Satisfaction insights
                 </div>
               ) : (
                 <div className="space-y-4">

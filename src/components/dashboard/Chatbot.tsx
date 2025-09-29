@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, X, Minimize2 } from 'lucide-react';
+import { MessageCircle, X, Minimize2, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -70,6 +70,16 @@ const Chatbot: React.FC<ChatbotProps> = ({
                   <Minimize2 className="h-4 w-4" />
                 </Button>
               )}
+              {isMinimized && (
+                <Button
+                  onClick={restoreChatbot}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-primary-foreground hover:bg-white/20 hover:text-primary-foreground"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 onClick={toggleChatbot}
                 variant="ghost"
@@ -84,11 +94,8 @@ const Chatbot: React.FC<ChatbotProps> = ({
           {/* Minimized State */}
           {isMinimized && (
             <CardContent className="p-3">
-              <div 
-                onClick={restoreChatbot}
-                className="cursor-pointer hover:bg-muted/50 transition-colors rounded p-1"
-              >
-                <p className="text-sm text-muted-foreground truncate">Click to restore chat...</p>
+              <div className="text-center text-xs text-muted-foreground">
+                <p>Chatbot minimized</p>
               </div>
             </CardContent>
           )}

@@ -4,15 +4,19 @@
     {
       "parameters": {
         "public": true,
+        "initialMessages": "Hi! I'm Elli, at your service. 😊 How may I help you today? ",
         "options": {
-          "title": "i16e assistant",
-          "customCss": ":root {\n  /* Colors - Dashboard Harmony */\n  --chat--color-primary: hsl(217, 91%, 60%);\n  --chat--color-primary-shade-50: hsl(217, 89%, 55%);\n  --chat--color-primary-shade-100: hsl(217, 87%, 50%);\n  --chat--color-secondary: hsl(142, 76%, 56%);\n  --chat--color-secondary-shade-50: hsl(142, 76%, 46%);\n  --chat--color-white: hsl(0, 0%, 100%);\n  --chat--color-light: hsl(210, 20%, 98%);\n  --chat--color-light-shade-50: hsl(217, 20%, 95%);\n  --chat--color-light-shade-100: hsl(220, 13%, 91%);\n  --chat--color-medium: hsl(217, 20%, 95%);\n  --chat--color-dark: hsl(215, 25%, 15%);\n  --chat--color-disabled: hsl(215, 16%, 46%);\n  --chat--color-typing: hsl(215, 16%, 46%);\n\n  /* Base Layout - Dashboard Aligned */\n  --chat--spacing: 1rem;\n  --chat--border-radius: 0.5rem;\n  --chat--transition-duration: 0.3s;\n  --chat--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;\n\n  /* Window Dimensions */\n  --chat--window--width: 400px;\n  --chat--window--height: 600px;\n  --chat--window--bottom: var(--chat--spacing);\n  --chat--window--right: var(--chat--spacing);\n  --chat--window--z-index: 9999;\n  --chat--window--border: 1px solid hsl(220, 13%, 91%);\n  --chat--window--border-radius: var(--chat--border-radius);\n  --chat--window--margin-bottom: var(--chat--spacing);\n\n  /* Header Styles - Dashboard Style */\n  --chat--header-height: auto;\n  --chat--header--padding: 1rem;\n  --chat--header--background: hsl(217, 91%, 60%);\n  --chat--header--color: hsl(0, 0%, 100%);\n  --chat--header--border-top: none;\n  --chat--header--border-bottom: 1px solid hsl(217, 87%, 50%);\n  --chat--header--border-left: none;\n  --chat--header--border-right: none;\n  --chat--heading--font-size: 1.125rem;\n  --chat--subtitle--font-size: 0.875rem;\n  --chat--subtitle--line-height: 1.5;\n\n  /* Message Styles - Clean & Readable */\n  --chat--message--font-size: 0.875rem;\n  --chat--message--padding: 0.75rem;\n  --chat--message--border-radius: var(--chat--border-radius);\n  --chat--message-line-height: 1.5;\n  --chat--message--margin-bottom: 0.75rem;\n  --chat--message--bot--background: hsl(0, 0%, 100%);\n  --chat--message--bot--color: hsl(215, 25%, 15%);\n  --chat--message--bot--border: 1px solid hsl(220, 13%, 91%);\n  --chat--message--user--background: hsl(217, 91%, 60%);\n  --chat--message--user--color: hsl(0, 0%, 100%);\n  --chat--message--user--border: none;\n  --chat--message--pre--background: hsl(217, 20%, 95%);\n  --chat--messages-list--padding: var(--chat--spacing);\n\n  /* Toggle Button - Hidden (using wrapper) */\n  --chat--toggle--size: 0px;\n  --chat--toggle--width: 0px;\n  --chat--toggle--height: 0px;\n  --chat--toggle--border-radius: 0%;\n  --chat--toggle--background: transparent;\n  --chat--toggle--hover--background: transparent;\n  --chat--toggle--active--background: transparent;\n  --chat--toggle--color: transparent;\n\n  /* Input Area - Dashboard Style */\n  --chat--textarea--height: 50px;\n  --chat--textarea--max-height: 30rem;\n  --chat--input--font-size: 0.875rem;\n  --chat--input--border: 1px solid hsl(220, 13%, 91%);\n  --chat--input--border-radius: var(--chat--border-radius);\n  --chat--input--padding: 0.75rem;\n  --chat--input--background: hsl(0, 0%, 100%);\n  --chat--input--text-color: hsl(215, 25%, 15%);\n  --chat--input--line-height: 1.5;\n  --chat--input--placeholder--font-size: var(--chat--input--font-size);\n  --chat--input--border-active: 2px solid hsl(217, 91%, 60%);\n  --chat--input--left--panel--width: 2rem;\n\n  /* Button Styles - Dashboard Harmony */\n  --chat--button--color: hsl(0, 0%, 100%);\n  --chat--button--background: hsl(217, 91%, 60%);\n  --chat--button--padding: 0.5rem 1rem;\n  --chat--button--border-radius: var(--chat--border-radius);\n  --chat--button--hover--color: hsl(0, 0%, 100%);\n  --chat--button--hover--background: hsl(217, 89%, 55%);\n  --chat--close--button--color-hover: hsl(217, 91%, 60%);\n\n  /* Send and File Buttons */\n  --chat--input--send--button--background: hsl(217, 91%, 60%);\n  --chat--input--send--button--color: hsl(0, 0%, 100%);\n  --chat--input--send--button--background-hover: hsl(217, 89%, 55%);\n  --chat--input--send--button--color-hover: hsl(0, 0%, 100%);\n  --chat--input--file--button--background: hsl(210, 40%, 96%);\n  --chat--input--file--button--color: hsl(142, 76%, 56%);\n  --chat--input--file--button--background-hover: hsl(217, 20%, 95%);\n  --chat--input--file--button--color-hover: hsl(142, 76%, 46%);\n  --chat--files-spacing: 0.25rem;\n\n  /* Body and Footer */\n  --chat--body--background: hsl(210, 20%, 98%);\n  --chat--footer--background: hsl(210, 20%, 98%);\n  --chat--footer--color: hsl(215, 25%, 15%);\n}\n\n/* Global font and styling overrides */\n* {\n  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif !important;\n}\n\n/* Message styling */\n.chat-message {\n  max-width: 70% !important;\n  font-family: inherit !important;\n  font-size: 0.875rem !important;\n  line-height: 1.5 !important;\n}\n\n/* Input styling */\n.chat-input, .chat-input input, .chat-input textarea {\n  font-family: inherit !important;\n  font-size: 0.875rem !important;\n}\n\n/* Header styling */\n.chat-header, .chat-header h1, .chat-header h2, .chat-header h3 {\n  font-family: inherit !important;\n  font-weight: 600 !important;\n  font-size: 1.125rem !important;\n}\n\n/* Button styling */\n.chat-button, button {\n  font-family: inherit !important;\n  font-weight: 500 !important;\n  transition: all 0.3s ease !important;\n}\n\n/* Remove default toggle button */\n.chat-toggle {\n  display: none !important;\n}\n\n/* Body text */\np, span, div {\n  font-family: inherit !important;\n}\n\n/* Scrollbar styling */\n::-webkit-scrollbar {\n  width: 6px;\n}\n\n::-webkit-scrollbar-track {\n  background: hsl(217, 20%, 95%);\n}\n\n::-webkit-scrollbar-thumb {\n  background: hsl(217, 91%, 60%);\n  border-radius: 3px;\n}\n\n::-webkit-scrollbar-thumb:hover {\n  background: hsl(217, 89%, 55%);\n}\n\n/* Hide the chat header section completely */\n.chat-header {\n  display: none !important;\n}\n\n/* Hide chat intro/welcome section */\n.chat-intro, .chat-welcome {\n  display: none !important;\n}\n\n/* Hide any title or subtitle elements */\n.chat-title, .chat-subtitle {\n  display: none !important;\n}"
+          "title": "Chat Elli 💭",
+          "customCss": ":root {\n  /* Gemini-inspired Color Palette */\n  --chat--color-primary: #1a73e8;\n  --chat--color-primary-shade-50: #1557b0;\n  --chat--color-primary-shade-100: #103d88;\n  --chat--color-secondary: #34a853;\n  --chat--color-secondary-shade-50: #2d8f47;\n  --chat--color-white: #ffffff;\n  --chat--color-light: #f8f9fa;\n  --chat--color-light-shade-50: #f1f3f4;\n  --chat--color-light-shade-100: #e8eaed;\n  --chat--color-medium: #dadce0;\n  --chat--color-dark: #202124;\n  --chat--color-disabled: #5f6368;\n  --chat--color-typing: #3c4043;\n  --chat--color-gemini-blue: #4285f4;\n  --chat--color-gemini-light: #e8f0fe;\n\n  /* Modern Layout */\n  --chat--spacing: 1.5rem;\n  --chat--border-radius: 24px;\n  --chat--transition-duration: 0.3s;\n  --chat--font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\n\n  /* Window Dimensions */\n  --chat--window--width: 400px;\n  --chat--window--height: 600px;\n  --chat--window--bottom: 24px;\n  --chat--window--right: 24px;\n  --chat--window--z-index: 9999;\n  --chat--window--border: 1px solid var(--chat--color-light-shade-100);\n  --chat--window--border-radius: 24px;\n  --chat--window--margin-bottom: var(--chat--spacing);\n\n  /* Header Styles - Gemini Clean White */\n  --chat--header-height: auto;\n  --chat--header--padding: 2rem 2rem 1.5rem 2rem;\n  --chat--header--background: #ffffff;\n  --chat--header--color: var(--chat--color-dark);\n  --chat--header--border-top: none;\n  --chat--header--border-bottom: 1px solid var(--chat--color-light-shade-100);\n  --chat--header--border-left: none;\n  --chat--header--border-right: none;\n  --chat--heading--font-size: 1.375rem;\n  --chat--subtitle--font-size: 0.875rem;\n  --chat--subtitle--line-height: 1.5;\n\n  /* Message Styles - Gemini-like */\n  --chat--message--font-size: 0.875rem;\n  --chat--message--padding: 1rem 1.5rem;\n  --chat--message--border-radius: 20px;\n  --chat--message-line-height: 1.5;\n  --chat--message--margin-bottom: 1rem;\n  \n  /* Bot Message Styling - Gemini Light Blue */\n  --chat--message--bot--background: var(--chat--color-gemini-light);\n  --chat--message--bot--color: var(--chat--color-dark);\n  --chat--message--bot--border: 1px solid #d2e3fc;\n  \n  /* User Message Styling - Gemini Blue */\n  --chat--message--user--background: var(--chat--color-gemini-blue);\n  --chat--message--user--color: #ffffff;\n  --chat--message--user--border: none;\n  \n  --chat--message--pre--background: rgba(0, 0, 0, 0.05);\n  --chat--messages-list--padding: var(--chat--spacing);\n\n  /* Toggle Button - Gemini Style */\n  --chat--toggle--size: 56px;\n  --chat--toggle--width: var(--chat--toggle--size);\n  --chat--toggle--height: var(--chat--toggle--size);\n  --chat--toggle--border-radius: 50%;\n  --chat--toggle--background: var(--chat--color-gemini-blue);\n  --chat--toggle--hover--background: var(--chat--color-primary);\n  --chat--toggle--active--background: var(--chat--color-primary-shade-50);\n  --chat--toggle--color: var(--chat--color-white);\n\n  /* Input Area - Clean Gemini Style */\n  --chat--textarea--height: 52px;\n  --chat--textarea--max-height: 30rem;\n  --chat--input--font-size: 0.875rem;\n  --chat--input--border: 1px solid var(--chat--color-light-shade-100);\n  --chat--input--border-radius: 26px;\n  --chat--input--padding: 1rem 1.5rem;\n  --chat--input--background: var(--chat--color-white);\n  --chat--input--text-color: var(--chat--color-dark);\n  --chat--input--line-height: 1.5;\n  --chat--input--placeholder--font-size: var(--chat--input--font-size);\n  --chat--input--border-active: 2px solid var(--chat--color-gemini-blue);\n  --chat--input--left--panel--width: 3rem;\n\n  /* Button Styles */\n  --chat--button--color: var(--chat--color-white);\n  --chat--button--background: var(--chat--color-gemini-blue);\n  --chat--button--padding: 0.75rem 1.5rem;\n  --chat--button--border-radius: 20px;\n  --chat--button--hover--color: var(--chat--color-white);\n  --chat--button--hover--background: var(--chat--color-primary);\n  --chat--close--button--color-hover: var(--chat--color-gemini-blue);\n\n  /* Send and File Buttons */\n  --chat--input--send--button--background: var(--chat--color-gemini-blue);\n  --chat--input--send--button--color: var(--chat--color-white);\n  --chat--input--send--button--background-hover: var(--chat--color-primary);\n  --chat--input--send--button--color-hover: var(--chat--color-white);\n  --chat--input--file--button--background: transparent;\n  --chat--input--file--button--color: var(--chat--color-disabled);\n  --chat--input--file--button--background-hover: var(--chat--color-light-shade-50);\n  --chat--input--file--button--color-hover: var(--chat--color-gemini-blue);\n  --chat--files-spacing: 0.5rem;\n\n  /* Body and Footer - Clean White */\n  --chat--body--background: var(--chat--color-white);\n  --chat--footer--background: var(--chat--color-white);\n  --chat--footer--color: var(--chat--color-dark);\n}\n\n/* Message Container - Gemini Style */\n.chat-messages,\n.messages-container,\n.chat-messages-list {\n    padding: 1.5rem 2rem !important;\n    display: flex !important;\n    flex-direction: column !important;\n    gap: 1rem !important;\n    background: #ffffff !important;\n}\n\n/* User Messages - Gemini Blue Style */\n.chat-message-user,\n.message-user,\n[data-message-type=\"user\"],\n.chat-message.user,\n.user-message {\n    background: #4285f4 !important;\n    color: #ffffff !important;\n    border: none !important;\n    display: block !important;\n    margin-left: auto !important;\n    margin-right: 0 !important;\n    text-align: left !important;\n    max-width: 80% !important;\n    padding: 1rem 1.5rem !important;\n    border-radius: 20px 20px 4px 20px !important;\n    align-self: flex-end !important;\n    word-wrap: break-word !important;\n    font-size: 0.875rem !important;\n    line-height: 1.5 !important;\n    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;\n}\n\n/* Bot Messages - Gemini Light Blue Style */\n.chat-message-bot,\n.message-bot,\n[data-message-type=\"bot\"],\n.chat-message.bot,\n.bot-message {\n    background: #e8f0fe !important;\n    color: #202124 !important;\n    border: 1px solid #d2e3fc !important;\n    margin-left: 0 !important;\n    margin-right: auto !important;\n    text-align: left !important;\n    max-width: 80% !important;\n    padding: 1rem 1.5rem !important;\n    border-radius: 20px 20px 20px 4px !important;\n    align-self: flex-start !important;\n    word-wrap: break-word !important;\n    font-size: 0.875rem !important;\n    line-height: 1.5 !important;\n    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;\n}\n\n/* General message styling */\n.chat-message {\n    max-width: 80% !important;\n    padding: 1rem 1.5rem !important;\n    border-radius: 20px !important;\n    display: block !important;\n    word-wrap: break-word !important;\n    margin-bottom: 0 !important;\n    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;\n}\n\n/* Specific overrides for user messages */\n*[class*=\"user\"], *[class*=\"User\"] {\n    margin-left: auto !important;\n    margin-right: 0 !important;\n    align-self: flex-end !important;\n    background: #4285f4 !important;\n    color: #ffffff !important;\n    border-radius: 20px 20px 4px 20px !important;\n}\n\n/* Specific overrides for bot messages */\n*[class*=\"bot\"], *[class*=\"Bot\"], *[class*=\"assistant\"], *[class*=\"Assistant\"] {\n    margin-left: 0 !important;\n    margin-right: auto !important;\n    align-self: flex-start !important;\n    background: #e8f0fe !important;\n    color: #202124 !important;\n    border: 1px solid #d2e3fc !important;\n    border-radius: 20px 20px 20px 4px !important;\n}\n\n/* Header styling - Gemini clean look */\n.chat-header {\n    background: #ffffff !important;\n    border-bottom: 1px solid #e8eaed !important;\n    padding: 2rem 2rem 1.5rem 2rem !important;\n}\n\n.chat-header h1 {\n    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;\n    font-weight: 400 !important;\n    margin: 0 !important;\n    font-size: 1.375rem !important;\n    color: #202124 !important;\n}\n\n.chat-header p {\n    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;\n    color: #5f6368 !important;\n    margin: 0.5rem 0 0 0 !important;\n    font-size: 0.875rem !important;\n    font-weight: 400 !important;\n}\n\n/* Input styling - Gemini style */\n.chat-input {\n    transition: all 0.3s ease !important;\n    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;\n    background: #ffffff !important;\n    border: 1px solid #dadce0 !important;\n    border-radius: 26px !important;\n    color: #202124 !important;\n}\n\n.chat-input:focus {\n    outline: none !important;\n    border-color: #4285f4 !important;\n    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2) !important;\n}\n\n.chat-input::placeholder {\n    color: #5f6368 !important;\n}\n\n/* Input container */\n.chat-input-container {\n    padding: 1.5rem 2rem !important;\n    background: #ffffff !important;\n    border-top: 1px solid #e8eaed !important;\n}\n\n/* Send button - Gemini style */\n.chat-send-button {\n    background: #4285f4 !important;\n    color: #ffffff !important;\n    border: none !important;\n    border-radius: 50% !important;\n    width: 40px !important;\n    height: 40px !important;\n    transition: all 0.2s ease !important;\n}\n\n.chat-send-button:hover {\n    background: #1a73e8 !important;\n    transform: scale(1.05) !important;\n}\n\n/* Window styling */\n.chat-window {\n    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.1) !important;\n    border-radius: 24px !important;\n    overflow: hidden !important;\n    background: #ffffff !important;\n}\n\n/* Subtle animations */\n@keyframes geminiSlideInRight {\n    from {\n        opacity: 0;\n        transform: translateX(16px) scale(0.95);\n    }\n    to {\n        opacity: 1;\n        transform: translateX(0) scale(1);\n    }\n}\n\n@keyframes geminiSlideInLeft {\n    from {\n        opacity: 0;\n        transform: translateX(-16px) scale(0.95);\n    }\n    to {\n        opacity: 1;\n        transform: translateX(0) scale(1);\n    }\n}\n\n/* Apply Gemini animations */\n*[class*=\"user\"], *[class*=\"User\"] {\n    animation: geminiSlideInRight 0.4s cubic-bezier(0.4, 0.0, 0.2, 1) !important;\n}\n\n*[class*=\"bot\"], *[class*=\"Bot\"], *[class*=\"assistant\"], *[class*=\"Assistant\"] {\n    animation: geminiSlideInLeft 0.4s cubic-bezier(0.4, 0.0, 0.2, 1) !important;\n}\n\n/* Scrollbar - Gemini style */\n.chat-messages::-webkit-scrollbar {\n    width: 8px !important;\n}\n\n.chat-messages::-webkit-scrollbar-track {\n    background: transparent !important;\n}\n\n.chat-messages::-webkit-scrollbar-thumb {\n    background: #dadce0 !important;\n    border-radius: 4px !important;\n}\n\n.chat-messages::-webkit-scrollbar-thumb:hover {\n    background: #5f6368 !important;\n}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.3,
-      "position": [0, 0],
-      "id": "f043387e-4957-4d4b-bef1-358595dfc7e3",
+      "position": [
+        576,
+        48
+      ],
+      "id": "bf1b1f45-fc49-4470-b657-270a51a9731f",
       "name": "When chat message received",
       "webhookId": "850736dd-ddac-4e8d-9ea4-799c64607835"
     },
@@ -24,12 +28,15 @@
       },
       "type": "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
       "typeVersion": 1,
-      "position": [688, 176],
-      "id": "e08c5660-65a8-4c2b-834c-c02b143eca46",
+      "position": [
+        1440,
+        224
+      ],
+      "id": "bbcf4091-cab8-4af4-8b4d-2d1d3cf6767a",
       "name": "MongoDB Chat Memory2",
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -46,12 +53,15 @@
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
-      "position": [528, 176],
-      "id": "92ebd1a5-1219-48bc-bd4d-405d4c84a195",
+      "position": [
+        1280,
+        224
+      ],
+      "id": "1696ddf0-2ea5-49cf-aa7c-75d91c7f28d9",
       "name": "OpenAI Chat Model2",
       "credentials": {
         "openAiApi": {
-          "id": "f4hPmYjzWQEUBTKk",
+          "id": "qKEozZy1FaCPhKS2",
           "name": "OpenAi account"
         }
       }
@@ -64,12 +74,15 @@
       },
       "type": "n8n-nodes-base.mongoDbTool",
       "typeVersion": 1.2,
-      "position": [912, 176],
-      "id": "51949fbf-348d-4568-afcc-578ed77b1258",
+      "position": [
+        1664,
+        224
+      ],
+      "id": "cc13dbe1-75f4-458c-8876-0fcfb26eb3aa",
       "name": "Customer Surveys",
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -79,13 +92,16 @@
         "promptType": "define",
         "text": "={{ $('When chat message received').item.json.chatInput }}",
         "options": {
-          "systemMessage": "# Customer Support Database Assistant\n\nYou are a customer support data assistant that helps analyze cases and surveys. You have access to MongoDB databases containing case emails and customer satisfaction data.\n\n## Available Tools\n\n**Cases Tool**\n- Contains: Case IDs with complete email exchanges between customers and engineers\n- Use for: Any questions about specific cases, case details, customer communications, or technical issues\n\n## Survey Classification System\n**CSAT (Customer Satisfied)**: Overall Satisfaction score of 4 or 5\n**DSAT (Customer Dissatisfied)**: Overall Satisfaction score of 1 or 2\n**NEUT (Neutral)**: Overall Satisfaction score of 3\n\n### Score Computations\n- **Overall CSAT Score**: (Count of surveys with Overall Satisfaction 4 or 5 ÷ Total surveys) × 100\n- **Overall DSAT Score**: (Count of surveys with Overall Satisfaction 1 or 2 ÷ Total surveys) × 100\n- **Overall NEUT Score**: (Count of surveys with Overall Satisfaction 3 ÷ Total surveys) × 100\n\n## STRICT Tool Usage Rules\n\n1. **ALWAYS query data first** - Never provide analysis or recommendations without retrieving actual data\n2. **Use Cases tool when users ask about:**\n   - Specific case numbers (e.g., \"Tell me about case TM-03737326\")\n   - Case details, status, or history\n   - Customer-engineer communications\n   - Technical issues or resolutions\n\n3. **Use Support Surveys tool when users ask about:**\n   - Customer satisfaction scores\n   - Survey feedback or ratings (CSAT/DSAT/NEUT analysis)\n   - Service quality analysis\n   - Customer sentiment trends\n\n4. **For general questions** - Use Cases tool first to search relevant cases, then Support Surveys if satisfaction data is needed\n\n## Sample Coaching Recommendations\nUse these as examples, but you are not limited to these recommendations. Create specific, actionable coaching points based on your analysis:\n\n**Actionable**: Provide coaching recommendations suitable for manager-engineer discussions\n\n**Delay Management:**\n- For excessive delays: Engage in remote session to help the customer with the prepared action plan\n- For urgent issues requiring customer updates: Initiate a callback to the customer\n\n**Escalation & Investigation:**\n- When cases are escalated to RD Team and require extended investigation time: Manage customer expectations and prioritize relaying timely updates to the customer\n- When engineers struggle with issue investigation: Suggest utilizing available resources like CompanionXL, Eureka Search, or reaching out to Squad Leads for additional insights and help\n\n**Product Limitations:**\n- When faced with product limitations: Clearly communicate limitations to the customer, set proper expectations about what can and cannot be achieved\n- For customer requests beyond current product capabilities: File a feature request to R&D Team and provide the customer with the feature request number for tracking\n\n## Response Format\n1. Query appropriate tool(s) with user's request\n2. Analyze retrieved data using proper survey classifications\n3. Provide clear, data-backed responses\n4. Reference specific case numbers or survey data in your answers\n\n**Remember: No guessing, no assumptions - always retrieve data first.**"
+          "systemMessage": "# You are Elli, the Customer Support Quality Analyst\n\n## Persona\nElli is an experienced quality analyst specializing in support performance coaching. She's data-driven, detail-oriented, and solution-focused. Her communication style is professional yet approachable, delivering evidence-based feedback suitable for manager-engineer coaching sessions.\n\n## Core Traits\n- **Analytical**: Uses data to identify coaching opportunities\n- **Balanced**: Highlights both strengths and improvement areas\n- **Constructive**: Frames feedback as growth opportunities\n- **Objective**: Maintains professional neutrality\n- **Customer-focused**: Considers impact on customer experience\n\n## Expertise\n- Email sentiment analysis and communication patterns\n- Timeline optimization and process bottlenecks\n- SLA compliance and support metrics\n- Translating performance data into actionable coaching points\n\n## Available Tools\n\n**Cases Tool**\n- Contains: Case IDs with complete email exchanges between customers and engineers\n- Use for: Any questions about specific cases, case details, customer communications, or technical issues\n\n## Survey Classification System\n**CSAT (Customer Satisfied)**: Overall Satisfaction score of 4 or 5\n**DSAT (Customer Dissatisfied)**: Overall Satisfaction score of 1 or 2\n**NEUT (Neutral)**: Overall Satisfaction score of 3\n\n### Score Computations\n- **Overall CSAT Score**: (Count of surveys with Overall Satisfaction 4 or 5 ÷ Total surveys) × 100\n- **Overall DSAT Score**: (Count of surveys with Overall Satisfaction 1 or 2 ÷ Total surveys) × 100\n- **Overall NEUT Score**: (Count of surveys with Overall Satisfaction 3 ÷ Total surveys) × 100\n\n## STRICT Tool Usage Rules\n\n1. **ALWAYS query data first** - Never provide analysis or recommendations without retrieving actual data\n2. **Use Cases tool when users ask about:**\n   - Specific case numbers (e.g., \"Tell me about case TM-03737326\")\n   - Case details, status, or history\n   - Customer-engineer communications\n   - Technical issues or resolutions\n\n3. **Use Support Surveys tool when users ask about:**\n   - Customer satisfaction scores\n   - Survey feedback or ratings (CSAT/DSAT/NEUT analysis)\n   - Service quality analysis\n   - Customer sentiment trends\n\n4. **For general questions** - Use Cases tool first to search relevant cases, then Support Surveys if satisfaction data is needed\n\n## Sample Coaching Recommendations\nUse these as examples, but you are not limited to these recommendations. Create specific, actionable coaching points based on your analysis:\n\n**Actionable**: Provide coaching recommendations suitable for manager-engineer discussions\n\n**Delay Management:**\n- For excessive delays: Engage in remote session to help the customer with the prepared action plan\n- For urgent issues requiring customer updates: Initiate a callback to the customer\n\n**Escalation & Investigation:**\n- When cases are escalated to RD Team and require extended investigation time: Manage customer expectations and prioritize relaying timely updates to the customer\n- When engineers struggle with issue investigation: Suggest utilizing available resources like CompanionXL, Eureka Search, or reaching out to Squad Leads for additional insights and help\n\n**Product Limitations:**\n- When faced with product limitations: Clearly communicate limitations to the customer, set proper expectations about what can and cannot be achieved\n- For customer requests beyond current product capabilities: File a feature request to R&D Team and provide the customer with the feature request number for tracking\n\n## Response Format\n1. Query appropriate tool(s) with user's request\n2. Analyze retrieved data using proper survey classifications\n3. Provide clear, data-backed responses\n4. Reference specific case numbers or survey data in your answers\n\n**Remember: No guessing, no assumptions - always retrieve data first.**"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
-      "position": [624, 0],
-      "id": "588cfb02-e7b3-49d9-aaf7-9552a2c631f0",
+      "position": [
+        1376,
+        48
+      ],
+      "id": "ba9d43fd-9f70-4676-b375-991e4fa0ad55",
       "name": "AI Agent"
     },
     {
@@ -96,37 +112,18 @@
       },
       "type": "n8n-nodes-base.mongoDbTool",
       "typeVersion": 1.2,
-      "position": [800, 176],
-      "id": "b949c611-bfef-4286-b960-5c6ddd341406",
+      "position": [
+        1552,
+        224
+      ],
+      "id": "c09ce6c1-31e5-43cd-a895-b55e47808e1f",
       "name": "Cases",
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
-    },
-    {
-      "parameters": {
-        "inputs": {
-          "input": [
-            {
-              "type": "ai_languageModel"
-            },
-            {
-              "type": "ai_memory"
-            },
-            {
-              "type": "ai_tool"
-            }
-          ]
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.code",
-      "typeVersion": 1,
-      "position": [1536, 0],
-      "id": "4c637d55-cc3e-43e7-b156-816b61e8c530",
-      "name": "LangChain Code"
     },
     {
       "parameters": {
@@ -140,12 +137,15 @@
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
-      "position": [160, 176],
-      "id": "b9ac8c26-9789-48ad-b0ce-69879847328a",
+      "position": [
+        832,
+        224
+      ],
+      "id": "22f32395-daeb-4b5b-9eae-733d90c1780f",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "f4hPmYjzWQEUBTKk",
+          "id": "qKEozZy1FaCPhKS2",
           "name": "OpenAi account"
         }
       }
@@ -156,12 +156,15 @@
       },
       "type": "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
       "typeVersion": 1,
-      "position": [320, 208],
-      "id": "ee2b34a8-85be-44ec-a3fc-45a815d702d0",
+      "position": [
+        976,
+        224
+      ],
+      "id": "3496d7db-a19f-4f20-868d-4fdca443f77c",
       "name": "MongoDB Chat Memory",
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -174,9 +177,58 @@
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
-      "position": [208, 0],
-      "id": "49785e61-c92e-445b-92dd-6614a193d7f2",
+      "position": [
+        864,
+        48
+      ],
+      "id": "2b280985-6486-409d-a154-edc90e276a96",
       "name": "Query Builder"
+    },
+    {
+      "parameters": {
+        "content": "## Query Builder\nLLM: Claude 3.5 Sonnet",
+        "height": 432,
+        "width": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        784,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "efc7338d-eae0-4296-832b-f178ac87351d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Elli the ChatBot\nLLM: GPT 4.1 Mini",
+        "height": 432,
+        "width": 576,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1216,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "7381ba36-4dad-456f-a06d-9db3e5fb62a0",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Chat User",
+        "height": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        496,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "b619b8ff-75a0-4336-9325-823ad1c42d21",
+      "name": "Sticky Note2"
     }
   ],
   "pinData": {},
@@ -270,15 +322,15 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "9afabd63-ffd6-45ae-8d08-a5a902bff6a5",
+  "versionId": "a01b8f93-cf45-4824-875c-9a77bee96c85",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
+    "instanceId": "197030258e5ec4f22da7668edae4c29f9bb02818dd32dfbc6a28b550e0739e49"
   },
-  "id": "Y8RyDBND8QQUa0mW",
+  "id": "dPd5bfPSt6U8UQuF",
   "tags": []
 }

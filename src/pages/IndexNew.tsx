@@ -408,8 +408,8 @@ const IndexNew = () => {
     
     setSelectedTimeRange(range);
     
-    // Recalculate chart data if we have satisfaction data
-    if (satisfactionData && satisfactionData.satisfactionData) {
+    // Only recalculate chart data if a report has been generated (data persistence requirement)
+    if (reportGenerated && satisfactionData && satisfactionData.satisfactionData) {
       // Recalculate filtered chart data
       const filteredChartData = generateFilteredChartData(satisfactionData.satisfactionData);
       setChartSurveyData(filteredChartData);
@@ -522,8 +522,11 @@ const IndexNew = () => {
         const data = await CustomerSatisfactionService.getEntitySatisfactionData(entityName, entityType);
         if (data) {
           setSatisfactionData(data);
-          const chartData = generateFilteredChartData(data.surveyDetails);
-          setChartSurveyData(chartData);
+          // Only update chart data if report is already generated (data persistence)
+          if (reportGenerated) {
+            const chartData = generateFilteredChartData(data.surveyDetails);
+            setChartSurveyData(chartData);
+          }
         } else {
           setSatisfactionData(null);
           setChartSurveyData([]);
@@ -554,8 +557,11 @@ const IndexNew = () => {
               satisfactionData: aggregatedData,
               surveyDetails: allSurveyDetails // Include all survey details from squad members
             });
-            const chartData = generateFilteredChartData(allSurveyDetails);
-            setChartSurveyData(chartData);
+            // Only update chart data if report is already generated (data persistence)
+            if (reportGenerated) {
+              const chartData = generateFilteredChartData(allSurveyDetails);
+              setChartSurveyData(chartData);
+            }
           } else {
             setSatisfactionData(null);
             setChartSurveyData([]);
@@ -598,8 +604,11 @@ const IndexNew = () => {
               satisfactionData: aggregatedData,
               surveyDetails: allSurveyDetails // Include all survey details from team members
             });
-            const chartData = generateFilteredChartData(allSurveyDetails);
-            setChartSurveyData(chartData);
+            // Only update chart data if report is already generated (data persistence)
+            if (reportGenerated) {
+              const chartData = generateFilteredChartData(allSurveyDetails);
+              setChartSurveyData(chartData);
+            }
           } else {
             setSatisfactionData(null);
             setChartSurveyData([]);
@@ -626,6 +635,17 @@ const IndexNew = () => {
   };
 
   const handleGenerateReport = async () => {
+    // Clear insights and analysis results when generating new report
+    setSctAnalysisResults(null);
+    setCxInsightResults(null);
+    setSurveyAnalysisResults(null);
+    setSctAnalyzed(false);
+    setCxAnalyzed(false);
+    setIsSurveyAnalyzed(false);
+    
+    // Clear chart data to ensure fresh start for new report
+    setChartSurveyData([]);
+
     // Comprehensive validation before generating report
     if (!selectedEntity) {
       return;
@@ -1148,10 +1168,11 @@ const IndexNew = () => {
               // End satisfaction loading state since we have data now
               setIsSatisfactionLoading(false);
               
-              // Format for chart with time range filtering
-              const chartData = generateFilteredChartData(allSquadSurveyDetails);
-              
-              setChartSurveyData(chartData);
+              // Format for chart with time range filtering (only if report is already generated)
+              if (reportGenerated) {
+                const chartData = generateFilteredChartData(allSquadSurveyDetails);
+                setChartSurveyData(chartData);
+              }
             }
             
             // Aggregate all detailed cases for the squad
@@ -1318,10 +1339,11 @@ const IndexNew = () => {
                 surveyDetails: allTeamSurveyDetails // Include all survey details from team members
               });
               
-              // Format for chart
-              const chartData = generateFilteredChartData(allTeamSurveyDetails);
-              
-              setChartSurveyData(chartData);
+              // Format for chart (only if report is already generated)
+              if (reportGenerated) {
+                const chartData = generateFilteredChartData(allTeamSurveyDetails);
+                setChartSurveyData(chartData);
+              }
             }
             
             // Aggregate all detailed cases for the team
@@ -1406,10 +1428,11 @@ const IndexNew = () => {
               // End satisfaction loading state since we have data now
               setIsSatisfactionLoading(false);
               
-              // Format for chart
-              const chartData = generateFilteredChartData(latestMetrics.surveyDetails || []);
-              
-              setChartSurveyData(chartData);
+              // Format for chart (only if report is already generated)
+              if (reportGenerated) {
+                const chartData = generateFilteredChartData(latestMetrics.surveyDetails || []);
+                setChartSurveyData(chartData);
+              }
               setIsSatisfactionLoading(false); // Clear loading state when satisfaction data is set
             } else {
               setIsSatisfactionLoading(false); // Clear loading state even if no satisfaction data
@@ -2162,7 +2185,9 @@ const IndexNew = () => {
               impact: 'Medium',
               category: 'communication',
               type: 'warning',
-              recommendation: item.recommendations?.join('\n') || 'No specific recommendations'
+              recommendation: item.recommendations?.join('\n') || 'No specific recommendations',
+              caseId: item.case_id,
+              caseTitle: item.case_title || item.title || undefined
             });
           });
         }
@@ -2177,7 +2202,9 @@ const IndexNew = () => {
               impact: 'High',
               category: 'process',
               type: 'warning',
-              recommendation: item.recommendations?.join('\n') || 'No specific recommendations'
+              recommendation: item.recommendations?.join('\n') || 'No specific recommendations',
+              caseId: item.case_id,
+              caseTitle: item.case_title || item.title || undefined
             });
           });
         }
@@ -2615,7 +2642,9 @@ const IndexNew = () => {
                 recommendation: Array.isArray(item.recommendations) ? 
                   `• ${item.recommendations.join('\n• ')}` : 
                   'No specific recommendations provided.',
-                surveyType: item.survey_type // Add survey type for grouping
+                surveyType: item.survey_type, // Add survey type for grouping
+                caseId: item.case_id,
+                caseTitle: item.case_title || item.title || undefined
               };
               
               console.log(`📝 Created insight for ${item.survey_type} case ${item.case_id}:`, insight);
@@ -3463,7 +3492,7 @@ const IndexNew = () => {
                     </div>
 
                     {/* Dynamic Tabs Section - Centered */}
-                    {reportGenerated && selectedEntity && (
+                    {reportGenerated && selectedEntity && selectedEntity !== 'dpe' && (
                       <div className="flex justify-center">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-md">
                           <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -3522,7 +3551,7 @@ const IndexNew = () => {
                     </div>
 
                     {/* Dynamic Tabs Section - Centered */}
-                    {reportGenerated && selectedEntity && (
+                    {reportGenerated && selectedEntity && selectedEntity !== 'dpe' && (
                       <div className="flex justify-center">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-md">
                           <TabsList className="grid w-full grid-cols-2 mb-4">
