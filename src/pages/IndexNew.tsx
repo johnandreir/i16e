@@ -2825,6 +2825,36 @@ const IndexNew = () => {
         // Add summary insight if available
         if (workflowResults.summary) {
           const summary = workflowResults.summary;
+          
+          // Determine survey type from processed case insights
+          let surveyType = '';
+          if (processedInsights.length > 0) {
+            // Count CSAT, DSAT, and NEUTRAL cases
+            const csatCount = processedInsights.filter(insight => insight.surveyType === 'CSAT').length;
+            const dsatCount = processedInsights.filter(insight => insight.surveyType === 'DSAT').length;
+            const neutralCount = processedInsights.filter(insight => insight.surveyType === 'NEUT' || insight.surveyType === 'NEUTRAL').length;
+            
+            // Use the predominant type
+            if (dsatCount > csatCount && dsatCount > neutralCount) {
+              surveyType = 'DSAT';
+            } else if (csatCount > dsatCount && csatCount > neutralCount) {
+              surveyType = 'CSAT';
+            } else if (neutralCount > csatCount && neutralCount > dsatCount) {
+              surveyType = 'NEUT';
+            } else if (csatCount > 0) {
+              surveyType = 'CSAT';
+            } else if (dsatCount > 0) {
+              surveyType = 'DSAT';
+            } else if (neutralCount > 0) {
+              surveyType = 'NEUT';
+            } else {
+              // Fallback: check raw data for survey types
+              const allSurveyTypes = workflowResults.survey_sentiment_analysis?.map((item: any) => item.survey_type).filter(Boolean) || [];
+              const uniqueTypes = [...new Set(allSurveyTypes)];
+              surveyType = uniqueTypes.length === 1 ? uniqueTypes[0] : (uniqueTypes.includes('CSAT') ? 'CSAT' : uniqueTypes.includes('DSAT') ? 'DSAT' : uniqueTypes.includes('NEUT') ? 'NEUT' : 'Mixed');
+            }
+          }
+          
           let summaryDescription = `Customer satisfaction analysis reveals key trends and improvement opportunities.`;
           
           if (summary.strengths?.length > 0) {
@@ -2842,6 +2872,7 @@ const IndexNew = () => {
             impact: 'High',
             category: 'summary',
             type: 'success',
+            surveyType: surveyType, // Add survey type for display
             recommendation: summary.areas_for_improvement?.length > 0 ? 
               `Focus on:\n• ${summary.areas_for_improvement.join('\n• ')}` : 
               'Continue current excellent practices.'

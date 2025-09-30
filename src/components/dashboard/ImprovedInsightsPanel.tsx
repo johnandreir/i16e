@@ -540,11 +540,16 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
   // Organize CX insights into summary and case-specific analysis
   const organizedCxInsights = useMemo(() => {
     // Filter for summary insights (overview, summary, etc.)
-    const summaryInsights = cxInsights.filter(insight => 
+    const allSummaryInsights = cxInsights.filter(insight => 
       insight.title.toLowerCase().includes('summary') || 
       insight.title.toLowerCase().includes('overview') ||
       insight.title.toLowerCase().includes('dpe customer survey summary')
     );
+    
+    // Separate CSAT, DSAT, and NEUTRAL summaries
+    const csatSummaries = allSummaryInsights.filter(insight => insight.surveyType === 'CSAT');
+    const dsatSummaries = allSummaryInsights.filter(insight => insight.surveyType === 'DSAT');
+    const neutralSummaries = allSummaryInsights.filter(insight => insight.surveyType === 'NEUT' || insight.surveyType === 'NEUTRAL');
     
     // Filter for case-specific insights
     const caseSpecificInsights = cxInsights.filter(insight => 
@@ -577,12 +582,12 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     });
 
     return {
-      summary: summaryInsights,
+      summary: allSummaryInsights, // Keep all for backward compatibility
+      csatSummary: csatSummaries,
+      dsatSummary: dsatSummaries,
+      neutralSummary: neutralSummaries,
       cases,
-      surveysAnalyzed: cxInsights.filter(insight => 
-        insight.title.toLowerCase().includes('survey') ||
-        insight.category?.toLowerCase().includes('survey')
-      ).length
+      surveysAnalyzed: cases.length // Count unique cases instead of survey-related insights
     };
   }, [cxInsights]);
 
@@ -869,18 +874,16 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                     
                     {/* Customer Survey Summary Tab */}
                     <TabsContent value="overview" className="space-y-3">
-                      {organizedCxInsights.summary.length > 0 ? (
-                        <div>
+                      <div className="space-y-4">
+                        {/* CSAT Summary Section */}
+                        {organizedCxInsights.csatSummary.length > 0 && (
                           <div className="mb-3 p-4 bg-background/50 dark:bg-background/80 rounded-lg shadow-sm border border-border/50">
                             <h3 className="font-medium mb-3 text-base flex items-center gap-2 pb-2 border-b border-muted-foreground/20">
-                              {EMOJIS.SURVEY} {selectedEntity} {organizedCxInsights.summary[0]?.surveyType || ''} Survey Summary
+                              {EMOJIS.SURVEY} {selectedEntity.charAt(0).toUpperCase() + selectedEntity.slice(1)} CSAT Survey Summary
                             </h3>
-                            {organizedCxInsights.summary.map((insight) => (
+                            {organizedCxInsights.csatSummary.map((insight) => (
                               <div key={insight.id} className="border-l-2 border-l-primary pl-3 py-4 bg-background/50 dark:bg-background/80 rounded-r-lg mb-3 shadow-sm">
                                 <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="font-medium text-foreground">{insight.title}</h4>
-                                    </div>
                                     <div className="bg-background/50 p-3 rounded-md border border-border/50 customer-survey-summary">
                                       {formatDescription(insight.description)}
                                     </div>
@@ -893,7 +896,62 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                               </div>
                             ))}
                           </div>
-                          {organizedCxInsights.cases.length > 0 && (
+                        )}
+
+                        {/* DSAT Summary Section */}
+                        {organizedCxInsights.dsatSummary.length > 0 && (
+                          <div className="mb-3 p-4 bg-background/50 dark:bg-background/80 rounded-lg shadow-sm border border-border/50">
+                            <h3 className="font-medium mb-3 text-base flex items-center gap-2 pb-2 border-b border-muted-foreground/20">
+                              {EMOJIS.SURVEY} {selectedEntity.charAt(0).toUpperCase() + selectedEntity.slice(1)} DSAT Survey Summary
+                            </h3>
+                            {organizedCxInsights.dsatSummary.map((insight) => (
+                              <div key={insight.id} className="border-l-2 border-l-destructive pl-3 py-4 bg-background/50 dark:bg-background/80 rounded-r-lg mb-3 shadow-sm">
+                                <div className="space-y-3">
+                                    <div className="bg-background/50 p-3 rounded-md border border-border/50 customer-survey-summary">
+                                      {formatDescription(insight.description)}
+                                    </div>
+                                    {insight.recommendation && !insight.recommendation.toLowerCase().includes('focus on:') && (
+                                      <div className="bg-accent/5 border border-accent/20 rounded-md p-4 mt-3">
+                                        {formatTextWithBullets(insight.recommendation, 'Action Item')}
+                                      </div>
+                                    )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* NEUTRAL Summary Section */}
+                        {organizedCxInsights.neutralSummary.length > 0 && (
+                          <div className="mb-3 p-4 bg-background/50 dark:bg-background/80 rounded-lg shadow-sm border border-border/50">
+                            <h3 className="font-medium mb-3 text-base flex items-center gap-2 pb-2 border-b border-muted-foreground/20">
+                              {EMOJIS.SURVEY} {selectedEntity.charAt(0).toUpperCase() + selectedEntity.slice(1)} NEUTRAL Survey Summary
+                            </h3>
+                            {organizedCxInsights.neutralSummary.map((insight) => (
+                              <div key={insight.id} className="border-l-2 border-l-muted pl-3 py-4 bg-background/50 dark:bg-background/80 rounded-r-lg mb-3 shadow-sm">
+                                <div className="space-y-3">
+                                    <div className="bg-background/50 p-3 rounded-md border border-border/50 customer-survey-summary">
+                                      {formatDescription(insight.description)}
+                                    </div>
+                                    {insight.recommendation && !insight.recommendation.toLowerCase().includes('focus on:') && (
+                                      <div className="bg-accent/5 border border-accent/20 rounded-md p-4 mt-3">
+                                        {formatTextWithBullets(insight.recommendation, 'Action Item')}
+                                      </div>
+                                    )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Show message if no summaries available */}
+                        {organizedCxInsights.csatSummary.length === 0 && organizedCxInsights.dsatSummary.length === 0 && organizedCxInsights.neutralSummary.length === 0 ? (
+                          <div className="text-center py-4 text-muted-foreground">
+                            No survey summary available. Try analyzing more cases.
+                          </div>
+                        ) : (
+                          /* Cases link */
+                          organizedCxInsights.cases.length > 0 && (
                             <div className="p-3 bg-background/50 dark:bg-background/80 rounded-lg">
                               <p className="text-sm text-muted-foreground">
                                 We've found {organizedCxInsights.cases.length} case{organizedCxInsights.cases.length > 1 ? 's' : ''} that need attention. 
@@ -902,13 +960,9 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                                 </a>
                               </p>
                             </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-center py-4 text-muted-foreground">
-                          No survey summary available. Try analyzing more cases.
-                        </div>
-                      )}
+                          )
+                        )}
+                      </div>
                     </TabsContent>
                     
                     {/* Survey Analysis Tab */}
