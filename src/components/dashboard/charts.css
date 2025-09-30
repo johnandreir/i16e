@@ -49,3 +49,19 @@
   position: relative;
   top: -20px; /* Adjust vertical position */
 }
+
+/* Pie chart hover effects */
+.pie-segment {
+  cursor: pointer;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Enhanced hover effects for pie chart segments */
+.recharts-pie-sector {
+  transition: all 0.2s ease-in-out;
+}
+
+.recharts-pie-sector:hover {
+  filter: brightness(1.1) drop-shadow(0px 2px 8px rgba(0, 0, 0, 0.2));
+  cursor: pointer;
+}

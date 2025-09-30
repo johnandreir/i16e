@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { 
   AlertTriangle, CheckCircle, Info, TrendingUp, Clock, ThumbsUp, 
   ChevronDown, ChevronRight, Lightbulb, Mail, AlertCircle,
-  BarChart, ArrowUpRight, ArrowDownRight
+  BarChart, ArrowUpRight, ArrowDownRight, MessageSquare, User, Loader2
 } from 'lucide-react';
 import { EMOJIS } from '@/components/EmojiIcons';
 import './recommendation-fix.css'; // Import CSS for aligning recommendations with analysis
@@ -39,6 +39,8 @@ interface Insight {
   caseId?: string; // Added to track which case this insight belongs to
   caseTitle?: string; // Added to store the case title for display
   surveyType?: string; // Added to store the type of survey (CSAT, DSAT, etc.)
+  customerVerbatim?: string; // Added to store customer feedback/verbatim
+  caseOwner?: string; // Added to store case owner information
 }
 
 interface InsightsPanelProps {
@@ -52,6 +54,8 @@ interface InsightsPanelProps {
   generatedEntityValue?: string;
   isLoading?: boolean;
   isAnalysisEnabled?: boolean;
+  isSCTAnalysisLoading?: boolean;
+  isSurveyAnalysisLoading?: boolean;
 }
 
 // Define the CaseGroup interface above the organizedCxInsights function
@@ -101,7 +105,9 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
   generatedEntity = '',
   generatedEntityValue = '',
   isLoading = false,
-  isAnalysisEnabled = false
+  isAnalysisEnabled = false,
+  isSCTAnalysisLoading = false,
+  isSurveyAnalysisLoading = false
 }) => {
   const [sctOpen, setSctOpen] = useState(true); // Auto-expand SCT section by default
   const [cxOpen, setCxOpen] = useState(false);
@@ -633,7 +639,15 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                 {sctOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-3 mt-3">
-                {sctInsights.length === 0 ? (
+                {isSCTAnalysisLoading ? (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Processing SCT Analysis...</span>
+                    </div>
+                    <p className="text-sm">This may take a few minutes. Results will appear here automatically.</p>
+                  </div>
+                ) : sctInsights.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
                     Click "Analyze SCT" to generate Solution Cycle Time insights
                   </div>
@@ -859,7 +873,15 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                 {cxOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-3 mt-3">
-                {cxInsights.length === 0 ? (
+                {isSurveyAnalysisLoading ? (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Processing Survey Analysis...</span>
+                    </div>
+                    <p className="text-sm">This may take a few minutes. Results will appear here automatically.</p>
+                  </div>
+                ) : cxInsights.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
                     Click "Analyze Survey" to generate Customer Satisfaction insights
                   </div>
@@ -993,10 +1015,53 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                                     <div key={insight.id} className="border-l-2 border-l-primary pl-3 py-3 bg-background/50 dark:bg-background/80 rounded-r-lg shadow-sm border border-border/50">
                                       <div className="space-y-4">
                                           
-                                          {/* Analysis Section */}
+                                          {/* Case Owner Section - First */}
                                           <div>
                                             <h6 className="text-sm font-medium mb-1 flex items-center gap-2 text-foreground dark:text-foreground">
-                                              {EMOJIS.MAGNIFYING_GLASS} Analysis:
+                                              <User className="h-4 w-4 text-primary" />
+                                              Case Owner:
+                                            </h6>
+                                            <div className="text-sm text-foreground dark:text-foreground ml-6 bg-muted/10 border border-muted/20 rounded-md p-2">
+                                              {insight.caseOwner || 'Not Available'}
+                                            </div>
+                                          </div>
+
+                                          {/* Customer Verbatim Section - Second */}
+                                          {(() => {
+                                            console.log(`🔍 UI Debug - Case ${insight.caseId} verbatim:`, insight.customerVerbatim);
+                                            
+                                            if (insight.customerVerbatim) {
+                                              return (
+                                                <div>
+                                                  <h6 className="text-sm font-medium mb-1 flex items-center gap-2 text-foreground dark:text-foreground">
+                                                    <MessageSquare className="h-4 w-4 text-primary" />
+                                                    Customer Verbatim:
+                                                  </h6>
+                                                  <div className="text-sm text-foreground dark:text-foreground ml-6 bg-accent/5 border border-accent/20 rounded-md p-3 italic">
+                                                    "{insight.customerVerbatim}"
+                                                  </div>
+                                                </div>
+                                              );
+                                            } else {
+                                              // Temporary debug section to show when verbatim is missing
+                                              return (
+                                                <div>
+                                                  <h6 className="text-sm font-medium mb-1 flex items-center gap-2 text-muted-foreground">
+                                                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                                                    Customer Verbatim: (Not Available)
+                                                  </h6>
+                                                  <div className="text-xs text-muted-foreground ml-6 bg-muted/10 border border-muted/20 rounded-md p-2">
+                                                    No customer feedback found for this case
+                                                  </div>
+                                                </div>
+                                              );
+                                            }
+                                          })()}
+
+                                          {/* Analysis Section (Problem) - Third */}
+                                          <div>
+                                            <h6 className="text-sm font-medium mb-1 flex items-center gap-2 text-foreground dark:text-foreground">
+                                              {EMOJIS.MAGNIFYING_GLASS} Problem:
                                             </h6>
                                             <div className="text-sm text-foreground dark:text-foreground ml-6">
                                               <ul className="list-disc ml-4">
@@ -1005,12 +1070,12 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                                             </div>
                                           </div>
                                           
-                                          {/* Recommendations Section */}
+                                          {/* Recommendations Section - Fourth */}
                                           {insight.recommendation && !insight.recommendation.toLowerCase().includes('focus on:') && (
                                             <div>
                                               <h6 className="text-sm font-medium mb-2 flex items-center gap-2">
                                                 <Lightbulb className="h-4 w-4 text-accent" />
-                                                Recommendations:
+                                                Recommendation:
                                               </h6>
                                               <div className="text-sm text-foreground dark:text-foreground ml-6">
                                                 {formatTextWithBullets(insight.recommendation, '')}

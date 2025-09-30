@@ -54,6 +54,14 @@ export interface DashboardData {
     sct: number;
     cases: number;
     satisfaction: number;
+    detailedCases?: any[];
+  }>;
+  individualDPEData?: Array<{
+    name: string;
+    sct: number;
+    cases: number;
+    satisfaction: number;
+    detailedCases?: any[];
   }>;
 }
 

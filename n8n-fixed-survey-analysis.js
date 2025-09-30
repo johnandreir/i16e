@@ -19,8 +19,16 @@ const selectedDsat = dsatSurveys.slice(0, 3);
 const selectedCsat = csatSurveys.slice(0, 2);
 const selectedNeutral = neutralSurveys.slice(0, 2); // Include 2 neutral surveys
 
-// Combine selected surveys
+// Combine selected surveys with their feedback
 const selectedSurveys = [...selectedDsat, ...selectedCsat, ...selectedNeutral];
+
+// Create a mapping of case ID to feedback for easy lookup
+const feedbackMap = {};
+selectedSurveys.forEach(survey => {
+  if (survey.case_id && survey.feedback) {
+    feedbackMap[survey.case_id] = survey.feedback;
+  }
+});
 
 // Extract unique case IDs for MongoDB lookup
 const caseIds = [...new Set(selectedSurveys.map(survey => survey.case_id))];
@@ -32,6 +40,7 @@ return [{
   json: {
     selected_surveys: selectedSurveys,
     case_ids: formattedCaseIds,
+    feedback_map: feedbackMap, // Include feedback mapping
     dsat_count: selectedDsat.length,
     csat_count: selectedCsat.length,
     neutral_count: selectedNeutral.length, // Add neutral count
@@ -43,6 +52,7 @@ return [{
       dsat: selectedDsat.length,
       csat: selectedCsat.length, 
       neutral: selectedNeutral.length
-    }
+    },
+    debug_feedback_map: feedbackMap // Debug: show feedback mapping
   }
 }];

@@ -42,9 +42,11 @@ This will:
 
 ## 🔧 Utility Commands
 
-- **`check-health.bat`** - Check if backend services are running
-- **`view-logs.bat`** - View Docker service logs
-- **`cleanup.bat`** - Clean up Docker containers
+- **`scripts/check-health.bat`** - Check if backend services are running
+- **`scripts/view-logs.bat`** - View Docker service logs  
+- **`scripts/cleanup.bat`** - Clean up Docker containers
+- **`scripts/monitor-connection.bat`** - Monitor database connections
+- **`scripts/restart-with-fixes.bat`** - Restart services with fixes
 
 ## 📦 What Gets Installed Automatically
 

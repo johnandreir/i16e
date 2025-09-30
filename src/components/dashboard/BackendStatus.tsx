@@ -16,6 +16,13 @@ interface ServiceStatus {
   url?: string;
   category: 'database' | 'api' | 'workflow' | 'external';
   priority: 'high' | 'medium' | 'low';
+  workflows?: Array<{
+    id: string;
+    name: string;
+    active: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+  }>;
 }
 
 interface DetailedHealth {
@@ -98,7 +105,7 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
     }
   };
 
-  const checkN8nHealth = async (): Promise<{ status: ServiceStatus['status'], details: string }> => {
+  const checkN8nHealth = async (): Promise<{ status: ServiceStatus['status'], details: string, workflows?: Array<any> }> => {
     try {
       // Use backend API proxy to check N8N health (avoiding CORS)
       const response = await fetch('http://localhost:3001/api/n8n/health', {
@@ -119,10 +126,19 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
       if (workflowStatus?.reachable) {
         const activeCount = workflowStatus.activeCount || 0;
         const totalCount = workflowStatus.totalCount || 0;
+        const workflows = workflowStatus.workflows || [];
+        const activeWorkflows = workflows.filter((w: any) => w.active);
+        
+        // Create detailed status message
+        const activeWorkflowNames = activeWorkflows.map((w: any) => w.name).join(', ');
+        const detailsMessage = activeCount > 0 
+          ? `${activeCount} active: ${activeWorkflowNames}` 
+          : `${totalCount} workflows found, none active`;
         
         return {
           status: activeCount > 0 ? 'healthy' : 'unhealthy',
-          details: `${activeCount} active workflow(s) out of ${totalCount} total`
+          details: detailsMessage,
+          workflows: workflows
         };
       } else {
         return {
@@ -139,7 +155,7 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
   };
 
   const checkServiceHealth = async (service: ServiceStatus): Promise<ServiceStatus> => {
-    let result: { status: ServiceStatus['status'], details: string, health?: DetailedHealth };
+    let result: { status: ServiceStatus['status'], details: string, health?: DetailedHealth, workflows?: Array<any> };
 
     switch (service.name) {
       case 'MongoDB API Server':
@@ -208,7 +224,8 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
       ...service,
       status: result.status,
       lastCheck: new Date(),
-      details: result.details
+      details: result.details,
+      workflows: result.workflows
     };
   };
 
@@ -343,6 +360,35 @@ const BackendStatus: React.FC<BackendStatusProps> = ({ className }) => {
                 <div className="text-xs text-muted-foreground">
                   {service.details || 'No details available'}
                 </div>
+                
+                {/* Show workflow details for n8n service */}
+                {service.name === 'n8n Workflow Status' && service.workflows && service.workflows.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">Workflows:</div>
+                    {service.workflows.map((workflow: any) => (
+                      <div
+                        key={workflow.id}
+                        className={`flex items-center justify-between text-xs p-1 rounded ${
+                          workflow.active 
+                            ? 'bg-green-500/10 text-green-700 dark:text-green-400' 
+                            : 'bg-gray-500/10 text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        <span className="truncate max-w-[120px]" title={workflow.name}>
+                          {workflow.name}
+                        </span>
+                        <span className={`px-1 rounded text-xs ${
+                          workflow.active 
+                            ? 'bg-green-500/20 text-green-700 dark:text-green-400' 
+                            : 'bg-gray-500/20 text-gray-600 dark:text-gray-400'
+                        }`}>
+                          {workflow.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
                 <div className="text-xs text-muted-foreground/80 mt-1">
                   Last checked: {service.lastCheck.toLocaleTimeString()}
                 </div>

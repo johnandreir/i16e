@@ -10,11 +10,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -752,
-        112
+        0,
+        0
       ],
       "typeVersion": 1,
-      "id": "06930a23-3b80-4e9f-825c-f9776c3c760d",
+      "id": "b7e31ea7-69dd-470c-9c06-5f9e0d340add",
       "name": "Sticky Note4"
     },
     {
@@ -24,29 +24,29 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -96,
-        176
+        656,
+        64
       ],
-      "id": "b68572fe-d1be-44e1-8d42-39e4e7d24e88",
+      "id": "894f84a3-2abd-444c-a70f-1f9d6251cbd5",
       "name": "JSONizer"
     },
     {
       "parameters": {
         "operation": "aggregate",
         "collection": "cases",
-        "query": "=  [\n    {\n      \"$match\": {\n        \"status\": \"Resolved\"\n      }\n    },\n    {\n      \"$sort\": {\n        \"case_age_days\": -1\n      }\n    },\n    {\n      \"$limit\": 5\n    },\n    {\n      \"$project\": {\n        \"case_id\": 1,\n        \"priority\": 1,\n        \"owner_full_name\": 1,\n        \"title\": 1,\n        \"products\": 1,\n        \"created_date\": 1,\n        \"closed_date\": 1,\n        \"case_age_days\": 1,\n        \"structured_email_thread\": 1\n      }\n    }\n  ]"
+        "query": "=  [\n    {\n      \"$match\": {\n        \"status\": \"Resolved\"\n      }\n    },\n    {\n      \"$sort\": {\n        \"case_age_days\": -1\n      }\n    },\n    {\n      \"$limit\": 3\n    },\n    {\n      \"$project\": {\n        \"case_id\": 1,\n        \"priority\": 1,\n        \"owner_full_name\": 1,\n        \"title\": 1,\n        \"products\": 1,\n        \"created_date\": 1,\n        \"closed_date\": 1,\n        \"case_age_days\": 1,\n        \"structured_email_thread\": 1\n      }\n    }\n  ]"
       },
       "type": "n8n-nodes-base.mongoDbTool",
       "typeVersion": 1.2,
       "position": [
-        -352,
-        400
+        400,
+        288
       ],
-      "id": "bb33fd63-a43f-4172-85e3-72b7a8e457ef",
+      "id": "4706a180-5cca-4f9c-a7dc-c00134f92be3",
       "name": "emailDB",
       "credentials": {
         "mongoDb": {
-          "id": "uCCYnpccbmAfY9W9",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -64,14 +64,14 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        -608,
-        400
+        144,
+        288
       ],
-      "id": "b2bbd88d-b4a7-4482-9862-18a60d72032c",
+      "id": "dc9a5ea0-e3e3-4594-a523-7b8d21759daa",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "sNYSwlaVIlldj1f2",
+          "id": "qKEozZy1FaCPhKS2",
           "name": "OpenAi account"
         }
       }
@@ -85,14 +85,14 @@
       "type": "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
       "typeVersion": 1,
       "position": [
-        -480,
-        400
+        272,
+        288
       ],
-      "id": "37414973-e296-4411-ae9a-19de0f97df89",
+      "id": "7583cf44-4e74-43a7-8614-b6be78d3f7c5",
       "name": "MongoDB Chat Memory",
       "credentials": {
         "mongoDb": {
-          "id": "uCCYnpccbmAfY9W9",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -106,10 +106,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -544,
-        176
+        208,
+        64
       ],
-      "id": "4600b3a6-99aa-49ec-8b04-5f0ded16780e",
+      "id": "db5053f0-ee8b-4d44-a828-efc7dc222f67",
       "name": "AI Agent"
     },
     {
@@ -122,10 +122,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -880,
-        176
+        -128,
+        64
       ],
-      "id": "3ff50188-d28c-4b18-9e6d-44bd89f14736",
+      "id": "234f31ba-2da6-4875-ac1c-97e672a38253",
       "name": "Webhook",
       "webhookId": "0bf25328-aa75-4ec4-9720-fbad836f08fb"
     },
@@ -134,10 +134,10 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -1328,
-        224
+        -576,
+        112
       ],
-      "id": "453f8509-4cff-4c25-ad7e-5dcd99b08d8c",
+      "id": "fb8c7121-1bd6-4e93-a082-2549922bcb30",
       "name": "When clicking ‘Execute workflow’",
       "disabled": true
     },
@@ -148,10 +148,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        176,
-        176
+        928,
+        64
       ],
-      "id": "660830d5-2163-4c13-9b76-4acf2704c275",
+      "id": "ea59a396-b35e-426c-90ef-fc15f49dcf1f",
       "name": "Respond to Webhook"
     }
   ],
@@ -224,15 +224,15 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "876fced4-29cd-46c3-bb44-428fcbcfe35e",
+  "versionId": "36e631b6-a4dc-4736-b365-775a7d37208a",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "19925d8ea9608c62de932aa1564c2e7236335b0466d69111e1fed356d5342c96"
+    "instanceId": "197030258e5ec4f22da7668edae4c29f9bb02818dd32dfbc6a28b550e0739e49"
   },
-  "id": "yQissI9g6XMYRinM",
+  "id": "VQfqSrHPFQxZMaGb",
   "tags": []
 }

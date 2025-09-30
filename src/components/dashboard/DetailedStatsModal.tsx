@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { X, Clock, ChevronUp, ChevronDown, MessageSquare } from 'lucide-react';
+import { X, Clock, ChevronUp, ChevronDown, MessageSquare, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface DetailedStatsModalProps {
@@ -13,6 +13,8 @@ interface DetailedStatsModalProps {
   title: string;
   onAnalyzeSCT?: () => void;
   onAnalyzeSurvey?: () => void;
+  isSCTAnalysisLoading?: boolean;
+  isSurveyAnalysisLoading?: boolean;
 }
 
 const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
@@ -22,7 +24,9 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
   type,
   title,
   onAnalyzeSCT,
-  onAnalyzeSurvey
+  onAnalyzeSurvey,
+  isSCTAnalysisLoading = false,
+  isSurveyAnalysisLoading = false
 }) => {
   // State for sorting only - removed pagination
   const [sortField, setSortField] = useState<string>('');
@@ -115,12 +119,17 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
               {onAnalyzeSCT && (
                 <Button 
                   onClick={onAnalyzeSCT}
+                  disabled={isSCTAnalysisLoading}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
                 >
-                  <Clock className="h-4 w-4" />
-                  Analyze SCT
+                  {isSCTAnalysisLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Clock className="h-4 w-4" />
+                  )}
+                  {isSCTAnalysisLoading ? 'Analyzing...' : 'Analyze SCT'}
                 </Button>
               )}
             </div>
@@ -462,12 +471,17 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
               {onAnalyzeSCT && (
                 <Button 
                   onClick={onAnalyzeSCT}
+                  disabled={isSCTAnalysisLoading}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"
                 >
-                  <Clock className="h-4 w-4" />
-                  Analyze SCT
+                  {isSCTAnalysisLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Clock className="h-4 w-4" />
+                  )}
+                  {isSCTAnalysisLoading ? 'Analyzing...' : 'Analyze SCT'}
                 </Button>
               )}
             </div>
@@ -505,6 +519,12 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                         <div className="flex items-center gap-1">
                           Case ID
                           {renderSortIcon('case_id')}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '140px', maxWidth: '140px' }} onClick={() => handleSort('owner_full_name')}>
+                        <div className="flex items-center gap-1">
+                          Case Owner
+                          {renderSortIcon('owner_full_name')}
                         </div>
                       </TableHead>
                       <TableHead className="cursor-pointer hover:bg-muted/50" style={{ width: '130px', maxWidth: '130px' }} onClick={() => handleSort('products')}>
@@ -557,6 +577,13 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                             style={{ width: '120px', maxWidth: '120px' }}
                           >
                             {detail.case_id || detail.caseId || 'N/A'}
+                          </TableCell>
+                          <TableCell 
+                            title={detail.owner_full_name || 'N/A'}
+                            className="text-sm truncate" 
+                            style={{ width: '140px', maxWidth: '140px' }}
+                          >
+                            {detail.owner_full_name || 'N/A'}
                           </TableCell>
                           <TableCell 
                             title={detail.products ? (Array.isArray(detail.products) ? detail.products.join(', ') : detail.products) : 'N/A'}
@@ -776,12 +803,17 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
           {onAnalyzeSurvey && (
             <Button 
               onClick={onAnalyzeSurvey}
+              disabled={isSurveyAnalysisLoading}
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
             >
-              <MessageSquare className="h-4 w-4" />
-              Analyze Survey
+              {isSurveyAnalysisLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="h-4 w-4" />
+              )}
+              {isSurveyAnalysisLoading ? 'Analyzing...' : 'Analyze Survey'}
             </Button>
           )}
         </div>
@@ -798,6 +830,12 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                     <div className="flex items-center gap-1">
                       Case Number
                       {renderSortIcon('case_id')}
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('owner_full_name')}>
+                    <div className="flex items-center gap-1">
+                      Case Owner
+                      {renderSortIcon('owner_full_name')}
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort('overallSatisfaction')}>
@@ -869,6 +907,9 @@ const DetailedStatsModal: React.FC<DetailedStatsModalProps> = ({
                           <code className="text-xs bg-muted px-2 py-1 rounded">
                             {survey.case_id || survey.caseNumber || 'N/A'}
                           </code>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {survey.owner_full_name || 'N/A'}
                         </TableCell>
                         <TableCell>
                           {getRatingBadge(survey.overallSatisfaction || 0, survey.category)}

@@ -131,6 +131,8 @@ const IndexNew = () => {
   const [sctAnalyzed, setSctAnalyzed] = useState<boolean>(false);
   const [isSurveyAnalyzed, setIsSurveyAnalyzed] = useState<boolean>(false);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState<boolean>(false);
+  const [isSCTAnalysisLoading, setIsSCTAnalysisLoading] = useState<boolean>(false);
+  const [isSurveyAnalysisLoading, setIsSurveyAnalysisLoading] = useState<boolean>(false);
   const [cxAnalyzed, setCxAnalyzed] = useState<boolean>(false);
   const [performanceOverviewData, setPerformanceOverviewData] = useState<TeamMember[]>([]);
   const [isAnalysisEnabled, setIsAnalysisEnabled] = useState<boolean>(false);
@@ -1420,7 +1422,8 @@ const IndexNew = () => {
               detailedCases: result.squadDetailedCases || []
             }));
 
-            // Create individual DPE data for squad tab view
+            // Create individual DPE data for team tab view (collect all DPEs from all squads)
+            const allDPEResults = validSquadResults.flatMap(squad => squad.dpeData || []);
             const individualDPEData = allDPEResults.map(dpe => ({
               name: dpe.dpeName,
               sct: dpe.data.metrics?.sct || 0,
@@ -1461,7 +1464,6 @@ const IndexNew = () => {
             
             // Aggregate satisfaction data for team (from all squads' DPE data)
             let totalTeamCsat = 0, totalTeamNeutral = 0, totalTeamDsat = 0;
-            const allDPEResults = validSquadResults.flatMap(squad => squad.dpeData || []);
             const validTeamSatisfactionData = allDPEResults.filter(dpe => dpe.data.metrics?.customerSatisfaction);
             
             validTeamSatisfactionData.forEach(dpe => {
@@ -1908,6 +1910,7 @@ const IndexNew = () => {
       customerName: survey.customerName || 'N/A',
       productArea: survey.productArea || 'N/A',
       ownerName: survey.ownerName,
+      owner_full_name: survey.ownerName, // Add this field for the Case Owner column
       // Additional case details can be added here if available
       title: `Survey for Case ${survey.caseNumber}`,
       status: 'Completed', // Assuming surveys are for completed cases
@@ -2229,6 +2232,13 @@ const IndexNew = () => {
     console.log('🎯 HANDLEANALYZESCT FUNCTION CALLED - This is for SCT analysis');
     setSctAnalyzed(true);
     setIsAnalysisLoading(true);
+    setIsSCTAnalysisLoading(true);
+    
+    // Show notification that SCT analysis is starting
+    toast({
+      title: "SCT Analysis Starting",
+      description: "Processing solution cycle time data. Please check Insights & Recommendations section for results.",
+    });
     
     // Get entity-specific terminology
     const entityType = generatedEntity || selectedEntity;
@@ -2265,6 +2275,7 @@ const IndexNew = () => {
       };
       setSctAnalysisResults(sctAnalysis);
       setIsAnalysisLoading(false);
+      setIsSCTAnalysisLoading(false);
       return;
     }
     
@@ -2588,6 +2599,7 @@ const IndexNew = () => {
       });
     } finally {
       setIsAnalysisLoading(false);
+      setIsSCTAnalysisLoading(false);
       console.log('🔄 SCT Analysis loading state cleared');
     }
     
@@ -2733,6 +2745,13 @@ const IndexNew = () => {
   const handleAnalyzeSurvey = async () => {
     setIsSurveyAnalyzed(true);
     setIsAnalysisLoading(true);
+    setIsSurveyAnalysisLoading(true);
+    
+    // Show notification that Survey analysis is starting
+    toast({
+      title: "Survey Analysis Starting", 
+      description: "Processing customer satisfaction survey data. Please check Insights & Recommendations section for results.",
+    });
     
     // Get entity-specific terminology
     const entityType = generatedEntity || selectedEntity;
@@ -2760,6 +2779,7 @@ const IndexNew = () => {
       };
       setSurveyAnalysisResults(fallbackAnalysis);
       setIsAnalysisLoading(false);
+      setIsSurveyAnalysisLoading(false);
       return;
     }
     
@@ -2795,6 +2815,58 @@ const IndexNew = () => {
             console.log(`🔍 Item case_id: ${item?.case_id}, survey_type: ${item?.survey_type}`);
             
             if (item && item.case_id && item.problem) {
+              // Debug: Log available fields to see what verbatim fields exist
+              console.log(`🔍 Available fields for case ${item.case_id}:`, Object.keys(item));
+              console.log(`🔍 Verbatim fields:`, {
+                customer_verbatim: item.customer_verbatim,
+                verbatim: item.verbatim,
+                feedback: item.feedback,
+                customer_feedback: item.customer_feedback,
+                survey_feedback: item.survey_feedback,
+                comments: item.comments
+              });
+
+              // Get customer verbatim from original survey data
+              let customerVerbatim = undefined;
+              
+              // First try the item itself (from n8n workflow response)
+              const verbatimOptions = [
+                item.customer_verbatim,
+                item.verbatim, 
+                item.feedback,
+                item.customer_feedback,
+                item.survey_feedback,
+                item.comments
+              ];
+              
+              customerVerbatim = verbatimOptions.find(v => v && typeof v === 'string' && v.trim().length > 0);
+              
+              // If not found in n8n response, get it from original survey data
+              if (!customerVerbatim && item.case_id && realSurveyData) {
+                const originalSurvey = realSurveyData.find(survey => 
+                  survey.caseNumber === item.case_id || survey.case_id === item.case_id
+                );
+                
+                if (originalSurvey && originalSurvey.feedback && 
+                    typeof originalSurvey.feedback === 'string' && 
+                    originalSurvey.feedback.trim().length > 0 &&
+                    originalSurvey.feedback !== 'No feedback provided') {
+                  customerVerbatim = originalSurvey.feedback.trim();
+                }
+              }
+
+              // Get case owner information from the original survey data
+              let caseOwner = undefined;
+              if (realSurveyData) {
+                const originalSurveyForOwner = realSurveyData.find(survey => 
+                  survey.caseNumber === item.case_id || survey.case_id === item.case_id
+                );
+                
+                if (originalSurveyForOwner && originalSurveyForOwner.ownerName) {
+                  caseOwner = originalSurveyForOwner.ownerName;
+                }
+              }
+
               const insight = {
                 id: `survey-analysis-${item.case_id}-${Date.now()}-${index + 1}`,
                 title: `Case Analysis: ${item.case_id}`,
@@ -2807,8 +2879,13 @@ const IndexNew = () => {
                   'No specific recommendations provided.',
                 surveyType: item.survey_type, // Add survey type for grouping
                 caseId: item.case_id,
-                caseTitle: item.case_title || item.title || undefined
+                caseTitle: item.case_title || item.title || undefined,
+                customerVerbatim: customerVerbatim, // Add customer verbatim
+                caseOwner: caseOwner // Add case owner information
               };
+
+              console.log(`💬 Customer verbatim for ${item.case_id}:`, customerVerbatim ? `"${customerVerbatim}"` : 'NO VERBATIM FOUND');
+              console.log(`👤 Case owner for ${item.case_id}:`, caseOwner ? `"${caseOwner}"` : 'NO OWNER FOUND');
               
               console.log(`📝 Created insight for ${item.survey_type} case ${item.case_id}:`, insight);
               processedInsights.push(insight);
@@ -2850,8 +2927,8 @@ const IndexNew = () => {
             } else {
               // Fallback: check raw data for survey types
               const allSurveyTypes = workflowResults.survey_sentiment_analysis?.map((item: any) => item.survey_type).filter(Boolean) || [];
-              const uniqueTypes = [...new Set(allSurveyTypes)];
-              surveyType = uniqueTypes.length === 1 ? uniqueTypes[0] : (uniqueTypes.includes('CSAT') ? 'CSAT' : uniqueTypes.includes('DSAT') ? 'DSAT' : uniqueTypes.includes('NEUT') ? 'NEUT' : 'Mixed');
+              const uniqueTypes = [...new Set(allSurveyTypes)] as string[];
+              surveyType = uniqueTypes.length === 1 ? uniqueTypes[0] as string : (uniqueTypes.includes('CSAT') ? 'CSAT' : uniqueTypes.includes('DSAT') ? 'DSAT' : uniqueTypes.includes('NEUT') ? 'NEUT' : 'Mixed');
             }
           }
           
@@ -2912,6 +2989,7 @@ const IndexNew = () => {
         return { insights: combinedInsights };
       });
       setIsAnalysisLoading(false);
+      setIsSurveyAnalysisLoading(false);
       
       toast({
         title: `${entityLabel} Survey Analysis Complete`,
@@ -2939,6 +3017,7 @@ const IndexNew = () => {
       
       setSurveyAnalysisResults(errorAnalysis);
       setIsAnalysisLoading(false);
+      setIsSurveyAnalysisLoading(false);
       
       toast({
         title: "Survey Analysis Error",
@@ -3437,8 +3516,8 @@ const IndexNew = () => {
                   className="h-8 w-auto hidden dark:block"
                 />
                 <div>
-                  <h1 className="text-2xl font-bold text-foreground">Intelliperformance</h1>
-                  <p className="text-sm text-muted-foreground">Real-time performance analytics and customer insights</p>
+                  <h1 className="text-2xl font-bold text-foreground">IntelliPerformance</h1>
+                  <p className="text-sm text-muted-foreground">Performance Analytics and Customer Insights</p>
                 </div>
               </div>
             </div>
@@ -3765,6 +3844,8 @@ const IndexNew = () => {
                 generatedEntityValue={generatedEntityValue}
                 isLoading={isLoading}
                 isAnalysisEnabled={isAnalysisEnabled}
+                isSCTAnalysisLoading={isSCTAnalysisLoading}
+                isSurveyAnalysisLoading={isSurveyAnalysisLoading}
               />
             </div>
           );
@@ -3888,6 +3969,8 @@ const IndexNew = () => {
               cxAnalyzed={cxAnalyzed}
               isAnalysisEnabled={isAnalysisEnabled}
               selectedEntity={selectedEntity}
+              isSCTAnalysisLoading={isSCTAnalysisLoading}
+              isSurveyAnalysisLoading={isSurveyAnalysisLoading}
             />
           </div>
         )}
@@ -3902,6 +3985,8 @@ const IndexNew = () => {
         title={modalTitle}
         onAnalyzeSCT={handleAnalyzeSCT}
         onAnalyzeSurvey={handleAnalyzeSurvey}
+        isSCTAnalysisLoading={isSCTAnalysisLoading}
+        isSurveyAnalysisLoading={isSurveyAnalysisLoading}
       />
 
       {/* Chatbot */}

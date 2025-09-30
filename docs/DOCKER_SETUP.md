@@ -32,66 +32,56 @@ docker-compose up -d --build
 
 ## Services
 
-The application consists of 4 main services:
+The application consists of 3 main Docker services (with Frontend running locally):
 
 1. **MongoDB** (`i16e-mongodb`) - Database server
-
    - Port: 27017
    - Admin credentials: admin/N0virus1!
 
 2. **N8N** (`i16e-n8n`) - Workflow automation
-
    - Port: 5678
    - Web interface: http://localhost:5678
 
 3. **API Server** (`i16e-api`) - Backend API
-
    - Port: 3001
    - Health check: http://localhost:3001/api/health
 
-4. **Frontend** (`i16e-frontend`) - React application
+4. **Frontend** - React application (runs locally via `npm run dev`)
    - Port: 8082
    - Web interface: http://localhost:8082
+   - Development server with hot reload
 
 ## Available Commands
 
 ### Using Docker Compose directly
 
 ```bash
-# Production
-docker-compose -f docker-compose.prod.yml up -d        # Start
-docker-compose -f docker-compose.prod.yml down         # Stop
-docker-compose -f docker-compose.prod.yml logs -f      # View logs
-docker-compose -f docker-compose.prod.yml up -d --build # Rebuild and start
+# Backend Services
+docker-compose up -d                    # Start all backend services
+docker-compose down                     # Stop all services  
+docker-compose logs -f                  # View logs
+docker-compose up -d --build            # Rebuild and start
 
-# Development
-docker-compose -f docker-compose.dev.yml up -d         # Start
-docker-compose -f docker-compose.dev.yml down          # Stop
-docker-compose -f docker-compose.dev.yml logs -f       # View logs
-docker-compose -f docker-compose.dev.yml up -d --build # Rebuild and start
+# Individual Services
+docker-compose up -d mongodb            # Start only MongoDB
+docker-compose up -d n8n                # Start only N8N
+docker-compose up -d api                # Start only API server
 ```
 
-### Using Makefile (recommended)
+### Using Batch Scripts (Windows)
 
 ```bash
-make help           # Show all available commands
+# Main Commands
+start-full-dev.bat              # Start everything (backend + frontend)
+start.bat                       # Start backend services only
+stop.bat                        # Stop all backend services
 
-# Production
-make prod          # Start production environment
-make prod-build    # Build and start production
-make prod-down     # Stop production
-make prod-logs     # View production logs
-
-# Development
-make dev           # Start development environment
-make dev-build     # Build and start development
-make dev-down      # Stop development
-make dev-logs      # View development logs
-
-# Utilities
-make clean         # Clean up containers and volumes
-make clean-all     # Clean everything including images
-make health        # Check health of all services
+# Utility Scripts (in /scripts directory)
+scripts/check-health.bat        # Check service health
+scripts/view-logs.bat          # Interactive log viewer
+scripts/cleanup.bat            # Clean up containers and volumes
+scripts/monitor-connection.bat  # Monitor connections
+scripts/restart-with-fixes.bat # Restart with fixes applied
 ```
 
 ## Environment Variables
@@ -109,17 +99,18 @@ Key environment variables are configured in docker-compose files:
 
 ## Networks
 
-- `i16e-network`: Production network (172.20.0.0/16)
-- `i16e-dev-network`: Development network (172.21.0.0/16)
+- `i16e-network`: Main network (172.20.0.0/16) for all backend services
 
 ## Health Checks
 
-All services include health checks:
+All backend services include health checks:
 
-- MongoDB: Database ping
-- N8N: HTTP health endpoint
-- API: HTTP health endpoint
-- Frontend: HTTP availability
+- **MongoDB**: Database ping and connection validation
+- **N8N**: HTTP health endpoint (`/healthz`)
+- **API**: HTTP health endpoint (`/api/health`)
+- **Frontend**: Development server runs locally with auto-reload
+
+Use `scripts/check-health.bat` to monitor all services at once.
 
 ## Troubleshooting
 
@@ -140,25 +131,41 @@ taskkill /f /pid <PID>
 
 ```bash
 # Check logs
-docker-compose -f docker-compose.prod.yml logs
+docker-compose logs
 
 # Check specific service
 docker logs i16e-api
-docker logs i16e-frontend
+docker logs i16e-mongodb
+docker logs i16e-n8n
 ```
 
 ### Clean restart
 
 ```bash
-make clean
-make prod-build
+# Windows
+scripts/cleanup.bat
+start.bat
+
+# Manual
+docker-compose down
+docker system prune -f  
+docker-compose up -d --build
 ```
 
 ## Development Features
 
-The development environment includes:
+The hybrid development approach provides:
 
-- Hot reload for frontend changes
-- Volume mounts for live code editing
-- Separate network and containers from production
-- Development-friendly environment variables
+- **Frontend**: Local development server with hot reload (`npm run dev`)
+- **Backend**: Containerized services for consistency
+- **Volume Mounts**: Live code editing for server files
+- **Fast Startup**: Backend services ready in ~30 seconds
+- **Easy Debugging**: Local frontend with containerized backend
+- **Data Persistence**: MongoDB and N8N data persisted in Docker volumes
+
+## Hybrid Architecture Benefits
+
+- **Speed**: No frontend Docker rebuilds needed for code changes
+- **Consistency**: Backend services run in identical containers
+- **Flexibility**: Can develop frontend locally or in container as needed
+- **Simplicity**: Single `docker-compose.yml` file for all backend services

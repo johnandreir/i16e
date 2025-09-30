@@ -107,7 +107,7 @@ const Chatbot: React.FC<ChatbotProps> = ({
               <iframe
                 src={chatUrl}
                 className="w-full h-full border-0 rounded-b-lg"
-                title="Intelliperformance Chatbot"
+                title="IntelliPerformance Chatbot"
                 allow="microphone"
                 style={{
                   background: 'hsl(var(--background))',

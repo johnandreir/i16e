@@ -1,4 +1,4 @@
-﻿import React from 'react';
+﻿import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { PieChart as PieChartIcon } from 'lucide-react';
@@ -26,6 +26,7 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
   onPieClick,
   isLoading = false
 }) => {
+  const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -128,26 +129,43 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
                 startAngle={90} // Start from top for better visual alignment
                 endAngle={450} // Full circle for proper rendering
                 stroke="hsl(var(--chart-border))" // Always show outer border
-                strokeWidth={1.5} // Consistent border width
+                strokeWidth={2} // Consistent border width for all segments
                 minAngle={3} // Minimum size for small segments
                 paddingAngle={0.5} // Slightly reduced padding for better proportions
                 fill="#8884d8"
                 dataKey="value"
                 onClick={handleSegmentClick}
+                onMouseEnter={(data, index) => setHoveredSegment(index)}
+                onMouseLeave={() => setHoveredSegment(null)}
+                animationBegin={0}
+                animationDuration={600}
+                isAnimationActive={true}
               >
                 {chartData.map((entry, index) => {
                   // Make small segments visually more distinct
                   const isVerySmallSegment = entry.percentage < 15 && entry.value > 0;
-                  const isSmallSegment = entry.percentage < 30 && entry.percentage >= 15 && entry.value > 0;
+                  const isHovered = hoveredSegment === index;
                   
-                  // Special styling for small segments
-                  const strokeWidth = isVerySmallSegment ? 2 : 1;
-                  const strokeColor = isVerySmallSegment ? 'white' : 'hsl(var(--chart-border))';
+                  // Consistent stroke for all segments to ensure outlines are visible
+                  const strokeWidth = isVerySmallSegment ? 2.5 : 2;
+                  const strokeColor = 'hsl(var(--chart-border))'; // Consistent border color for all segments
                   
                   // Brighten the DSAT color for better visibility if it's small
                   let fillColor = entry.color;
                   if (entry.name.includes('DSAT') && isVerySmallSegment) {
                     fillColor = '#ff5252'; // Brighter red
+                  }
+                  
+                  // Enhance color when hovered
+                  if (isHovered) {
+                    // Brighten the color when hovered
+                    if (fillColor.startsWith('#')) {
+                      const rgb = fillColor.slice(1).match(/.{2}/g);
+                      if (rgb) {
+                        const [r, g, b] = rgb.map(x => parseInt(x, 16));
+                        fillColor = `rgb(${Math.min(255, Math.round(r * 1.2))}, ${Math.min(255, Math.round(g * 1.2))}, ${Math.min(255, Math.round(b * 1.2))})`;
+                      }
+                    }
                   }
 
                   return (
@@ -155,7 +173,12 @@ const SurveyAnalysisChart: React.FC<SurveyAnalysisChartProps> = ({
                       key={`cell-${index}`} 
                       fill={fillColor}
                       stroke={strokeColor}
-                      strokeWidth={strokeWidth} 
+                      strokeWidth={strokeWidth}
+                      className="pie-segment"
+                      style={{
+                        filter: isHovered ? 'drop-shadow(0px 4px 12px rgba(0, 0, 0, 0.3))' : 'drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.1))',
+                        transition: 'all 0.3s ease'
+                      }}
                     />
                   );
                 })}

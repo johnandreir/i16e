@@ -10,11 +10,11 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -160,
-        -32
+        -80,
+        -160
       ],
       "typeVersion": 1,
-      "id": "23a9b9b4-7c26-4f27-aed1-84fc7b1fd0fd",
+      "id": "55e1dd25-c51f-48d7-bf08-3af61a3a3e78",
       "name": "Sticky Note4"
     },
     {
@@ -26,10 +26,10 @@
       "type": "n8n-nodes-base.mongoDbTool",
       "typeVersion": 1.2,
       "position": [
-        400,
-        288
+        480,
+        176
       ],
-      "id": "9fd8109c-dd0e-4564-aa33-7b2361c7b453",
+      "id": "0330f205-9a44-4e56-b439-888026ddc3b4",
       "name": "surveyDB",
       "credentials": {
         "mongoDb": {
@@ -45,10 +45,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        480,
-        64
+        560,
+        -64
       ],
-      "id": "356dd029-d834-41cf-bc2a-46d57028e305",
+      "id": "f8499434-c404-46a3-bae3-0a520f05501c",
       "name": "JSONizer"
     },
     {
@@ -64,10 +64,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        144,
-        288
+        224,
+        176
       ],
-      "id": "7af1cdff-6958-4a7f-bd56-1cb6af9fd04e",
+      "id": "245cd0f5-904a-433f-b404-45b10ee0f59b",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
@@ -85,10 +85,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryMongoDbChat",
       "typeVersion": 1,
       "position": [
-        272,
-        288
+        352,
+        176
       ],
-      "id": "438eae51-dfbe-47ce-97f9-b75b7f7c71fd",
+      "id": "5be29819-736f-49cc-8a8d-79944ee3f4ae",
       "name": "MongoDB Chat Memory",
       "credentials": {
         "mongoDb": {
@@ -100,16 +100,16 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "# Customer Support Quality Analysis\n\n## Tools & Data Sources\n- **surveyDB**: Analyze cases with customer satisfaction surveys (DSAT and NEUT cases)\n\n## Your Role\nYou are a customer support quality analyst providing feedback for team leads conducting 1-on-1 engineer coaching sessions. Focus exclusively on engineer performance, communication skills, and case handling processes. **Do not suggest product improvements.**\n\n## Key Requirements\n- **No names**: Generalize all analysis without identifying specific individuals\n- **Evidence-based**: Reference specific case IDs when citing examples (use complete case IDs as they appear in database)\n- **Actionable**: Provide coaching recommendations suitable for manager-engineer discussions\n- **Complete Data**: Always use full case IDs and exact field values - never truncate or abbreviate\n\n## Email Timeline Analysis\n- **Calculate response times**: Analyze timestamps within `structured_email_thread` to calculate time spans between customer and engineer exchanges\n- **Date format**: Email timestamps are in format `2025-06-27T09:06:54Z`\n- **Response delay baseline**: If time span is more than 3 days and response is pending from engineer, use this as a key factor for coaching recommendations\n- **Timeline patterns**: Identify patterns of delayed responses, quick turnarounds, or communication gaps\n- **Timeline accuracy**: Carefully verify timeline calculations by examining the actual sequence of emails and their timestamps. Only count days when engineer response is actually pending, not total case duration.\n\n**Timeline Calculation Example**:\n- Customer email: 2025-06-26T10:00:00Z\n- Engineer response: 2025-06-29T14:00:00Z\n- Calculation: 3 days, 4 hours (engineer response delay)\n\n## Analysis Areas\n\n### Email-Based Sentiment Analysis\nExamine the `structured_email_thread` field for each case to analyze email tone, customer satisfaction indicators, and communication effectiveness in P1 priority cases. Review the complete email exchange between engineer and customer to identify patterns where engineer responses may have improved or worsened customer sentiment. **Provide 2-3 specific coaching recommendations per case analyzed.**\n\n### Survey-Based Sentiment Analysis\nAnalyze the survey feedback fields including `Technical Ability of Your Engineer`, `Overall Satisfaction`, `Overall Product Satisfaction`, and `Additional Feedback or Commentary(Text)` for DSAT and NEUT cases. Cross-reference these survey responses with the `structured_email_thread` to correlate customer satisfaction scores with specific communication patterns and engineer performance. **Provide 2-3 specific coaching recommendations per survey case analyzed.**\n\n### Case Hand-Off & Timing Analysis\nReview email timestamps and case progression to identify delays, inefficient handovers, or missed response opportunities. Focus on process improvements and time management.\n\n### Summary\nConsolidate findings into manager-ready coaching points, including both improvement areas and engineer strengths observed.\n\n## Sample Coaching Recommendations\nUse these as examples, but you are not limited to these recommendations. Create specific, actionable coaching points based on your analysis:\n\n**Delay Management:**\n- For excessive delays: Engage in remote session to help the customer with the prepared action plan\n- For urgent issues requiring customer updates: Initiate a callback to the customer\n\n**Escalation & Investigation:**\n- When cases are escalated to RD Team and require extended investigation time: Manage customer expectations and prioritize relaying timely updates to the customer\n- When engineers struggle with issue investigation: Suggest utilizing available resources like CompanionXL, Eureka Search, or reaching out to Squad Leads for additional insights and help\n\n**Note:** Tailor your recommendations to the specific situation and create additional coaching points as needed based on your analysis of each case.\n\n## IMPORTANT: Output Format\nYou MUST respond with valid JSON only. No markdown formatting. Use this exact structure:\n\n```json\n{\n  \"survey_sentiment_analysis\": [\n    {\n      \"problem\": \"Low customer satisfaction score correlating with communication gaps...\",\n      \"case_id\": \"TM-XXXXXXX\",\n      \"survey_type\": \"DSAT/NEUT\",\n      \"recommendations\": [\n        \"Focus on customer expectation management and follow-up communication...\",\n        \"Improve technical explanation clarity for customer understanding...\",\n        \"Enhance empathy and acknowledgment of customer concerns...\"\n      ]\n    }\n  ],\n  \"summary\": {\n    \"areas_for_improvement\": [\n      \"Enhance customer communications by translating technical jargon\",\n      \"Improve proactive engagement during long or complex cases\"\n    ],\n    \"strengths\": [\n      \"Demonstrated perseverance and persistence in complex cases\",\n      \"Maintained professional and polite communication throughout\"\n    ]\n  },\n  \"cases_analyzed\": [\n    {\n      \"case_id\": \"TM-XXXXXXX\",\n      \"case_title\": \"Brief description of the case issue\",\n      \"data_source\": \"emailDB/surveyDB\"\n    }\n  ]\n}\n```",
+        "text": "# Customer Support Quality Analysis\n\n## Tools & Data Sources\n- **surveyDB**: Analyze cases with customer satisfaction surveys (CSAT, NEUT, and DSAT cases)\n\n## Your Role\nYou are a customer support quality analyst providing feedback for team leads conducting 1-on-1 engineer coaching sessions. Focus exclusively on engineer performance, communication skills, and case handling processes. **Do not suggest product improvements.**\n\n## Key Requirements\n- **No names**: Generalize all analysis without identifying specific individuals\n- **Evidence-based**: Reference specific case IDs when citing examples (use complete case IDs as they appear in database)\n- **Actionable**: Provide coaching recommendations suitable for manager-engineer discussions\n- **Complete Data**: Always use full case IDs and exact field values - never truncate or abbreviate\n\n## Email Timeline Analysis\n- **Calculate response times**: Analyze timestamps within `structured_email_thread` to calculate time spans between customer and engineer exchanges\n- **Date format**: Email timestamps are in format `2025-06-27T09:06:54Z`\n- **Response delay baseline**: If time span is more than 3 days and response is pending from engineer, use this as a key factor for coaching recommendations\n- **Timeline patterns**: Identify patterns of delayed responses, quick turnarounds, or communication gaps\n- **Timeline accuracy**: Carefully verify timeline calculations by examining the actual sequence of emails and their timestamps. Only count days when engineer response is actually pending, not total case duration.\n\n**Timeline Calculation Example**:\n- Customer email: 2025-06-26T10:00:00Z\n- Engineer response: 2025-06-29T14:00:00Z\n- Calculation: 3 days, 4 hours (engineer response delay)\n\n## Analysis Areas\n\n### Survey-Based Sentiment Analysis\nAnalyze the survey feedback fields including `Technical Ability of Your Engineer`, `Overall Satisfaction`, `Overall Product Satisfaction`, and `Additional Feedback or Commentary(Text)` for CSAT, NEUT, and DSAT cases. Cross-reference these survey responses with the `structured_email_thread` to assess customer emotional state and correlate satisfaction scores with communication patterns and engineer performance.\n\n**Important Note**: Some DSAT cases may be potential disputes where survey scores do not align with actual customer sentiment expressed in emails. Identify cases where customers verbally indicate satisfaction or happiness in email communications but provide low survey scores.\n\n**Customer Sentiment Assessment**: Determine the customer's emotional state throughout the support interaction using these categories:\n- Frustrated/Escalating\n- Angry/Hostile\n- Concerned/Worried\n- Neutral/Professional\n- Satisfied/Pleased\n- Happy/Grateful\n\n**Dispute Detection**: For DSAT cases, analyze for potential score-sentiment misalignment by identifying:\n- Positive language in emails vs. low survey scores\n- Expressions of gratitude or satisfaction in email thread vs. DSAT rating\n- Professional/cordial tone throughout interaction vs. dissatisfaction score\n- Clear resolution acknowledgment in emails vs. low overall satisfaction\n\n**Emotional Indicators to Analyze in Email Thread:**\n- Language tone (formal vs. urgent vs. appreciative)\n- Escalation requests or threats\n- Appreciation expressions and thank you messages\n- Urgency markers (\"ASAP\", \"critical\", \"urgent\")\n- Satisfaction signals (\"works perfectly\", \"resolved\", \"thank you\")\n- Frustration markers (\"still not working\", \"disappointed\", \"unacceptable\")\n- Misalignment indicators (positive email sentiment with low survey scores)\n\n**Provide 2-3 specific coaching recommendations per survey case analyzed.**\n\n### Survey Classification System\n**CSAT (Customer Satisfied)**: Overall Satisfaction score of 4 or 5\n**DSAT (Customer Dissatisfied)**: Overall Satisfaction score of 1 or 2\n**NEUT (Neutral)**: Overall Satisfaction score of 3\n\n### Case Hand-Off & Timing Analysis\nReview email timestamps and case progression to identify delays, inefficient handovers, or missed response opportunities. Focus on process improvements and time management.\n\n### Summary\nConsolidate findings into manager-ready coaching points, including both improvement areas and engineer strengths observed.\n\n## Sample Coaching Recommendations\nUse these as examples, but you are not limited to these recommendations. Create specific, actionable coaching points based on your analysis:\n\n**Delay Management:**\n- For excessive delays: Engage in remote session to help the customer with the prepared action plan\n- For urgent issues requiring customer updates: Initiate a callback to the customer\n\n**Escalation & Investigation:**\n- When cases are escalated to RD Team and require extended investigation time: Manage customer expectations and prioritize relaying timely updates to the customer\n- When engineers struggle with issue investigation: Suggest utilizing available resources like CompanionXL, Eureka Search, or reaching out to Squad Leads for additional insights and help\n\n**Note:** Tailor your recommendations to the specific situation and create additional coaching points as needed based on your analysis of each case.\n\n## IMPORTANT: Output Format\nYou MUST respond with valid JSON only. No markdown formatting. Use this exact structure:\n\n```json\n{\n  \"survey_sentiment_analysis\": [\n    {\n      \"problem\": \"Customer displayed frustrated/escalating sentiment due to communication gaps and low satisfaction scores...\",\n      \"case_id\": \"TM-XXXXXXX\",\n      \"survey_type\": \"CSAT/NEUT/DSAT\",\n      \"recommendations\": [\n        \"Focus on customer expectation management and follow-up communication...\",\n        \"Improve technical explanation clarity for customer understanding...\",\n        \"Enhance empathy and acknowledgment of customer concerns...\"\n      ]\n    }\n  ],\n  \"summary\": {\n    \"areas_for_improvement\": [\n      \"Enhance customer communications by translating technical jargon\",\n      \"Improve proactive engagement during long or complex cases\"\n    ],\n    \"strengths\": [\n      \"Demonstrated perseverance and persistence in complex cases\",\n      \"Maintained professional and polite communication throughout\"\n    ]\n  },\n  \"cases_analyzed\": [\n    {\n      \"case_id\": \"TM-XXXXXXX\",\n      \"case_title\": \"Brief description of the case issue\",\n      \"data_source\": \"emailDB/surveyDB\"\n    }\n  ]\n}\n```",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        208,
-        64
+        288,
+        -64
       ],
-      "id": "2160c059-2173-4117-97d3-45ad2a820c1a",
+      "id": "27c4c24c-d803-42c2-9bb6-2fd1e6e439e6",
       "name": "AI Agent"
     },
     {
@@ -122,10 +122,10 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -80,
-        64
+        0,
+        -64
       ],
-      "id": "b333130a-4eb3-48bc-b5d3-e22dfe51d12b",
+      "id": "203bc2be-7b9f-4359-877f-1d6fbe90cdb1",
       "name": "Webhook",
       "webhookId": "065a5b64-eeb9-4633-9eee-0a89594eadad"
     },
@@ -136,35 +136,23 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        624,
-        64
+        704,
+        -64
       ],
-      "id": "2886881f-d28b-4f1a-a455-32a6fa5b1045",
+      "id": "ac91b576-04b2-42c0-8d88-51260089c370",
       "name": "Respond to Webhook"
     },
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        -960,
-        176
-      ],
-      "id": "9d03aa1f-e519-4e40-bd0c-2449fe307a1a",
-      "name": "When clicking ‘Execute workflow’",
-      "disabled": true
-    },
-    {
       "parameters": {
-        "jsCode": "  // Get the survey data from the correct path: body.survey_data\n  const inputData = $input.all()[0].json;\n  const surveyData = inputData.body.survey_data || [];\n\n  console.log(\"Survey data found:\", surveyData.length, \"items\");\n\n  // Separate DSAT and CSAT\n  const dsatSurveys = surveyData.filter(survey => survey.category === 'dsat');\n  const csatSurveys = surveyData.filter(survey => survey.category === 'csat');\n\n  console.log(\"DSAT surveys:\", dsatSurveys.length);\n  console.log(\"CSAT surveys:\", csatSurveys.length);\n\n  // Select 3 DSAT and 2 CSAT (or as many as available)\n  const selectedDsat = dsatSurveys.slice(0, 3);\n  const selectedCsat = csatSurveys.slice(0, 2);\n\n  // Combine selected surveys\n  const selectedSurveys = [...selectedDsat, ...selectedCsat];\n\n  // Extract unique case IDs for MongoDB lookup\n  const caseIds = [...new Set(selectedSurveys.map(survey => survey.case_id))];\n\n  // Format case_ids with quotes for MongoDB\n  const formattedCaseIds = caseIds.map(id => `\"${id}\"`).join(',');\n\n  return [{\n    json: {\n      selected_surveys: selectedSurveys,\n      case_ids: formattedCaseIds,\n      dsat_count: selectedDsat.length,\n      csat_count: selectedCsat.length,\n      total_surveys: selectedSurveys.length,\n      entity_type: inputData.body.entity_type,\n      entity_name: inputData.body.entity_name,\n      debug_total_input: surveyData.length\n    }\n  }];"
+        "jsCode": "// Fixed n8n code node to include NEUTRAL surveys\n// Get the survey data from the correct path: body.survey_data\nconst inputData = $input.all()[0].json;\nconst surveyData = inputData.body.survey_data || [];\n\nconsole.log(\"Survey data found:\", surveyData.length, \"items\");\n\n// Separate DSAT, CSAT, and NEUTRAL surveys\nconst dsatSurveys = surveyData.filter(survey => survey.category === 'dsat');\nconst csatSurveys = surveyData.filter(survey => survey.category === 'csat');\nconst neutralSurveys = surveyData.filter(survey => survey.category === 'neut' || survey.category === 'neutral');\n\nconsole.log(\"DSAT surveys:\", dsatSurveys.length);\nconsole.log(\"CSAT surveys:\", csatSurveys.length);\nconsole.log(\"NEUTRAL surveys:\", neutralSurveys.length);\n\n// Select surveys from each category (adjust numbers as needed)\nconst selectedDsat = dsatSurveys.slice(0, 5);\nconst selectedCsat = csatSurveys.slice(0, 5);\nconst selectedNeutral = neutralSurveys.slice(0, 5); // Include 2 neutral surveys\n\n// Combine selected surveys\nconst selectedSurveys = [...selectedDsat, ...selectedCsat, ...selectedNeutral];\n\n// Extract unique case IDs for MongoDB lookup\nconst caseIds = [...new Set(selectedSurveys.map(survey => survey.case_id))];\n\n// Format case_ids with quotes for MongoDB\nconst formattedCaseIds = caseIds.map(id => `\"${id}\"`).join(',');\n\nreturn [{\n  json: {\n    selected_surveys: selectedSurveys,\n    case_ids: formattedCaseIds,\n    dsat_count: selectedDsat.length,\n    csat_count: selectedCsat.length,\n    neutral_count: selectedNeutral.length, // Add neutral count\n    total_surveys: selectedSurveys.length,\n    entity_type: inputData.body.entity_type,\n    entity_name: inputData.body.entity_name,\n    debug_total_input: surveyData.length,\n    debug_breakdown: {\n      dsat: selectedDsat.length,\n      csat: selectedCsat.length, \n      neutral: selectedNeutral.length\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        64,
-        64
+        144,
+        -64
       ],
-      "id": "0c3b2c8f-0c3d-4c7e-9649-ab7e38ca08ca",
+      "id": "b95b0120-d36c-4e3f-8175-64b8cd927fa3",
       "name": "Code"
     }
   ],
@@ -181,11 +169,11 @@
         ]
       ]
     },
-    "AI Agent": {
+    "JSONizer": {
       "main": [
         [
           {
-            "node": "JSONizer",
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -214,6 +202,17 @@
         ]
       ]
     },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "JSONizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Webhook": {
       "main": [
         [
@@ -223,22 +222,6 @@
             "index": 0
           }
         ]
-      ]
-    },
-    "JSONizer": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "When clicking ‘Execute workflow’": {
-      "main": [
-        []
       ]
     },
     "Code": {
@@ -253,15 +236,15 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "4f670179-24ee-4e1e-a073-3eceb416cb6d",
+  "versionId": "0792d57d-010c-4aa1-9d26-4676a33ce872",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "197030258e5ec4f22da7668edae4c29f9bb02818dd32dfbc6a28b550e0739e49"
   },
-  "id": "xp5ZLIYrSgt9YTfy",
+  "id": "d44sE0fVPckGkbVV",
   "tags": []
 }

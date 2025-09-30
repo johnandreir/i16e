@@ -1,15 +1,15 @@
 {
-  "name": "Calculate metrics",
+  "name": "Calculate Metrics",
   "nodes": [
     {
       "parameters": {},
-      "id": "504a8af0-a46a-48ad-b6c0-d1d7282b046e",
+      "id": "1b5db698-520b-47d7-9043-39bb497da40f",
       "name": "Calculate Metrics Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
       "position": [
-        -560,
-        -144
+        -960,
+        96
       ]
     },
     {
@@ -17,18 +17,18 @@
         "operation": "delete",
         "collection": "performance_data"
       },
-      "id": "5082d1e6-5fae-4733-b383-2eb3fd81e332",
+      "id": "03b34369-ea4d-4a68-bdec-6f44bbe5929b",
       "name": "MongoDB Delete - Clear All Performance Data",
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
       "position": [
-        -336,
-        -144
+        -736,
+        96
       ],
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -37,13 +37,13 @@
       "parameters": {
         "jsCode": "// Extract entity data - Handle array of DPE objects from trigger\nlet entityValues = [];\nlet action = 'getMetrics';\nlet entityType = 'dpe';\nlet entityName = 'Unknown';\nlet totalEntities = 0;\n\ntry {\n  console.log('=== EXTRACT ENTITY - DEBUG TRIGGER ACCESS ===');\n  console.log('🚀 Processing trigger data for DPE array');\n  \n  // Try multiple ways to access the trigger data\n  let triggerData = null;\n  \n  // Method 1: Get first item (might be just one item of array)\n  try {\n    const method1 = $('Calculate Metrics Trigger').first().json;\n    console.log('📋 Method 1 - first().json:', JSON.stringify(method1, null, 2));\n    console.log('📋 Method 1 - Type:', typeof method1, 'IsArray:', Array.isArray(method1));\n    triggerData = method1;\n  } catch (e) {\n    console.log('❌ Method 1 failed:', e.message);\n  }\n  \n  // Method 2: Get all items (might be multiple items)\n  try {\n    const method2 = $('Calculate Metrics Trigger').all();\n    console.log('📋 Method 2 - all() length:', method2.length);\n    if (method2.length > 0) {\n      console.log('📋 Method 2 - all()[0]:', JSON.stringify(method2[0].json, null, 2));\n      if (method2.length > 1) {\n        console.log('📋 Method 2 - all()[1]:', JSON.stringify(method2[1].json, null, 2));\n      }\n      \n      // If we have multiple trigger items, combine them into array\n      if (method2.length > 1) {\n        triggerData = method2.map(item => item.json);\n        console.log('✅ Method 2 - Combined multiple trigger items into array');\n      } else if (method2.length === 1) {\n        triggerData = method2[0].json;\n        console.log('✅ Method 2 - Using single trigger item');\n      }\n    }\n  } catch (e) {\n    console.log('❌ Method 2 failed:', e.message);\n  }\n  \n  console.log('📋 Final trigger data type:', typeof triggerData);\n  console.log('📋 Final trigger data isArray:', Array.isArray(triggerData));\n  console.log('📋 Final trigger data:', JSON.stringify(triggerData, null, 2));\n  \n  // Handle the array format: [{ entityValue, owner_full_name, ... }, ...]\n  if (Array.isArray(triggerData)) {\n    console.log('✅ Detected array format with', triggerData.length, 'DPE objects');\n    \n    // Extract entity values from the array\n    entityValues = triggerData.map((dpeObj, index) => {\n      const name = dpeObj.entityValue || dpeObj.owner_full_name;\n      console.log(`📝 DPE ${index + 1}: ${name}`);\n      return name;\n    }).filter(name => name);\n    \n    // Get metadata from first object (all should have same metadata)\n    if (triggerData.length > 0) {\n      const firstDpe = triggerData[0];\n      action = firstDpe.action || 'getMetrics';\n      entityType = firstDpe.entityType || 'squad';\n      entityName = firstDpe.entityName || 'Unknown Squad';\n      totalEntities = firstDpe.totalEntities || triggerData.length;\n    }\n    \n    console.log('📊 Extracted from array:', {\n      entityValues,\n      entityType,\n      entityName,\n      totalEntities,\n      action\n    });\n  }\n  // Handle single object format (fallback)\n  else if (triggerData && typeof triggerData === 'object') {\n    console.log('✅ Detected single object format');\n    \n    action = triggerData.action || 'getMetrics';\n    entityType = triggerData.entityType || 'dpe';\n    entityName = triggerData.entityName || triggerData.entityValue || 'Unknown';\n    \n    // Single DPE\n    if (triggerData.entityValue || triggerData.owner_full_name) {\n      entityValues = [triggerData.entityValue || triggerData.owner_full_name];\n      totalEntities = 1;\n      console.log('📝 Single DPE:', entityValues[0]);\n    }\n    // Multiple DPEs in properties\n    else if (triggerData.dpeList && Array.isArray(triggerData.dpeList)) {\n      entityValues = triggerData.dpeList.map(dpe => \n        typeof dpe === 'string' ? dpe : (dpe.owner_full_name || dpe.entityValue)\n      ).filter(name => name);\n      totalEntities = entityValues.length;\n      console.log('📝 DPE List:', entityValues);\n    }\n    else if (triggerData.entityValues && Array.isArray(triggerData.entityValues)) {\n      entityValues = triggerData.entityValues.filter(name => name);\n      totalEntities = entityValues.length;\n      console.log('� Entity Values:', entityValues);\n    }\n  }\n  \n} catch (error) {\n  console.error('❌ ERROR in Extract Entity:', error.message);\n  console.error('Stack trace:', error.stack);\n}\n\n// Validate we have at least one entity value\nif (!entityValues || entityValues.length === 0) {\n  console.error('❌ CRITICAL: No entityValues found');\n  console.error('❌ Trigger data type:', typeof triggerData);\n  console.error('❌ Trigger data:', triggerData);\n  throw new Error('No entityValues found in trigger data');\n}\n\n// Build MongoDB query for ALL DPEs using $in operator\nconst mongoQuery = {\n  \"owner_full_name\": {\n    \"$in\": entityValues\n  },\n  \"status\": \"Resolved\"\n};\n\nconsole.log('✅ MongoDB query built for', entityValues.length, 'DPE(s)');\nconsole.log('🔍 Query:', JSON.stringify(mongoQuery, null, 2));\nconsole.log('📝 DPEs to query:', entityValues);\n\n// Return output with all entity information\nconst outputData = {\n  query: mongoQuery,\n  entityValues: entityValues,\n  entityType: entityType,\n  entityName: entityName,\n  action: action,\n  totalDPEs: entityValues.length,\n  totalEntities: totalEntities,\n  timestamp: new Date().toISOString()\n};\n\nconsole.log('📤 Extract Entity result:');\nconsole.log('- DPE Count:', entityValues.length);\nconsole.log('- Entity Type:', entityType);\nconsole.log('- Entity Name:', entityName);\nconsole.log('- DPEs:', entityValues.join(', '));\n\nreturn [{ json: outputData }];"
       },
-      "id": "8154c242-4a58-4770-b8f9-9a7d4142f19c",
+      "id": "a0c9dfe9-977d-4835-ae0d-747e8d5faf68",
       "name": "Extract Entity",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -112,
-        -144
+        -512,
+        96
       ]
     },
     {
@@ -52,17 +52,17 @@
         "options": {},
         "query": "={{ JSON.stringify($json.query) }}"
       },
-      "id": "5a337d34-9366-4888-8f76-d48d4b73fa7c",
+      "id": "d19b93ad-90d6-4c66-997a-004defe064d0",
       "name": "MongoDB Query - Get Cases",
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
       "position": [
-        112,
-        -144
+        -288,
+        96
       ],
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -71,26 +71,26 @@
       "parameters": {
         "jsCode": "// Calculate metrics for all DPEs (single or multiple)\nlet extractedData = {};\nlet action = 'getMetrics';\nlet entityValues = [];\nlet entityType = 'dpe';\nlet entityName = 'Unknown';\n\ntry {\n  console.log('=== CALCULATE METRICS - HANDLE ALL DPEs ===');\n  \n  // Get data from Extract Entity node\n  const extractNode = $('Extract Entity').first();\n  if (extractNode && extractNode.json) {\n    extractedData = extractNode.json;\n    action = extractedData.action || 'getMetrics';\n    entityValues = extractedData.entityValues || [];\n    entityType = extractedData.entityType || 'dpe';\n    entityName = extractedData.entityName || 'Unknown';\n    console.log('✅ Extracted data for', entityValues.length, 'DPE(s):', entityValues.join(', '));\n  } else {\n    console.log('❌ No data from Extract Entity node');\n    throw new Error('No data from Extract Entity node');\n  }\n  \n  // Get cases from MongoDB query\n  let cases = [];\n  try {\n    const mongoResults = $('MongoDB Query - Get Cases').all();\n    cases = mongoResults || [];\n    console.log('✅ MongoDB Find Results:', {\n      casesCount: cases.length,\n      entityValues,\n      action\n    });\n  } catch (mongoError) {\n    console.error('❌ Error getting MongoDB results:', mongoError.message);\n    cases = [];\n  }\n  \n  // If action is getDetails, return all case details\n  if (action === 'getDetails') {\n    const detailedCases = cases.map((caseNode, index) => {\n      try {\n        const caseData = caseNode.json || {};\n        return {\n          case_id: caseData.case_id || 'N/A',\n          title: caseData.title || 'No title',\n          status: caseData.status || 'Unknown',\n          priority: caseData.priority || 'N/A',\n          case_age_days: caseData.case_age_days || 0,\n          created_date: caseData.created_date || null,\n          closed_date: caseData.closed_date || null,\n          owner_full_name: caseData.owner_full_name || 'Unknown',\n          products: caseData.products || []\n        };\n      } catch (caseError) {\n        console.error(`❌ Error processing case ${index + 1}:`, caseError.message);\n        return { case_id: 'ERROR', title: 'Error processing case' };\n      }\n    });\n    \n    const detailResult = {\n      action: 'getDetails',\n      entityValues,\n      entityType,\n      entityName,\n      cases: detailedCases,\n      totalCases: detailedCases.length,\n      retrievedAt: new Date().toISOString()\n    };\n    \n    console.log('✅ Detail response prepared successfully');\n    return [{ json: detailResult }];\n  }\n  \n  // Calculate metrics for each DPE individually\n  const dpeMetrics = [];\n  const dpeMap = new Map();\n  \n  // Group cases by owner_full_name\n  cases.forEach((caseNode, index) => {\n    try {\n      const caseData = caseNode.json || {};\n      const ownerName = caseData.owner_full_name;\n      \n      if (ownerName && entityValues.includes(ownerName)) {\n        if (!dpeMap.has(ownerName)) {\n          dpeMap.set(ownerName, []);\n        }\n        dpeMap.get(ownerName).push(caseData);\n      }\n    } catch (caseError) {\n      console.error(`❌ Error processing case ${index + 1} for grouping:`, caseError.message);\n    }\n  });\n  \n  console.log('=== DPE METRICS CALCULATION ===');\n  console.log('DPEs found in cases:', Array.from(dpeMap.keys()));\n  console.log('DPEs requested:', entityValues);\n  \n  // Calculate metrics for each DPE\n  entityValues.forEach(dpeOwnerName => {\n    const dpeCases = dpeMap.get(dpeOwnerName) || [];\n    \n    let totalSct = 0;\n    let validSctCases = 0;\n    const closedCases = dpeCases.length;\n    \n    // Calculate SCT for this DPE\n    dpeCases.forEach((caseData, index) => {\n      if (caseData.case_age_days && typeof caseData.case_age_days === 'number' && !isNaN(caseData.case_age_days)) {\n        totalSct += caseData.case_age_days;\n        validSctCases++;\n      }\n    });\n    \n    const avgSct = validSctCases > 0 ? Math.round((totalSct / validSctCases) * 10) / 10 : 0;\n    \n    const dpeMetric = {\n      owner_full_name: dpeOwnerName,\n      sct: avgSct,\n      closedCases: closedCases,\n      validSctCases: validSctCases,\n      totalSctDays: totalSct,\n      calculatedAt: new Date().toISOString()\n    };\n    \n    dpeMetrics.push(dpeMetric);\n    \n    console.log(`✅ ${dpeOwnerName}: SCT=${avgSct}, Closed=${closedCases}, Valid=${validSctCases}`);\n  });\n  \n  // Calculate overall totals\n  const overallTotals = {\n    totalSct: dpeMetrics.reduce((sum, dpe) => sum + (dpe.sct * dpe.validSctCases), 0),\n    totalValidCases: dpeMetrics.reduce((sum, dpe) => sum + dpe.validSctCases, 0),\n    totalClosedCases: dpeMetrics.reduce((sum, dpe) => sum + dpe.closedCases, 0)\n  };\n  \n  const overallAvgSct = overallTotals.totalValidCases > 0 ? \n    Math.round((overallTotals.totalSct / overallTotals.totalValidCases) * 10) / 10 : 0;\n  \n  // Return the aggregated metrics\n  const finalResult = {\n    entityValues,\n    entityType,\n    entityName,\n    totalDPEs: entityValues.length,\n    dpeMetrics: dpeMetrics,\n    overallMetrics: {\n      avgSct: overallAvgSct,\n      totalClosedCases: overallTotals.totalClosedCases,\n      totalValidSctCases: overallTotals.totalValidCases\n    },\n    calculatedAt: new Date().toISOString(),\n    debug: {\n      requestedDPEs: entityValues,\n      foundDPEs: Array.from(dpeMap.keys()),\n      totalCases: cases.length,\n      processingSuccess: true\n    }\n  };\n  \n  console.log('✅ Calculate Metrics Final Result:');\n  console.log('- Total DPEs processed:', dpeMetrics.length);\n  console.log('- Overall metrics:', finalResult.overallMetrics);\n  \n  return [{ json: finalResult }];\n  \n} catch (error) {\n  console.error('❌ Fatal error in Calculate Metrics node:', error.message);\n  console.error('❌ Stack trace:', error.stack);\n  \n  // Return error result\n  const errorResult = {\n    entityValues: entityValues || [],\n    entityType: entityType || 'dpe',\n    entityName: entityName || 'Unknown',\n    totalDPEs: entityValues ? entityValues.length : 0,\n    dpeMetrics: [],\n    overallMetrics: {\n      avgSct: 0,\n      totalClosedCases: 0,\n      totalValidSctCases: 0\n    },\n    calculatedAt: new Date().toISOString(),\n    error: {\n      message: error.message,\n      type: 'Calculate Metrics Error',\n      timestamp: new Date().toISOString()\n    }\n  };\n  \n  console.log('❌ Returning error result');\n  return [{ json: errorResult }];\n}"
       },
-      "id": "6ce0eae8-3a53-42f5-9041-5bed98c25122",
+      "id": "95927d39-48c0-424c-b507-658da4f25574",
       "name": "Calculate Metrics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        336,
-        -144
+        -64,
+        96
       ]
     },
     {
       "parameters": {
         "jsCode": "// Prepare entity lookup - handle multiple DPEs for entity ID lookup\nlet entityNames = [];\nlet metricsData = {};\n\ntry {\n  console.log('=== PREPARE ENTITY LOOKUP - MULTIPLE DPEs ===');\n  \n  // Get the calculated metrics from previous node\n  const calculatedMetrics = $input.first().json;\n  console.log('Input from Calculate Metrics:', JSON.stringify(calculatedMetrics, null, 2));\n  \n  if (calculatedMetrics) {\n    metricsData = calculatedMetrics;\n    \n    // Get entity names from the new data structure\n    if (calculatedMetrics.entityValues && Array.isArray(calculatedMetrics.entityValues)) {\n      entityNames = calculatedMetrics.entityValues;\n      console.log('✅ Multiple entity names extracted:', entityNames);\n    }\n    // Fallback to old structure\n    else if (calculatedMetrics.entityValue) {\n      entityNames = [calculatedMetrics.entityValue];\n      console.log('✅ Single entity name extracted (fallback):', entityNames[0]);\n    }\n    // Extract from DPE metrics\n    else if (calculatedMetrics.dpeMetrics && Array.isArray(calculatedMetrics.dpeMetrics)) {\n      entityNames = calculatedMetrics.dpeMetrics.map(dpe => dpe.owner_full_name).filter(name => name);\n      console.log('✅ Entity names from DPE metrics:', entityNames);\n    }\n    \n  } else {\n    console.log('❌ No input data from Calculate Metrics node');\n  }\n  \n} catch (error) {\n  console.error('❌ Error preparing entity lookup:', error.message);\n}\n\nif (!entityNames || entityNames.length === 0) {\n  console.error('❌ CRITICAL: No entity names available for DPE lookup');\n  console.error('❌ Available fields in metrics data:', Object.keys(metricsData));\n  throw new Error('No entity names available for DPE lookup');\n}\n\n// Since we need to look up each DPE individually, we'll use the first one for the lookup\n// The database save will handle each DPE separately anyway\nconst primaryEntityName = entityNames[0];\n\n// Pass through the metrics data and add the entityValue for the lookup\nconst outputData = {\n  ...metricsData,\n  entityValue: primaryEntityName, // For compatibility with existing MongoDB lookup\n  entityNames: entityNames, // All entity names\n  entityLookupQuery: {name: primaryEntityName},\n  debug: {\n    ...metricsData.debug,\n    entityLookupPrepared: true,\n    entityValueForLookup: primaryEntityName,\n    allEntityNames: entityNames,\n    totalEntities: entityNames.length\n  }\n};\n\nconsole.log('=== ENTITY LOOKUP PREPARED ===');\nconsole.log('Primary entity for lookup:', primaryEntityName);\nconsole.log('All entity names:', entityNames);\nconsole.log('Query to execute:', JSON.stringify({name: primaryEntityName}, null, 2));\n\nreturn [{ json: outputData }];"
       },
-      "id": "92a91cba-7793-4f3f-8496-ddb3e643f666",
+      "id": "ff20c437-c28a-4e9e-8bb4-f659ebc45190",
       "name": "Prepare Entity Lookup",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        560,
-        -144
+        160,
+        96
       ]
     },
     {
@@ -99,18 +99,18 @@
         "options": {},
         "query": "={{ JSON.stringify({name: $json.entityValue || 'Unknown'}) }}"
       },
-      "id": "99b5323e-b16f-4b8b-a521-a434fc7ae94f",
+      "id": "a7181d2c-bc45-4ed8-bc69-be8b9ae0c136",
       "name": "MongoDB Find - Get Entity ID",
       "type": "n8n-nodes-base.mongoDb",
       "typeVersion": 1.2,
       "position": [
-        784,
-        -144
+        384,
+        96
       ],
       "alwaysOutputData": true,
       "credentials": {
         "mongoDb": {
-          "id": "Pl29NJOEfuRbqWf6",
+          "id": "NXkVLOCLl33yKAKM",
           "name": "MongoDB account"
         }
       }
@@ -119,24 +119,24 @@
       "parameters": {
         "jsCode": "// Prepare performance_data records for all DPEs (single or multiple)\nlet metricsData = {};\nlet casesData = [];\nlet performanceRecords = [];\n\ntry {\n  console.log('=== PREPARE DATABASE SAVE - MULTIPLE DPEs ===');\n  \n  // Get calculated metrics from Calculate Metrics node\n  const calculatedMetrics = $('Calculate Metrics').first();\n  if (calculatedMetrics && calculatedMetrics.json) {\n    metricsData = calculatedMetrics.json;\n    console.log('✅ Got calculated metrics for', metricsData.totalDPEs, 'DPE(s)');\n    console.log('📊 DPE metrics available:', metricsData.dpeMetrics ? metricsData.dpeMetrics.length : 0);\n  } else {\n    throw new Error('No calculated metrics data available');\n  }\n  \n  // Get detailed cases from MongoDB Query - Get Cases\n  const casesResults = $('MongoDB Query - Get Cases').all();\n  if (casesResults && casesResults.length > 0) {\n    casesData = casesResults.map(caseNode => {\n      const caseData = caseNode.json || {};\n      return {\n        case_id: caseData.case_id || null,\n        title: caseData.title || null,\n        status: caseData.status || null,\n        priority: caseData.priority || 'Medium',\n        case_age_days: Number(caseData.case_age_days) || 0,\n        owner_full_name: caseData.owner_full_name || null,\n        created_date: caseData.created_date || null,\n        closed_date: caseData.closed_date || null,\n        products: caseData.products || []\n      };\n    });\n    console.log('✅ Processed cases data:', casesData.length, 'cases total');\n  }\n  \n  // Create performance record for each DPE\n  if (metricsData.dpeMetrics && Array.isArray(metricsData.dpeMetrics)) {\n    metricsData.dpeMetrics.forEach((dpeMetric, index) => {\n      \n      // Get cases specific to this DPE\n      const dpeCases = casesData.filter(caseData => \n        caseData.owner_full_name === dpeMetric.owner_full_name\n      );\n      \n      // Create performance record for this DPE\n      const performanceRecord = {\n        entity_name: String(dpeMetric.owner_full_name),\n        entity_type: 'dpe', // Always 'dpe' for individual DPE records\n        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format\n        metrics: {\n          sct: Number(dpeMetric.sct) || 0,\n          closedCases: Number(dpeMetric.closedCases) || 0\n        },\n        cases_count: dpeCases.length,\n        sample_cases: dpeCases, // Include all cases for this DPE\n        metadata: {\n          totalSctDays: dpeMetric.totalSctDays || 0,\n          validSctCases: dpeMetric.validSctCases || 0,\n          entityType: metricsData.entityType || 'dpe',\n          calculationSource: 'multi-dpe-workflow',\n          batchId: metricsData.calculatedAt || new Date().toISOString()\n        },\n        created_at: new Date(),\n        updated_at: new Date()\n      };\n      \n      performanceRecords.push(performanceRecord);\n      \n      console.log(`✅ DPE ${index + 1}: ${dpeMetric.owner_full_name} - SCT: ${dpeMetric.sct}, Cases: ${dpeMetric.closedCases}`);\n    });\n  } else {\n    throw new Error('No DPE metrics found in calculated data');\n  }\n  \n  console.log('✅ Prepared', performanceRecords.length, 'performance records for database save');\n  \n  // Log summary\n  const summary = {\n    totalRecords: performanceRecords.length,\n    totalCases: casesData.length,\n    dpeNames: performanceRecords.map(record => record.entity_name),\n    overallMetrics: metricsData.overallMetrics\n  };\n  \n  console.log('📊 Database save summary:', JSON.stringify(summary, null, 2));\n  \n  // Return all performance records for batch insert\n  return performanceRecords.map(record => ({ json: record }));\n  \n} catch (error) {\n  console.error('❌ Error preparing database save:', error.message);\n  console.error('❌ Stack trace:', error.stack);\n  \n  // Return minimal error record\n  const errorRecord = {\n    entity_name: 'Error',\n    entity_type: 'dpe',\n    date: new Date().toISOString().split('T')[0],\n    metrics: {\n      sct: 0,\n      closedCases: 0\n    },\n    cases_count: 0,\n    sample_cases: [],\n    error: {\n      message: error.message,\n      timestamp: new Date()\n    },\n    created_at: new Date(),\n    updated_at: new Date()\n  };\n  \n  console.log('❌ Returning error record for database save');\n  return [{ json: errorRecord }];\n}"
       },
-      "id": "de581c79-e33a-49bd-88cc-12702bdc01a5",
+      "id": "8efb7cf8-50c0-4861-9d33-edb022815e3c",
       "name": "Prepare Database Save",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1008,
-        -144
+        608,
+        96
       ]
     },
     {
       "parameters": {},
-      "id": "28db0d26-c962-4021-b3d8-d9d4a7e4621b",
+      "id": "0f43945b-7106-4f7c-af3e-5f35ec5daabd",
       "name": "Done",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        1232,
-        -144
+        832,
+        96
       ]
     }
   ],
@@ -235,11 +235,11 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "48943d55-18de-4a52-9b76-cb341dd7a03f",
+  "versionId": "91a7ca59-5cd0-4095-a717-e1c7444fea39",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "4ae47e0d2927c2ad6ce432ba64a316fc4b36f12b6aeb96b5fb893ad9ad8e6961"
+    "instanceId": "197030258e5ec4f22da7668edae4c29f9bb02818dd32dfbc6a28b550e0739e49"
   },
-  "id": "VaX3w979KjLLcgNY",
+  "id": "qZ1v8w3jqsYtSUq4",
   "tags": []
 }

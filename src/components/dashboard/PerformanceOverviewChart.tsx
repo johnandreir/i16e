@@ -148,6 +148,7 @@ const DrillDownModal: React.FC<DrillDownModalProps> = ({ isOpen, onClose, owner,
             <TableHeader>
               <TableRow>
                 <TableHead className="w-24">Case ID</TableHead>
+                <TableHead className="w-32">Case Owner</TableHead>
                 <TableHead className="w-32">Product</TableHead>
                 <TableHead className="min-w-48">Title</TableHead>
                 <TableHead className="w-20">Priority</TableHead>
@@ -161,6 +162,7 @@ const DrillDownModal: React.FC<DrillDownModalProps> = ({ isOpen, onClose, owner,
                 sortedCases.map((caseItem, index) => (
                   <TableRow key={caseItem.case_id}>
                     <TableCell className="font-medium text-xs">{caseItem.case_id || 'N/A'}</TableCell>
+                    <TableCell className="text-xs">{caseItem.owner_full_name || 'N/A'}</TableCell>
                     <TableCell className="text-xs">{formatProducts(caseItem.products)}</TableCell>
                     <TableCell className="text-xs" title={caseItem.title}>
                       <div className="max-w-48 truncate">{caseItem.title || 'N/A'}</div>

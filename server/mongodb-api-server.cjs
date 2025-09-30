@@ -663,14 +663,33 @@ app.get('/api/n8n/health', async (req, res) => {
           );
           const activeUserWorkflows = userWorkflows.filter(w => w.active);
 
+          // Create detailed workflow information
+          const workflowDetails = userWorkflows.map(w => ({
+            id: w.id,
+            name: w.name,
+            active: w.active,
+            createdAt: w.createdAt,
+            updatedAt: w.updatedAt,
+            tags: w.tags || []
+          }));
+
           workflowStatus = {
             reachable: true,
             totalCount: userWorkflows.length,
             activeCount: activeUserWorkflows.length,
-            message: `${activeUserWorkflows.length} active out of ${userWorkflows.length} user workflows`
+            message: `${activeUserWorkflows.length} active out of ${userWorkflows.length} user workflows`,
+            workflows: workflowDetails,
+            activeWorkflows: activeUserWorkflows.map(w => ({
+              id: w.id,
+              name: w.name,
+              active: w.active,
+              createdAt: w.createdAt,
+              updatedAt: w.updatedAt
+            }))
           };
 
           console.log(`📊 Found ${userWorkflows.length} user workflows (${activeUserWorkflows.length} active)`);
+          console.log(`📋 Active workflows:`, activeUserWorkflows.map(w => w.name).join(', '));
         } else if (workflowsResponse.status === 401 || workflowsResponse.status === 403) {
           // Handle unauthorized/forbidden response - check local files instead
           console.log('⚠️ N8N workflow API access restricted - checking workflow files...');
