@@ -89,8 +89,8 @@ start-full-dev.bat
 
 ```bash
 # Clone the repository
-git clone https://github.com/johnandreir/devops-insight-engine.git
-cd devops-insight-engine
+git clone https://github.com/johnandreir/i16e.git
+cd i16e
 
 # Windows: Start everything with one command
 start-full-dev.bat
@@ -401,7 +401,7 @@ All backend services include automated health checks:
 
 ## Repository
 
-**GitHub**: [https://github.com/johnandreir/devops-insight-engine](https://github.com/johnandreir/devops-insight-engine)
+**GitHub**: [https://github.com/johnandreir/i16e](https://github.com/johnandreir/i16e)
 
 ## License
 
