@@ -1,0 +1,65 @@
+/* Last resort CSS fixes for survey summary indentation */
+
+/* Target the wrapping element we created in formatDescription */
+.survey-indent-override {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.survey-indent-override ul {
+  margin-left: 0 !important;
+  padding-left: 0.5rem !important;
+  list-style-position: outside !important;
+}
+
+.survey-indent-override ul li {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}
+
+.survey-indent-override p {
+  margin-left: 0 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+/* Reset any Tailwind margins */
+.survey-indent-override .ml-1,
+.survey-indent-override .ml-2,
+.survey-indent-override .ml-3,
+.survey-indent-override .ml-4,
+.survey-indent-override .ml-5,
+.survey-indent-override .ml-6,
+.survey-indent-override .ml-7,
+.survey-indent-override .ml-8 {
+  margin-left: 0 !important;
+}
+
+/* Ensure nested lists maintain proper indentation */
+.survey-indent-override ul ul {
+  padding-left: 0.75rem !important;
+}
+
+/* Ensure strength/improvement sections have correct indentation */
+.survey-indent-override .strength-points,
+.survey-indent-override .improvement-points {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+.survey-indent-override .strength-points ul,
+.survey-indent-override .improvement-points ul {
+  padding-left: 0.75rem !important;
+  margin-left: 0 !important;
+}
+
+/* Target any special formatting for the survey summary */
+.survey-indent-override[class*="ml-"] {
+  margin-left: 0 !important;
+}
+
+/* Override any specific class combinations */
+.customer-survey-summary .survey-indent-override ul {
+  padding-left: 0.75rem !important;
+  margin-left: 0 !important;
+}

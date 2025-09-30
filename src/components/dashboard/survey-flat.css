@@ -1,0 +1,52 @@
+/* Special flattened container styles for survey summary */
+
+.survey-flat-container {
+  /* Reset all spacing */
+  margin: 0 !important;
+  padding: 0 !important;
+
+  /* Force everything into a flat structure */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+.survey-flat-container * {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Completely custom bullet implementation */
+.survey-flat-container ul,
+.survey-flat-container ol {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.survey-flat-container li {
+  position: relative !important;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  display: flex !important;
+}
+
+.survey-flat-container li::before {
+  content: "•";
+  display: inline-block;
+  width: 12px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.survey-flat-container li li::before {
+  content: "○";
+}
+
+/* Make sure bullet and text are properly aligned */
+.survey-flat-container li span,
+.survey-flat-container li p {
+  display: inline-block;
+  margin: 0 !important;
+  padding: 0 !important;
+}

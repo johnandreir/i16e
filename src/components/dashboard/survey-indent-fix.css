@@ -1,0 +1,103 @@
+.survey-summary-section {
+  margin-top: 1.5rem;
+}
+
+/* Target all strength/improvement lists correctly */
+div:has(> p:contains("Strengths identified")) > ul,
+div:has(> p:contains("Areas for improvement")) > ul {
+  list-style-type: disc;
+  padding-left: 1rem !important;
+  margin-left: 0 !important;
+}
+
+div:has(> p:contains("Strengths identified")) > ul > li,
+div:has(> p:contains("Areas for improvement")) > ul > li {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Fix for DPE Customer Survey Summary section */
+div[class*="border-l-primary"] div[class*="bg-background"] ul {
+  padding-left: 1rem !important;
+  margin-left: 0 !important;
+}
+
+/* Target emojis in list items to adjust spacing */
+li:has(span[role="img"]) {
+  text-indent: -1.5rem !important;
+  padding-left: 1.5rem !important;
+}
+
+/* Fix specifically for the survey summary emojis */
+div:has(> h3:contains("Survey Summary")) ul {
+  list-style-position: outside !important;
+  padding-left: 1rem !important;
+  margin-left: 0 !important;
+}
+
+div:has(> h3:contains("Survey Summary")) li {
+  text-indent: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Enhanced fixes specifically targeting customer survey summary */
+.customer-survey-summary ul,
+.customer-survey-summary ol {
+  padding-left: 0.75rem !important;
+  margin-left: 0 !important;
+  list-style-position: outside !important;
+}
+
+.customer-survey-summary ul li,
+.customer-survey-summary ol li {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}
+
+/* Target nested lists to reduce their indentation */
+.customer-survey-summary ul ul,
+.customer-survey-summary ol ol,
+.customer-survey-summary ul ol,
+.customer-survey-summary ol ul {
+  padding-left: 0.5rem !important;
+  margin-left: 0 !important;
+}
+
+/* Override any Tailwind classes that might cause indentation */
+.customer-survey-summary .ml-4,
+.customer-survey-summary .ml-6,
+.customer-survey-summary .ml-8 {
+  margin-left: 0 !important;
+}
+
+.customer-survey-summary .pl-4,
+.customer-survey-summary .pl-6,
+.customer-survey-summary .pl-8 {
+  padding-left: 0.5rem !important;
+}
+
+/* Ensure bullet points appear properly */
+.customer-survey-summary ul {
+  list-style-type: disc !important;
+}
+
+.customer-survey-summary ul ul {
+  list-style-type: circle !important;
+}
+
+/* Reset margins on paragraphs inside list items */
+.customer-survey-summary li > p {
+  margin: 0 !important;
+}
+
+/* Force alignment for bullet points with emojis */
+.customer-survey-summary li span[role="img"] {
+  margin-right: 0.25rem !important;
+}
+
+/* Force proper alignment of the overall container */
+.customer-survey-fix {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}

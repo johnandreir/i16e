@@ -1,0 +1,63 @@
+/* Fix for left border indentation in Performance and Survey Summary sections */
+
+/* Target the left border in both sections */
+.border-l-4,
+[class*="border-l-primary"] {
+  border-left-width: 2px !important;
+  padding-left: 0.75rem !important;
+}
+
+/* Fix the vertical blue line positioning */
+.border-l-primary {
+  border-left-color: rgb(59, 130, 246) !important; /* Tailwind blue-500 */
+}
+
+/* Remove extra padding from summary sections */
+.dpe-performance-summary,
+.dpe-customer-survey-summary {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Fix the blue vertical line positioning */
+div:has(> h3:contains("DPE Performance Summary")),
+div:has(> h3:contains("DPE Customer Survey Summary")) {
+  position: relative !important;
+  padding-left: 0 !important;
+}
+
+/* Add custom blue line for better alignment */
+div:has(> h3:contains("DPE Performance Summary"))::before,
+div:has(> h3:contains("DPE Customer Survey Summary"))::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: rgb(59, 130, 246); /* Tailwind blue-500 */
+}
+
+/* Remove any padding from card content */
+div:has(> h3:contains("DPE Performance Summary")) + div,
+div:has(> h3:contains("DPE Customer Survey Summary")) + div {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Ensure the content is properly aligned with the blue line */
+.performance-section .bg-background,
+.survey-section .bg-background {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Fix card padding */
+.card-content-fix {
+  padding-left: 0 !important;
+}
+
+/* Fix position of border line in survey section */
+.card-header-fix + .card-content-fix {
+  padding-left: 0 !important;
+}

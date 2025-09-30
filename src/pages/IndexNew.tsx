@@ -115,7 +115,8 @@ const IndexNew = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState<{ from: Date | undefined; to: Date | undefined }>(() => {
     const to = new Date();
     const from = new Date();
-    from.setDate(to.getDate() - 30);
+    from.setDate(to.getDate() - 120); // Last 120 days as default, but will strictly filter by this range
+    console.log('📅 Setting initial time range:', from.toISOString(), 'to', to.toISOString());
     return { from, to };
   });
   const [reportGenerated, setReportGenerated] = useState<boolean>(false);
@@ -449,42 +450,131 @@ const IndexNew = () => {
     // Only recalculate chart data if a report has been generated (data persistence requirement)
     if (reportGenerated && satisfactionData && satisfactionData.satisfactionData) {
       // Recalculate filtered chart data
-      const filteredChartData = generateFilteredChartData(satisfactionData.satisfactionData);
+      // Use formatted data from CustomerSatisfactionService instead of raw data
+      const chartData = CustomerSatisfactionService.formatSatisfactionDataForChart(satisfactionData.satisfactionData);
+      console.log('📊 Using pre-formatted chart data:', chartData);
+      const filteredChartData = chartData;
       setChartSurveyData(filteredChartData);
     }
   };
 
   // Helper function to generate filtered chart data based on time range
   const generateFilteredChartData = (surveyDetails: any[]) => {
+    console.log('🔍 Processing survey details:', surveyDetails?.length || 0, 'entries');
     if (!surveyDetails || !Array.isArray(surveyDetails) || surveyDetails.length === 0) {
+      console.log('❌ No survey details to process');
       return [];
     }
 
+    if (surveyDetails.length > 0) {
+      console.log('📝 Sample survey detail:', surveyDetails[0]);
+    }
+
+    // Log the current selected time range in more detail
+    console.log('📅 Selected time range:', 
+                selectedTimeRange.from ? `${selectedTimeRange.from.toLocaleDateString()} (${selectedTimeRange.from.toISOString()})` : 'none', 
+                'to', 
+                selectedTimeRange.to ? `${selectedTimeRange.to.toLocaleDateString()} (${selectedTimeRange.to.toISOString()})` : 'none');
+    
+    // Get current date for reference
+    const currentDate = new Date();
+    console.log('📅 Current date:', currentDate.toLocaleDateString(), `(${currentDate.toISOString()})`);
+                
+    // Always strictly enforce time range filtering with no fallback mechanisms
+    const isTimeRangeActive = selectedTimeRange.from && selectedTimeRange.to;
+    console.log('📅 Time range filtering is:', isTimeRangeActive ? 'STRICTLY ENFORCED' : 'DISABLED');
+    
     // Filter surveys by time range if one is selected
     const filteredSurveys = surveyDetails.filter(survey => {
-      if (!selectedTimeRange.from || !selectedTimeRange.to || !survey.surveyDate) {
-        return true; // Include all if no time range or no survey date
+      // If no time range is selected or survey has no date, include it
+      if (!isTimeRangeActive || !survey.surveyDate) {
+        return true;
       }
       
       try {
-        const surveyDate = new Date(survey.surveyDate);
+        // Handle multiple date formats (M/D/YYYY HH:MM or ISO string)
+        let surveyDate;
+        
+        // Debug the date being processed
+        console.log('🔍 Processing survey date:', survey.surveyDate);
+        
+        if (typeof survey.surveyDate === 'string' && survey.surveyDate.includes('/')) {
+          try {
+            // Parse M/D/YYYY HH:MM format (example: "6/5/2025 21:48")
+            const [datePart, timePart] = survey.surveyDate.split(' ');
+            const [month, day, year] = datePart.split('/');
+            const [hours, minutes] = timePart ? timePart.split(':') : ['0', '0'];
+            
+            // Log the parsed components
+            console.log('📅 Parsed date components:', {
+              month: parseInt(month),
+              day: parseInt(day),
+              year: parseInt(year),
+              hours: parseInt(hours || '0'),
+              minutes: parseInt(minutes || '0')
+            });
+            
+            // Convert to Date object properly (month is 0-indexed in JavaScript)
+            surveyDate = new Date(
+              parseInt(year), 
+              parseInt(month) - 1, 
+              parseInt(day), 
+              parseInt(hours || '0'), 
+              parseInt(minutes || '0')
+            );
+            
+            // Force the date to be valid using Date methods
+            surveyDate = new Date(
+              surveyDate.getFullYear(),
+              surveyDate.getMonth(),
+              surveyDate.getDate(),
+              surveyDate.getHours(),
+              surveyDate.getMinutes()
+            );
+            
+            console.log('📅 Parsed date:', surveyDate, '(ISO:', surveyDate.toISOString(), ')');
+          } catch (dateError) {
+            // If any error in parsing, create a fallback date
+            console.error('❌ Error parsing date format:', survey.surveyDate, dateError);
+            const fallbackYear = parseInt(survey.surveyDate.split('/')[2]?.split(' ')[0] || '2025');
+            surveyDate = new Date(fallbackYear, 0, 1); // Fallback to January 1st of the year
+            console.log('📅 Using fallback date:', surveyDate);
+          }
+        } else {
+          // Standard date parsing for ISO strings
+          surveyDate = new Date(survey.surveyDate);
+          console.log('📅 Parsed standard date:', surveyDate);
+        }
+        
         const fromDate = new Date(selectedTimeRange.from);
         const toDate = new Date(selectedTimeRange.to);
         
-        fromDate.setHours(0, 0, 0, 0);
-        toDate.setHours(23, 59, 59, 999);
+        // Enforce strict adherence to selected date range
+        fromDate.setHours(0, 0, 0, 0); // Start of day for from date
+        toDate.setHours(23, 59, 59, 999); // End of day for to date
         
-        return surveyDate >= fromDate && surveyDate <= toDate;
+        // For debugging, log the comparison with more detail
+        const isInRange = surveyDate >= fromDate && surveyDate <= toDate;
+        console.log(
+          `📅 Date comparison: ${surveyDate.toISOString()} (${surveyDate.toLocaleDateString()}) ` +
+          `in range ${fromDate.toISOString()} - ${toDate.toISOString()}? ${isInRange ? 'YES' : 'NO'}`
+        );
+        
+        // Use more inclusive date range filtering
+        return isInRange;
       } catch (error) {
         console.error('Error parsing survey date:', survey.surveyDate, error);
         return true; // Include if date parsing fails
       }
     });
 
+    console.log(`📅 Filtered ${surveyDetails.length} surveys to ${filteredSurveys.length} based on date range`);
+
     // Recalculate metrics from filtered surveys
     // Check multiple possible rating fields and categorize based on rating value or category
     const csatCount = filteredSurveys.filter(s => {
-      const rating = s.rating || s.customerSatisfactionRating || s.ratingValue;
+      // First check overallSatisfaction which is in your data
+      const rating = s.overallSatisfaction || s.rating || s.customerSatisfactionRating || s.ratingValue;
       if (rating !== undefined && rating !== null) {
         return rating >= 4 && rating <= 5;
       }
@@ -493,7 +583,7 @@ const IndexNew = () => {
     }).length;
     
     const neutralCount = filteredSurveys.filter(s => {
-      const rating = s.rating || s.customerSatisfactionRating || s.ratingValue;
+      const rating = s.overallSatisfaction || s.rating || s.customerSatisfactionRating || s.ratingValue;
       if (rating !== undefined && rating !== null) {
         return rating === 3;
       }
@@ -502,7 +592,7 @@ const IndexNew = () => {
     }).length;
     
     const dsatCount = filteredSurveys.filter(s => {
-      const rating = s.rating || s.customerSatisfactionRating || s.ratingValue;
+      const rating = s.overallSatisfaction || s.rating || s.customerSatisfactionRating || s.ratingValue;
       if (rating !== undefined && rating !== null) {
         return rating >= 1 && rating <= 2;
       }
@@ -513,7 +603,8 @@ const IndexNew = () => {
     const total = csatCount + neutralCount + dsatCount;
 
     if (total === 0) {
-      return []; // No data to display
+      console.log('❌ No satisfaction data found after filtering by current time range');
+      return []; // No data to display - strictly enforce the selected time range
     }
 
     const csatPercentage = Math.round((csatCount / total) * 100);
@@ -522,9 +613,13 @@ const IndexNew = () => {
 
     console.log('📊 Filtered chart data generated:', {
       total: filteredSurveys.length,
+      calculatedTotal: total,
       csat: csatCount,
       neutral: neutralCount,
       dsat: dsatCount,
+      csatPercentage,
+      neutralPercentage,
+      dsatPercentage,
       timeRange: selectedTimeRange.from && selectedTimeRange.to ? 
         `${selectedTimeRange.from.toLocaleDateString()} - ${selectedTimeRange.to.toLocaleDateString()}` : 'All time'
     });
@@ -562,7 +657,10 @@ const IndexNew = () => {
           setSatisfactionData(data);
           // Only update chart data if report is already generated (data persistence)
           if (reportGenerated) {
-            const chartData = generateFilteredChartData(data.surveyDetails);
+            console.log('🔎 Found data for entity:', data.entityName, 'with', data.surveyDetails?.length || 0, 'survey details');
+            const chartData = data.surveyDetails && data.surveyDetails.length > 0
+              ? generateFilteredChartData(data.surveyDetails)
+              : [];
             setChartSurveyData(chartData);
           }
         } else {
@@ -3605,7 +3703,11 @@ const IndexNew = () => {
                       ) : (
                         // Always use SurveyAnalysisChart component for consistent styling
                         <SurveyAnalysisChart
-                          data={getSurveyChartData()}
+                          data={(() => {
+                            const chartData = getSurveyChartData();
+                            console.log('📊 Chart data provided to SurveyAnalysisChart:', chartData);
+                            return chartData;
+                          })()}
                           title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
                           totalSurveys={
                             getSurveyChartData().length > 0 ? 

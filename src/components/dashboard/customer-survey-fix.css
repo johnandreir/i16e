@@ -1,0 +1,68 @@
+/* Specific fixes for customer survey summary indentation */
+.customer-survey-summary ul {
+  list-style-type: disc !important;
+  padding-left: 0.5rem !important; /* Reduced from original */
+  margin-left: 0 !important;
+  list-style-position: outside !important;
+}
+
+.customer-survey-summary ul li {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  margin-bottom: 0.25rem !important;
+  list-style-position: outside !important;
+  text-indent: 0 !important;
+}
+
+/* Target specific emoji headers for strengths and areas */
+.customer-survey-summary ul:has(li:first-child:contains("Strengths")),
+.customer-survey-summary ul:has(li:first-child:contains("Areas")) {
+  padding-left: 0.5rem !important; /* Adjusted to be more precise */
+  margin-left: 0 !important;
+}
+
+/* Match Analysis bullet point indentation exactly */
+div:has(p:contains("Strengths identified")) ul,
+div:has(p:contains("Areas for improvement")) ul {
+  padding-left: 0.5rem !important; /* Adjusted to be more precise */
+  margin-left: 0 !important;
+}
+
+/* This ensures that bullet points appear at the same level as Analysis sections */
+.customer-survey-fix {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Additional specific fixes for nested elements */
+.customer-survey-summary ul ul {
+  padding-left: 0.5rem !important;
+  margin-left: 0 !important;
+}
+
+.customer-survey-summary p + ul {
+  margin-top: 0.25rem !important;
+  padding-left: 0.5rem !important;
+  margin-left: 0 !important;
+}
+
+/* Ensure paragraph spacing is consistent */
+.customer-survey-summary p {
+  margin-bottom: 0.25rem !important;
+}
+
+/* Target specific class combinations that might cause over-indentation */
+.customer-survey-summary.customer-survey-fix ul {
+  padding-left: 0.5rem !important;
+  margin-left: 0 !important;
+}
+
+/* Override any Tailwind ml classes specifically for survey summary */
+.customer-survey-summary .ml-1,
+.customer-survey-summary .ml-2,
+.customer-survey-summary .ml-3,
+.customer-survey-summary .ml-4,
+.customer-survey-summary .ml-5,
+.customer-survey-summary .ml-6 {
+  margin-left: 0 !important;
+}

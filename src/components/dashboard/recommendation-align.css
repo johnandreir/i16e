@@ -1,0 +1,19 @@
+.recommendation-fix {
+  display: flex;
+  flex-direction: column;
+}
+
+.recommendation-fix > h6 {
+  margin-bottom: 0.5rem;
+}
+
+.recommendation-fix > div {
+  margin-left: 1.5rem !important; /* Same indentation as Analysis */
+}
+
+/* Target recommendation lists to match analysis bullets */
+.recommendation-fix ul {
+  list-style-type: disc;
+  margin-left: 1rem !important;
+  padding-left: 0;
+}

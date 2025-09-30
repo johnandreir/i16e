@@ -1,0 +1,57 @@
+/* More aggressive fix for left border indentation in summary sections */
+
+/* Target the vertical blue line on the left */
+.border-l-4.border-l-primary {
+  border-left-width: 2px !important; /* Thinner line to match screenshot */
+  padding-left: 0.75rem !important; /* Match the screenshot padding */
+}
+
+/* Target all card content sections */
+.card-content {
+  padding-left: 0 !important;
+}
+
+/* Fix alignment of all content in performance and survey sections */
+.border-l-4.border-l-primary > div {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Target card header sections */
+.card-header {
+  padding-left: 0 !important;
+}
+
+/* Target the exact left border overindentation */
+.border-l-4.border-l-primary.pl-4 {
+  padding-left: 0.75rem !important;
+}
+
+/* Override any other padding that might be causing issues */
+div:has(> .border-l-4.border-l-primary) {
+  padding-left: 0 !important;
+}
+
+/* Target specifically the DPE performance section */
+div:has(h3:contains("Performance Summary")) .border-l-4 {
+  border-left-width: 2px !important;
+  padding-left: 0.75rem !important;
+}
+
+/* Target specifically the DPE survey section */
+div:has(h3:contains("Survey Summary")) .border-l-4 {
+  border-left-width: 2px !important;
+  padding-left: 0.75rem !important;
+}
+
+/* Fix any nesting issues that cause cumulative indentation */
+div.border-l-4.border-l-primary div.pl-4 {
+  padding-left: 0 !important;
+}
+
+/* Target the specific screenshot sections directly */
+div:has(h3:contains("Performance Summary")) ~ div.border-l-4,
+div:has(h3:contains("Survey Summary")) ~ div.border-l-4 {
+  border-left-width: 2px !important;
+  padding-left: 0.75rem !important;
+}
