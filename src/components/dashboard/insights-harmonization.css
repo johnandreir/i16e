@@ -1,0 +1,104 @@
+/* Comprehensive harmonization of bullet points and indentation across all insight sections */
+
+/* Global styles for all insight sections */
+.insights-harmonization {
+  font-family: var(--font-sans) !important;
+  font-size: 0.875rem !important;
+}
+
+/* Common bullet point styling */
+.insights-harmonization ul,
+.customer-survey-summary ul,
+.dpe-performance-summary ul,
+.analysis-section ul,
+.recommendation-section ul {
+  list-style-type: disc !important;
+  margin: 0 !important;
+  padding-left: 1.5rem !important;
+}
+
+/* Common list item styling */
+.insights-harmonization li,
+.customer-survey-summary li,
+.dpe-performance-summary li,
+.analysis-section li,
+.recommendation-section li {
+  font-size: 0.875rem !important;
+  margin-bottom: 0.25rem !important;
+  line-height: 1.5 !important;
+  text-indent: 0 !important;
+}
+
+/* Ensure consistent spacing in all insight sections */
+.insights-harmonization p,
+.customer-survey-summary p,
+.dpe-performance-summary p,
+.analysis-section p,
+.recommendation-section p {
+  margin-bottom: 0.5rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Harmonize heading styles */
+.insights-harmonization h3,
+.insights-harmonization h4,
+.customer-survey-summary h3,
+.customer-survey-summary h4,
+.dpe-performance-summary h3,
+.dpe-performance-summary h4,
+.analysis-section h3,
+.recommendation-section h3 {
+  font-size: 0.9375rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* Harmonize strength and improvement sections */
+.insights-harmonization .strengths,
+.insights-harmonization .improvements,
+.customer-survey-summary .strengths,
+.customer-survey-summary .improvements,
+.strength-points,
+.improvement-points {
+  margin-bottom: 0.75rem !important;
+}
+
+/* Ensure emoji icons align consistently */
+.insights-harmonization .emoji-icon,
+.customer-survey-summary .emoji-icon,
+.dpe-performance-summary .emoji-icon,
+[role="img"] {
+  margin-right: 0.25rem !important;
+  vertical-align: middle !important;
+}
+
+/* Target the analysis sections specifically */
+.analysis-section {
+  margin-bottom: 1rem !important;
+}
+
+/* Target the recommendation sections specifically */
+.recommendation-section {
+  margin-top: 0.5rem !important;
+}
+
+/* Override any custom indentation that might be causing inconsistencies */
+.customer-survey-summary .survey-flat-container ul,
+.customer-survey-summary .zero-indent ul,
+.customer-survey-summary .survey-indent-override ul {
+  padding-left: 1.5rem !important;
+  list-style-type: disc !important;
+}
+
+/* Remove any text-based bullets we previously added */
+.customer-survey-summary li::before,
+.customer-survey-summary ul > li::before,
+.customer-survey-summary ul ul > li::before {
+  content: none !important;
+}
+
+/* Reset previous overrides to match the design in the screenshot */
+.customer-survey-summary.customer-survey-fix.survey-flat-container {
+  padding: 0.75rem !important;
+}

@@ -10,6 +10,23 @@ import {
   BarChart, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { EMOJIS } from '@/components/EmojiIcons';
+import './recommendation-fix.css'; // Import CSS for aligning recommendations with analysis
+import './recommendation-align.css'; // Additional CSS for recommendation alignment
+import './fix-indentation.css'; // Direct CSS fixes for recommendation indentation
+import './customer-survey-fix.css'; // Fix for customer survey summary indentation
+import './survey-indent-fix.css'; // Additional targeted fixes for survey indentation
+import './survey-summary-reset.css'; // Hyper-specific reset styles for survey summaries
+import './survey-indent-override.css'; // Last resort fixes for survey indentation issues
+import './zero-indent.css'; // Complete removal of all indentation
+import './survey-flat.css'; // Completely flat bullet styling
+import './insights-harmonization.css'; // Harmonizes all bullet points and font styling across sections
+import './analysis-harmonization.css'; // Specific fixes for Analysis and Recommendation sections
+import './font-harmonization.css'; // Ensures consistent font usage across all sections
+import './summary-harmony.css'; // Unifies styling between Performance and Survey summaries
+import './screenshot-match.css'; // Exact styling to match the screenshot
+import './border-indent-fix.css'; // Fixes left border overindentation
+import './aggressive-border-fix.css'; // More aggressive fixes for border indentation
+import RecommendationIndentationFix from './RecommendationIndentationFix'; // Component to fix indentation
 
 interface Insight {
   id: string;
@@ -93,6 +110,12 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
 
   // Helper function to format text with bullet points for better readability
   const formatTextWithBullets = (text: string, label: string = 'Recommendation') => {
+    // Set fixed indentation for all recommendation content to match analysis
+    // This is added as a wrapping function to ensure consistent styling
+    const withProperIndentation = (content) => {
+      return <div className="recommendation-content">{content}</div>;
+    };
+    
     // Check if text contains 'Areas for improvement:' or 'Strengths:' patterns
     const hasAreasForImprovement = text.includes('Areas for improvement:');
     const hasStrengths = text.includes('Strengths:');
@@ -149,7 +172,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
         }
       }
       
-      return <div className="text-sm text-foreground dark:text-foreground">{sections}</div>;
+      return withProperIndentation(<div className="text-sm text-foreground dark:text-foreground">{sections}</div>);
     }
     
     // Standard bullet point formatting for other cases
@@ -158,7 +181,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     
     // If there's only one line or no splitting needed, return as single paragraph
     if (lines.length <= 1) {
-      return (
+      return withProperIndentation(
         <p className="text-sm text-foreground">
           {label && <><strong>{label}:</strong> </>}{text}
         </p>
@@ -166,10 +189,11 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
     }
     
     // If multiple lines, format as bullet points
+    // Use inline styles to ensure proper indentation regardless of CSS classes
     return (
-      <div className="text-sm text-foreground dark:text-foreground">
+      <div className="text-sm text-foreground dark:text-foreground" style={{ marginLeft: '1.5rem' }}>
         {label && <strong>{label}s:</strong>}
-        <ul className={`list-disc list-inside space-y-1 ml-2 ${label ? 'mt-2' : ''}`}>
+        <ul className={`space-y-1 ${label ? 'mt-2' : ''}`} style={{ listStyleType: 'disc', paddingLeft: '1rem' }}>
           {lines.map((line, index) => (
             <li key={index} className="text-sm">
               {/* Remove bullet characters if they already exist at the start of the line */}
@@ -182,9 +206,134 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
   };
 
   // Helper function to format descriptions - handle strengths/areas format and bullet points
+  const formatDpeCustomerSurvey = (description: string) => {
+    // Check if this content has strengths and areas sections
+    if (description.includes('Strengths') && description.includes('Areas for improvement')) {
+      // Split the description into sections
+      let mainText = '';
+      let strengthsSection = '';
+      let areasSection = '';
+      
+      // Extract main text
+      const mainEndIndex = description.indexOf('Strengths');
+      if (mainEndIndex > 0) {
+        mainText = description.substring(0, mainEndIndex).trim();
+      }
+      
+      // Extract strengths section
+      const strengthsStart = description.indexOf('Strengths');
+      const strengthsEnd = description.indexOf('Areas for improvement');
+      if (strengthsStart > 0 && strengthsEnd > strengthsStart) {
+        strengthsSection = description.substring(strengthsStart, strengthsEnd).trim();
+      }
+      
+      // Extract areas section
+      const areasStart = description.indexOf('Areas for improvement');
+      if (areasStart > 0) {
+        areasSection = description.substring(areasStart).trim();
+      }
+      
+      return (
+        <div className="dpe-survey-content">
+          {mainText && <p>{mainText}</p>}
+          
+          {strengthsSection && (
+            <div className="strengths-identified">
+              <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                {EMOJIS.MUSCLE} Strengths:
+              </p>
+              <ul className="performance-bullets">
+                {strengthsSection
+                  .replace('Strengths identified:', '')
+                  .replace('Strengths:', '')
+                  .split('\n')
+                  .filter(item => item.trim().startsWith('-') || item.trim().startsWith('•'))
+                  .map((item, idx) => (
+                    <li key={idx}>
+                      {item.trim().replace(/^[\-•]\s*/, '')}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+          
+          {areasSection && (
+            <div className="areas-for-improvement">
+              <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                {EMOJIS.TARGET} Areas for improvement:
+              </p>
+              <ul className="performance-bullets">
+                {areasSection
+                  .replace('Areas for improvement:', '')
+                  .split('\n')
+                  .filter(item => item.trim().startsWith('-') || item.trim().startsWith('•'))
+                  .map((item, idx) => (
+                    <li key={idx}>
+                      {item.trim().replace(/^[\-•]\s*/, '')}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Fallback to regular formatting
+    return formatDescriptionContent(description);
+  };
+
   const formatDescription = (description: string) => {
+    // Check if this is part of a customer survey summary to apply special formatting
+    const isCustomerSurveySection = description.includes('Customer satisfaction analysis') || 
+                                   description.includes('DPE Customer Survey') ||
+                                   description.includes('survey summary');
+    
+    // Check if this is specifically a DPE Customer Survey
+    const isDpeSurvey = description.includes('DPE Customer Survey') || 
+                        description.includes('Customer satisfaction analysis');
+    
+    // Use special DPE formatter for customer survey
+    if (isDpeSurvey) {
+      return (
+        <div className="survey-indent-override insights-harmonization dpe-customer-survey-summary">
+          {formatDpeCustomerSurvey(description)}
+        </div>
+      );
+    }
+    // If this is a regular customer survey section, wrap with special formatting
+    else if (isCustomerSurveySection) {
+      return (
+        <div className="survey-indent-override insights-harmonization">
+          {formatDescriptionContent(description)}
+        </div>
+      );
+    }
+    
+    // Otherwise use regular formatting but still apply harmonization
+    return (
+      <div className="insights-harmonization">
+        {formatDescriptionContent(description)}
+      </div>
+    );
+  };
+  
+  // Helper function that contains the actual formatting logic
+  const formatDescriptionContent = (description: string) => {
+    // Check if this is Performance Summary content
+    const isPerformanceSummary = description.includes('cycle time performance') || 
+                                description.includes('DPE Performance Summary') ||
+                                description.includes('performance overview');
+                                
     // Check if description contains strengths and areas for improvement format
-    const hasStrengthsFormat = (description.includes(`${EMOJIS.CHECK} Strengths identified:`) || description.includes(`${EMOJIS.MUSCLE} Strengths identified:`)) && description.includes(`${EMOJIS.TARGET} Areas for improvement:`);
+    const hasStrengthsFormat = (description.includes(`${EMOJIS.CHECK} Strengths identified:`) || 
+                               description.includes(`${EMOJIS.MUSCLE} Strengths identified:`) || 
+                               description.includes(`👍 Strengths identified:`) ||
+                               description.includes(`Strengths:`) ||
+                               description.includes(`Strengths identified:`)) && 
+                              (description.includes(`${EMOJIS.TARGET} Areas for improvement:`) || 
+                               description.includes(`Areas for improvement:`) ||
+                               description.includes(`Areas for improvement`));
     
     if (hasStrengthsFormat) {
       // Split the description into parts
@@ -200,16 +349,18 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
           
           {/* Strengths section - displayed first */}
           {strengthsPart && (
-            <div>
-              <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">{EMOJIS.MUSCLE} Strengths identified:</p>
-              <ul className="list-disc list-inside space-y-1 ml-4 text-sm">
+            <div className="strength-points strengths insights-harmonization strengths-identified">
+              <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-2">{EMOJIS.MUSCLE} Strengths:</p>
+              <ul className="performance-bullets">
                 {strengthsPart
                   .replace(`${EMOJIS.CHECK} Strengths identified:`, '')
                   .replace(`${EMOJIS.MUSCLE} Strengths identified:`, '')
+                  .replace(`Strengths:`, '')
+                  .replace(`Strengths`, '')
                   .split(/•/)
                   .filter(item => item.trim().length > 0)
                   .map((item, idx) => (
-                    <li key={idx} className="text-sm">
+                    <li key={idx}>
                       {item.trim().replace(/^\s*•\s*/, '')}
                     </li>
                   ))}
@@ -219,15 +370,15 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
           
           {/* Areas for improvement section - displayed after strengths */}
           {areasPart && (
-            <div>
+            <div className="improvement-points improvements insights-harmonization areas-for-improvement">
               <p className="text-sm font-medium text-amber-600 dark:text-amber-400 mb-2">{EMOJIS.TARGET} Areas for improvement:</p>
-              <ul className="list-disc list-inside space-y-1 ml-4 text-sm">
+              <ul className="performance-bullets">
                 {areasPart
                   .replace(`${EMOJIS.TARGET} Areas for improvement:`, '')
                   .split(/•/)
                   .filter(item => item.trim().length > 0)
                   .map((item, idx) => (
-                    <li key={idx} className="text-sm">
+                    <li key={idx}>
                       {item.trim().replace(/^\s*•\s*/, '')}
                     </li>
                   ))}
@@ -249,8 +400,8 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
       // If we got multiple meaningful sentences, format as bullets
       if (sentences.length > 1) {
         return (
-          <div>
-            <ul className="list-disc list-inside space-y-1 ml-2">
+          <div className="insights-harmonization">
+            <ul>
               {sentences.map((sentence, index) => (
                 <li key={index}>
                   {sentence}
@@ -437,6 +588,9 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Component to fix recommendation indentation */}
+      <RecommendationIndentationFix />
+      
       {/* Insights and Recommendations */}
       <Card className="glass-card">
         <CardHeader>
@@ -497,7 +651,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                               Performance Summary
                             </h3>
                             {organizedSctInsights.summary.map((insight) => (
-                              <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-4 bg-background/50 dark:bg-background/80 rounded-r-lg mb-3 shadow-sm">
+                              <div key={insight.id} className="border-l-2 border-l-primary pl-3 py-4 bg-background/50 dark:bg-background/80 rounded-r-lg mb-3 shadow-sm">
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
                                       <h4 className="font-medium text-foreground">{insight.title.replace('SCT Analysis Summary', 'Performance Overview')}</h4>
@@ -563,7 +717,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                                         {EMOJIS.EMAIL} Email Communication Analysis
                                       </h4>
                                       {caseGroup.emailInsights.map((insight) => (
-                                        <div key={insight.id} className="border-l-4 border-l-amber-400 pl-4 py-3 bg-background/50 dark:bg-background/20 rounded-r-lg shadow-sm">
+                                        <div key={insight.id} className="border-l-2 border-l-amber-400 pl-3 py-3 bg-background/50 dark:bg-background/20 rounded-r-lg shadow-sm">
                                           <div className="space-y-4">
                                             {/* Analysis Section */}
                                             <div>
@@ -601,7 +755,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                                         {EMOJIS.DELAY} Process Delay Analysis
                                       </h4>
                                       {caseGroup.delayInsights.map((insight) => (
-                                        <div key={insight.id} className="border-l-4 border-l-amber-400 pl-4 py-2 bg-background/50 dark:bg-background/20 rounded-r-lg shadow-sm">
+                                        <div key={insight.id} className="border-l-2 border-l-amber-400 pl-3 py-2 bg-background/50 dark:bg-background/20 rounded-r-lg shadow-sm">
                                           <div className="space-y-2">
                                             {/* Analysis Section */}
                                             <div>
@@ -640,7 +794,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                                         {EMOJIS.INFO} Additional Insights
                                       </h4>
                                       {caseGroup.otherInsights.map((insight) => (
-                                        <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-2 bg-background/50 dark:bg-background/80 rounded-r-lg shadow-sm border border-border/50">
+                                        <div key={insight.id} className="border-l-2 border-l-primary pl-3 py-2 bg-background/50 dark:bg-background/80 rounded-r-lg shadow-sm border border-border/50">
                                           <div className="space-y-2">
                                             {/* Analysis Section */}
                                             <div>
@@ -722,12 +876,12 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                               {EMOJIS.SURVEY} {selectedEntity} {organizedCxInsights.summary[0]?.surveyType || ''} Survey Summary
                             </h3>
                             {organizedCxInsights.summary.map((insight) => (
-                              <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-4 bg-background/50 dark:bg-background/80 rounded-r-lg mb-3 shadow-sm">
+                              <div key={insight.id} className="border-l-2 border-l-primary pl-3 py-4 bg-background/50 dark:bg-background/80 rounded-r-lg mb-3 shadow-sm">
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
                                       <h4 className="font-medium text-foreground">{insight.title}</h4>
                                     </div>
-                                    <div className="bg-background/50 p-3 rounded-md border border-border/50">
+                                    <div className="bg-background/50 p-3 rounded-md border border-border/50 customer-survey-summary">
                                       {formatDescription(insight.description)}
                                     </div>
                                     {insight.recommendation && !insight.recommendation.toLowerCase().includes('focus on:') && (
@@ -782,7 +936,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                                 {/* Case Content */}
                                 <div className="p-4 space-y-6">
                                   {caseGroup.insights.map((insight) => (
-                                    <div key={insight.id} className="border-l-4 border-l-primary pl-4 py-3 bg-background/50 dark:bg-background/80 rounded-r-lg shadow-sm border border-border/50">
+                                    <div key={insight.id} className="border-l-2 border-l-primary pl-3 py-3 bg-background/50 dark:bg-background/80 rounded-r-lg shadow-sm border border-border/50">
                                       <div className="space-y-4">
                                           
                                           {/* Analysis Section */}
@@ -804,7 +958,7 @@ const InsightsPanel: React.FC<InsightsPanelProps> = ({
                                                 <Lightbulb className="h-4 w-4 text-accent" />
                                                 Recommendations:
                                               </h6>
-                                              <div className="text-sm text-foreground dark:text-foreground">
+                                              <div className="text-sm text-foreground dark:text-foreground ml-6">
                                                 {formatTextWithBullets(insight.recommendation, '')}
                                               </div>
                                             </div>

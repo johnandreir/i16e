@@ -1,0 +1,86 @@
+/* Hyper-specific indentation fixes for customer survey summaries */
+
+/* Target the exact survey summary container */
+.customer-survey-summary.customer-survey-fix {
+  /* Reset all margins and padding */
+  margin: 0 !important;
+  padding: 0.5rem !important;
+}
+
+/* First level lists */
+.customer-survey-summary.customer-survey-fix > ul,
+.customer-survey-summary.customer-survey-fix > div > ul {
+  padding-left: 1rem !important;
+  margin-left: 0 !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+/* First level list items */
+.customer-survey-summary.customer-survey-fix > ul > li,
+.customer-survey-summary.customer-survey-fix > div > ul > li {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  text-indent: 0 !important;
+}
+
+/* Second level lists */
+.customer-survey-summary.customer-survey-fix ul ul {
+  padding-left: 1rem !important;
+  margin-left: 0 !important;
+}
+
+/* Second level list items */
+.customer-survey-summary.customer-survey-fix ul ul li {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Paragraphs inside list items */
+.customer-survey-summary.customer-survey-fix li > p {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Strengths and improvement sections */
+.customer-survey-summary.customer-survey-fix div:has(> p:contains("Strengths")),
+.customer-survey-summary.customer-survey-fix
+  div:has(> p:contains("Areas for improvement")) {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Lists after headings */
+.customer-survey-summary.customer-survey-fix h3 + ul,
+.customer-survey-summary.customer-survey-fix h4 + ul,
+.customer-survey-summary.customer-survey-fix p + ul {
+  padding-left: 1rem !important;
+  margin-left: 0 !important;
+}
+
+/* Force proper bullet rendering */
+.customer-survey-summary.customer-survey-fix ul {
+  list-style-type: disc !important;
+  list-style-position: outside !important;
+}
+
+/* Override any Tailwind classes specifically in this context */
+.customer-survey-summary.customer-survey-fix .ml-4 {
+  margin-left: 0 !important;
+}
+
+.customer-survey-summary.customer-survey-fix .pl-4 {
+  padding-left: 0.5rem !important;
+}
+
+/* Fix for emojis in lists */
+.customer-survey-summary.customer-survey-fix li:has(span[role="img"]) {
+  display: flex !important;
+  align-items: flex-start !important;
+  text-indent: 0 !important;
+}
+
+.customer-survey-summary.customer-survey-fix li span[role="img"] {
+  margin-right: 0.25rem !important;
+  flex-shrink: 0 !important;
+}

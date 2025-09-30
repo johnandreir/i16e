@@ -1,0 +1,88 @@
+/* Unified styling for Performance Summary and Survey Summary sections */
+
+/* Common styles for both summary sections */
+.dpe-performance-summary,
+.dpe-customer-survey-summary {
+  padding: 0.75rem !important;
+  font-family: var(--font-sans) !important;
+}
+
+/* Reset all list styling to ensure consistency */
+.dpe-performance-summary ul,
+.dpe-customer-survey-summary ul {
+  list-style-type: disc !important;
+  padding-left: 1.25rem !important;
+  margin-left: 0 !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+/* Make list items consistent */
+.dpe-performance-summary li,
+.dpe-customer-survey-summary li {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+  text-indent: 0 !important;
+  margin-bottom: 0.375rem !important;
+  line-height: 1.5 !important;
+  font-size: 0.875rem !important;
+}
+
+/* Reset any previously applied fixes that might be causing conflicts */
+.dpe-performance-summary li::before,
+.dpe-customer-survey-summary li::before {
+  content: none !important;
+}
+
+/* Ensure both sections have the same spacing for headers */
+.dpe-performance-summary h3,
+.dpe-customer-survey-summary h3,
+.dpe-performance-summary h4,
+.dpe-customer-survey-summary h4 {
+  margin-bottom: 0.5rem !important;
+  font-weight: 500 !important;
+  font-size: 0.9375rem !important;
+}
+
+/* Ensure strengths and improvement areas have consistent styling */
+.strengths-identified,
+.areas-for-improvement,
+.strengths,
+.improvements {
+  margin-bottom: 0.75rem !important;
+}
+
+/* Match the exact spacing and styling from the screenshot */
+.strengths-identified > p,
+.areas-for-improvement > p,
+.strengths > p,
+.improvements > p {
+  margin-bottom: 0.375rem !important;
+  font-weight: 500 !important;
+}
+
+/* Remove any custom margin/padding that might be causing over-indentation */
+.customer-survey-summary .ml-4,
+.customer-survey-summary .pl-4,
+.dpe-performance-summary .ml-4,
+.dpe-performance-summary .pl-4 {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Override any survey-flat container styles */
+.survey-flat-container ul {
+  list-style-type: disc !important;
+  padding-left: 1.25rem !important;
+  margin-left: 0 !important;
+}
+
+.survey-flat-container li {
+  padding-left: 0 !important;
+  margin-left: 0 !important;
+}
+
+/* Remove any previous fixes that introduced text-based bullets */
+.survey-flat-container li::before {
+  content: none !important;
+}

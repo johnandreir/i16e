@@ -1,0 +1,52 @@
+/* Font harmonization across all insight panels */
+
+/* Ensure consistent font family and sizing */
+.customer-survey-summary *,
+.dpe-performance-summary *,
+.insights-harmonization *,
+div:has(> h6:contains("Analysis")) *,
+div:has(> h6:contains("Recommendation")) * {
+  font-family: var(--font-sans) !important;
+}
+
+/* Specific font sizes to match the screenshot */
+h6,
+.text-sm {
+  font-size: 0.875rem !important;
+}
+
+/* Consistent heading weights */
+h6,
+.font-medium,
+strong {
+  font-weight: 500 !important;
+}
+
+/* Ensure consistent line height */
+p,
+li,
+div {
+  line-height: 1.5 !important;
+}
+
+/* Reset any custom font styles */
+.customer-survey-summary .custom-font,
+.dpe-performance-summary .custom-font,
+.insights-harmonization .custom-font {
+  font-family: var(--font-sans) !important;
+}
+
+/* Specific adjustments for emoji icons to maintain vertical alignment */
+span[role="img"] {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+  vertical-align: middle !important;
+}
+
+/* Ensure consistent bullet styling across all sections */
+ul {
+  list-style-type: disc !important;
+}
+
+ul ul {
+  list-style-type: circle !important;
+}

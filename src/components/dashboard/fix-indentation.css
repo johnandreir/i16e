@@ -1,0 +1,23 @@
+@layer recommendations {
+  /* Direct CSS approach - add ml-6 to all divs that come after recommendation headers */
+  h6 + div:has(ul),
+  .recommendation-content,
+  div:has(> p:first-child) {
+    margin-left: 1.5rem !important; /* Same as ml-6 */
+  }
+
+  /* Make lists consistent */
+  .recommendations-content ul,
+  .recommendation-content ul,
+  h6 + div > ul {
+    padding-left: 1rem !important;
+    margin-left: 0 !important;
+    list-style-position: outside !important;
+    list-style-type: disc !important;
+  }
+
+  /* Target Lightbulb icon's parent + next div specifically */
+  h6:has(svg.text-accent) + div {
+    margin-left: 1.5rem !important; /* ml-6 equivalent */
+  }
+}

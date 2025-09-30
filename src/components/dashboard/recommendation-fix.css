@@ -1,0 +1,16 @@
+/* Fix for recommendation section indentation */
+.recommendation-content {
+  margin-left: 1.5rem !important; /* ml-6 equivalent, with !important to override inline styles */
+}
+
+/* Make sure the list indentation matches Analysis section */
+.recommendation-list {
+  margin-left: 1rem !important; /* ml-4 equivalent */
+  list-style-type: disc !important;
+  padding-left: 1rem !important;
+}
+
+/* Target all recommendation sections directly */
+h6:has(.h-4.w-4.text-accent) + div {
+  margin-left: 1.5rem !important;
+}

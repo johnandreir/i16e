@@ -1,0 +1,87 @@
+/* Zero-indentation fix for survey summaries */
+
+/* Target every possible element with absolute zero indentation */
+.customer-survey-summary * {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}
+
+/* Convert all lists to use text bullets instead of HTML bullets */
+.customer-survey-summary ul,
+.customer-survey-summary ol {
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important; /* Remove default bullets */
+}
+
+/* Add text bullets manually */
+.customer-survey-summary ul > li:before {
+  content: "• ";
+  display: inline !important;
+  margin-right: 4px !important;
+}
+
+.customer-survey-summary ul ul > li:before {
+  content: "○ ";
+  display: inline !important;
+  margin-right: 4px !important;
+}
+
+/* Make all list items completely flat */
+.customer-survey-summary ul li,
+.customer-survey-summary ol li {
+  margin: 0 !important;
+  padding: 0 !important;
+  text-indent: 0 !important;
+  display: block !important;
+}
+
+/* Reset any tailwind classes */
+.customer-survey-summary [class*="ml-"],
+.customer-survey-summary [class*="pl-"],
+.customer-survey-summary [class*="m-"],
+.customer-survey-summary [class*="p-"] {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Force all text to align with the left edge */
+.customer-survey-summary p,
+.customer-survey-summary h1,
+.customer-survey-summary h2,
+.customer-survey-summary h3,
+.customer-survey-summary h4,
+.customer-survey-summary h5,
+.customer-survey-summary h6,
+.customer-survey-summary div {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-align: left !important;
+}
+
+/* Zero out all spacing */
+.customer-survey-summary .space-y-1,
+.customer-survey-summary .space-y-2,
+.customer-survey-summary .space-y-3,
+.customer-survey-summary .space-x-1,
+.customer-survey-summary .space-x-2,
+.customer-survey-summary .space-x-3 {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Apply to all div elements recursively */
+.customer-survey-summary div,
+.customer-survey-summary div div,
+.customer-survey-summary div div div,
+.customer-survey-summary div div div div {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Target any special case formatting */
+.zero-indent * {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}

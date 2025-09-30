@@ -1,0 +1,66 @@
+/* Additional targeted fixes for analysis and recommendation sections */
+
+/* Fix to ensure the analysis/recommendation sections match the screenshot */
+.analysis-harmonization ul,
+div:has(> h6:contains("Analysis")) ul,
+div:has(> h6:contains("Recommendation")) ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin-left: 0 !important;
+  margin-top: 0.5rem !important;
+}
+
+.analysis-harmonization li,
+div:has(> h6:contains("Analysis")) li,
+div:has(> h6:contains("Recommendation")) li {
+  font-size: 0.875rem !important;
+  margin-bottom: 0.25rem !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}
+
+/* Match the indentation seen in the screenshot */
+div:has(> h6:contains("Analysis")) + div,
+div:has(> h6:contains("Recommendation")) + div {
+  margin-left: 1.5rem !important;
+}
+
+/* Remove the double bullets when we manually added them */
+div:has(> h6:contains("Analysis")) li::before,
+div:has(> h6:contains("Recommendation")) li::before {
+  content: none !important;
+}
+
+/* Match the spacing between sections as seen in the screenshot */
+div:has(> h6:contains("Analysis")) {
+  margin-bottom: 1rem !important;
+}
+
+div:has(> h6:contains("Recommendation")) {
+  margin-top: 0.5rem !important;
+}
+
+/* Ensure font consistency across all elements */
+.insights-harmonization,
+.customer-survey-summary,
+.dpe-performance-summary,
+div:has(> h6:contains("Analysis")),
+div:has(> h6:contains("Recommendation")) {
+  font-family: var(--font-sans) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+/* Ensure emoji icons align consistently */
+span[role="img"],
+.emoji-icon {
+  vertical-align: middle !important;
+  margin-right: 0.25rem !important;
+}
+
+/* Set the exact bullet styling from the screenshot */
+.insights-harmonization ul li,
+div:has(> h6:contains("Analysis")) ul li,
+div:has(> h6:contains("Recommendation")) ul li {
+  list-style-type: disc !important;
+}
