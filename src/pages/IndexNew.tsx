@@ -160,13 +160,19 @@ const IndexNew = () => {
 
   // Helper function to calculate aggregated data based on active tab
   const getAggregatedData = () => {
-    if (!performanceOverviewData || performanceOverviewData.length === 0) {
+    // Use the correct data source based on tab and entity type
+    let dataToAggregate = [];
+    
+    if (!reportDashboardData?.performanceData || reportDashboardData.performanceData.length === 0) {
       return { avgSct: null, totalCases: null, avgSatisfaction: null };
     }
 
-    const avgSct = performanceOverviewData.reduce((acc, member) => acc + member.sct, 0) / performanceOverviewData.length;
-    const totalCases = performanceOverviewData.reduce((acc, member) => acc + member.cases, 0);
-    const avgSatisfaction = performanceOverviewData.reduce((acc, member) => acc + member.satisfaction, 0) / performanceOverviewData.length;
+    // Always use reportDashboardData.performanceData for aggregation
+    dataToAggregate = reportDashboardData.performanceData;
+    
+    const avgSct = dataToAggregate.reduce((acc, member) => acc + member.sct, 0) / dataToAggregate.length;
+    const totalCases = dataToAggregate.reduce((acc, member) => acc + member.cases, 0);
+    const avgSatisfaction = dataToAggregate.reduce((acc, member) => acc + member.satisfaction, 0) / dataToAggregate.length;
 
     return {
       avgSct: Math.round(avgSct * 100) / 100,
@@ -179,39 +185,62 @@ const IndexNew = () => {
   const getChartData = () => {
     if (!reportDashboardData?.performanceData) return [];
 
+    let chartData = [];
+
     if (selectedEntity === 'squad') {
       if (activeTab === 'squad') {
-        // Show combined data of all members for squad tab
+        // Squad tab: Show aggregated squad-level data (one bar for the entire squad)
         const aggregated = getAggregatedData();
-        if (aggregated.avgSct === null) return [];
-        return [{
-          name: generatedEntityValue || 'Combined Squad Data',
+        chartData = [{
+          name: generatedEntityValue || 'Squad',
           sct: aggregated.avgSct,
           cases: aggregated.totalCases,
-          satisfaction: aggregated.avgSatisfaction
+          satisfaction: aggregated.avgSatisfaction,
+          detailedCases: reportDashboardData.performanceData.flatMap(member => member.detailedCases || [])
         }];
+        console.log(`📊 getChartData (${selectedEntity} - ${activeTab} - squad aggregated):`, chartData);
       } else {
-        // Show individual DPE data for dpe tab
-        return reportDashboardData.performanceData;
+        // DPE tab: Show individual DPE data (each bar represents one squad member)
+        chartData = reportDashboardData.performanceData.map(member => ({
+          name: member.name,
+          sct: member.sct,
+          cases: member.cases,
+          satisfaction: member.satisfaction,
+          detailedCases: member.detailedCases
+        }));
+        console.log(`📊 getChartData (${selectedEntity} - ${activeTab} - individual DPE):`, chartData);
       }
     } else if (selectedEntity === 'team') {
       if (activeTab === 'team') {
-        // Show combined data of all squads for team tab
-        const aggregated = getAggregatedData();
-        if (aggregated.avgSct === null) return [];
-        return [{
-          name: `Combined ${generatedEntityValue || 'Team'} Data`,
-          sct: aggregated.avgSct,
-          cases: aggregated.totalCases,
-          satisfaction: aggregated.avgSatisfaction
-        }];
+        // Team tab: Show squad-level aggregated data for team view
+        // Each bar represents one squad's aggregated metrics
+        chartData = reportDashboardData.performanceData.map(squad => ({
+          name: squad.name,
+          sct: squad.sct,
+          cases: squad.cases,
+          satisfaction: squad.satisfaction,
+          detailedCases: squad.detailedCases
+        }));
+        console.log(`📊 getChartData (${selectedEntity} - ${activeTab} - squad level):`, chartData);
       } else {
-        // Show individual squad data for squad tab
-        return reportDashboardData.performanceData;
+        // Squad tab: Show individual DPE data from all squads in the team
+        // Each bar represents one individual DPE across all squads
+        const individualData = reportDashboardData.individualDPEData || reportDashboardData.performanceData;
+        chartData = individualData.map(member => ({
+          name: member.name,
+          sct: member.sct,
+          cases: member.cases,
+          satisfaction: member.satisfaction,
+          detailedCases: member.detailedCases
+        }));
+        console.log(`📊 getChartData (${selectedEntity} - ${activeTab} - individual DPE):`, chartData);
       }
+    } else {
+      chartData = reportDashboardData.performanceData;
+      console.log(`📊 getChartData (fallback):`, chartData);
     }
 
-    return reportDashboardData.performanceData;
+    return chartData;
   };
 
   // Helper function to get ALL KPI data based on active tab (SCT, Cases, CSAT, DSAT)
@@ -220,26 +249,18 @@ const IndexNew = () => {
     const aggregatedSatisfaction = getAggregatedSatisfactionData();
     
     if (selectedEntity === 'squad') {
-      if (activeTab === 'squad') {
-        // Show aggregated data for squad tab
-        return {
-          sct: aggregated.avgSct,
-          cases: aggregated.totalCases,
-          csat: aggregatedSatisfaction.csat,
-          dsat: aggregatedSatisfaction.dsat
-        };
-      } else {
-        // Show original data for dpe tab
-        return {
-          sct: calculateMetricsData?.sct || reportCurrentData?.sct,
-          cases: calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases,
-          csat: satisfactionData?.satisfactionData?.csatPercentage ?? calculateMetricsData?.satisfaction ?? reportCurrentData?.satisfaction,
-          dsat: satisfactionData?.satisfactionData?.dsatPercentage ?? calculateMetricsData?.dsatPercentage ?? reportCurrentData?.dsatPercentage
-        };
-      }
+      // For squad entities, always show aggregated data from the squad members (DPEs)
+      // This applies to both DPE and Squad tabs since they show the same underlying data
+      return {
+        sct: aggregated.avgSct,
+        cases: aggregated.totalCases,
+        csat: aggregatedSatisfaction.csat,
+        dsat: aggregatedSatisfaction.dsat
+      };
     } else if (selectedEntity === 'team') {
+      // For team entities, show appropriate data based on tab
       if (activeTab === 'team') {
-        // Show aggregated data for team tab
+        // Team tab: Show aggregated data from all squads
         return {
           sct: aggregated.avgSct,
           cases: aggregated.totalCases,
@@ -247,13 +268,30 @@ const IndexNew = () => {
           dsat: aggregatedSatisfaction.dsat
         };
       } else {
-        // Show original data for squad tab
-        return {
-          sct: calculateMetricsData?.sct || reportCurrentData?.sct,
-          cases: calculateMetricsData?.closedCases || reportCurrentData?.closedCases || reportCurrentData?.cases,
-          csat: satisfactionData?.satisfactionData?.csatPercentage ?? calculateMetricsData?.satisfaction ?? reportCurrentData?.satisfaction,
-          dsat: satisfactionData?.satisfactionData?.dsatPercentage ?? calculateMetricsData?.dsatPercentage ?? reportCurrentData?.dsatPercentage
-        };
+        // Squad tab: Show aggregated data from all individual DPEs in all squads
+        // Use individual DPE data if available, otherwise fall back to squad data
+        if (reportDashboardData?.individualDPEData && reportDashboardData.individualDPEData.length > 0) {
+          const individualData = reportDashboardData.individualDPEData;
+          const individualAggregated = {
+            avgSct: individualData.reduce((acc, member) => acc + member.sct, 0) / individualData.length,
+            totalCases: individualData.reduce((acc, member) => acc + member.cases, 0),
+            avgSatisfaction: individualData.reduce((acc, member) => acc + member.satisfaction, 0) / individualData.length
+          };
+          return {
+            sct: Math.round(individualAggregated.avgSct * 100) / 100,
+            cases: individualAggregated.totalCases,
+            csat: Math.round(individualAggregated.avgSatisfaction * 100) / 100,
+            dsat: aggregatedSatisfaction.dsat // Use existing satisfaction calculation
+          };
+        } else {
+          // Fallback to aggregated data
+          return {
+            sct: aggregated.avgSct,
+            cases: aggregated.totalCases,
+            csat: aggregatedSatisfaction.csat,
+            dsat: aggregatedSatisfaction.dsat
+          };
+        }
       }
     }
 
@@ -1113,7 +1151,8 @@ const IndexNew = () => {
             // Set reportDashboardData with individual DPE performance
             setReportDashboardData(prev => ({
               ...prev,
-              performanceData: performanceData
+              performanceData: performanceData,
+              individualDPEData: performanceData // For squads, individual data is the same as performance data
             }));
             // Calculate aggregated squad metrics for KPI cards
             const squadAggregatedMetrics = {
@@ -1283,10 +1322,36 @@ const IndexNew = () => {
               detailedCases: result.squadDetailedCases || []
             }));
 
-            // Set reportDashboardData with squad-level performance
+            // Create individual DPE data for squad tab view
+            const individualDPEData = allDPEResults.map(dpe => ({
+              name: dpe.dpeName,
+              sct: dpe.data.metrics?.sct || 0,
+              cases: dpe.data.metrics?.closedCases || 0,
+              satisfaction: dpe.data.metrics?.customerSatisfaction?.csatPercentage || 0,
+              detailedCases: dpe.data.sample_cases ? dpe.data.sample_cases.map(caseItem => {
+                let parsedProducts = [];
+                try {
+                  if (caseItem.products) {
+                    if (typeof caseItem.products === 'string') {
+                      parsedProducts = JSON.parse(caseItem.products);
+                    } else if (Array.isArray(caseItem.products)) {
+                      parsedProducts = caseItem.products;
+                    }
+                  }
+                } catch (error) {}
+                return {
+                  ...caseItem,
+                  products: parsedProducts,
+                  formattedProducts: parsedProducts.length > 0 ? parsedProducts.join(', ') : 'N/A'
+                };
+              }) : []
+            }));
+
+            // Set reportDashboardData with squad-level performance and individual DPE data
             setReportDashboardData(prev => ({
               ...prev,
-              performanceData: performanceData
+              performanceData: performanceData,
+              individualDPEData: individualDPEData // Store individual DPE data for squad tab
             }));
             // Calculate aggregated team metrics for KPI cards
             const teamAggregatedMetrics = {
@@ -3477,6 +3542,7 @@ const IndexNew = () => {
                     <div className="mb-4">
                       {isPerformanceLoading ? (
                         <TeamPerformanceChart
+                          key={`loading-${selectedEntity}-${activeTab}`}
                           data={[]}
                           title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
                           onBarClick={handleIndividualBarClick}
@@ -3484,6 +3550,7 @@ const IndexNew = () => {
                         />
                       ) : (
                         <TeamPerformanceChart
+                          key={`${selectedEntity}-${activeTab}-${generatedEntityValue}`}
                           data={getChartData()}
                           title={reportGenerated ? generatedEntityValue : 'No Entity Selected'}
                           onBarClick={handleIndividualBarClick}
@@ -3549,28 +3616,6 @@ const IndexNew = () => {
                         />
                       )}
                     </div>
-
-                    {/* Dynamic Tabs Section - Centered */}
-                    {reportGenerated && selectedEntity && selectedEntity !== 'dpe' && (
-                      <div className="flex justify-center">
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full max-w-md">
-                          <TabsList className="grid w-full grid-cols-2 mb-4">
-                            {selectedEntity === 'squad' && (
-                              <>
-                                <TabsTrigger value="dpe">DPE</TabsTrigger>
-                                <TabsTrigger value="squad">Squad</TabsTrigger>
-                              </>
-                            )}
-                            {selectedEntity === 'team' && (
-                              <>
-                                <TabsTrigger value="squad">Squad</TabsTrigger>
-                                <TabsTrigger value="team">Team</TabsTrigger>
-                              </>
-                            )}
-                          </TabsList>
-                        </Tabs>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               </div>

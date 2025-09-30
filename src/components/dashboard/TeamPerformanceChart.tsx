@@ -125,7 +125,8 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 onMouseEnter={(data, index) => setHoveredBar({ type: 'sct', index })}
                 onMouseLeave={() => setHoveredBar({ type: null, index: null })}
                 fillOpacity={hoveredBar.type === 'sct' || hoveredBar.type === null ? 1 : 0.6}
-                isAnimationActive={false}
+                isAnimationActive={true}
+                animationDuration={300}
                 stroke="hsl(var(--chart-border))"
                 strokeWidth={2}
               />
@@ -139,7 +140,8 @@ const TeamPerformanceChart: React.FC<TeamPerformanceChartProps> = ({ data, title
                 onMouseEnter={(data, index) => setHoveredBar({ type: 'cases', index })}
                 onMouseLeave={() => setHoveredBar({ type: null, index: null })}
                 fillOpacity={hoveredBar.type === 'cases' || hoveredBar.type === null ? 1 : 0.6}
-                isAnimationActive={false}
+                isAnimationActive={true}
+                animationDuration={300}
                 stroke="hsl(var(--chart-border))"
                 strokeWidth={2}
               />
